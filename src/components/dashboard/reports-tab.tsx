@@ -30,6 +30,9 @@ export default function ReportsTab() {
   const [exportFormat, setExportFormat] = useState<BackupFormat>('json');
   const [importFormat, setImportFormat] = useState<BackupFormat>('json');
   const [importError, setImportError] = useState('');
+  const [clearDataConfirmation, setClearDataConfirmation] = useState('');
+
+  const CONFIRMATION_TEXT = 'DELETE ALL DATA';
 
   const handleExport = () => {
     if (exportFormat !== 'json') {
@@ -159,6 +162,7 @@ export default function ReportsTab() {
     setUsers(adminUser ? [adminUser] : [adminUserBlueprint]);
 
     toast({ title: "All Data Cleared", description: "The application data has been reset." });
+    setClearDataConfirmation('');
   };
 
   return (
@@ -275,7 +279,7 @@ export default function ReportsTab() {
                     <h4 className="font-semibold">Clear All Application Data</h4>
                     <p className="text-sm text-muted-foreground">Permanently delete all teachers, schools, leave requests, and non-admin users.</p>
                 </div>
-                <AlertDialog>
+                <AlertDialog onOpenChange={() => setClearDataConfirmation('')}>
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive">
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -285,13 +289,24 @@ export default function ReportsTab() {
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete all data in the application except for the default admin user. Are you sure you want to proceed?
+                            <AlertDialogDescription className="space-y-2">
+                                <p>This action cannot be undone. This will permanently delete all data in the application except for the default admin user.</p>
+                                <p>To confirm, please type <strong className="text-destructive-foreground">{CONFIRMATION_TEXT}</strong> below.</p>
                             </AlertDialogDescription>
                         </AlertDialogHeader>
+                        <Input
+                            value={clearDataConfirmation}
+                            onChange={(e) => setClearDataConfirmation(e.target.value)}
+                            placeholder={CONFIRMATION_TEXT}
+                            className="border-destructive focus-visible:ring-destructive"
+                        />
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleClearAllData} className="bg-destructive hover:bg-destructive/90">
+                            <AlertDialogAction 
+                                onClick={handleClearAllData} 
+                                className="bg-destructive hover:bg-destructive/90"
+                                disabled={clearDataConfirmation !== CONFIRMATION_TEXT}
+                            >
                                 Yes, Clear All Data
                             </AlertDialogAction>
                         </AlertDialogFooter>

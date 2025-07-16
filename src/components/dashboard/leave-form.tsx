@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerSelect } from '@/components/dashboard/teacher-form';
 
-const leaveTypes: LeaveRequest['leaveType'][] = ['Sick', 'Vacation', 'Personal', 'Other'];
+const leaveTypes: LeaveRequest['leaveType'][] = ['Sick', 'Maternity', 'Paternity', 'Casual', 'Other'];
 
 const leaveSchema = z.object({
   teacherId: z.string().min(1, "Teacher is required"),

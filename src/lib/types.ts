@@ -47,7 +47,7 @@ export interface School {
 export interface LeaveRequest {
   id: string;
   teacherId: string;
-  leaveType: 'Sick' | 'Vacation' | 'Personal' | 'Other';
+  leaveType: 'Sick' | 'Maternity' | 'Paternity' | 'Casual' | 'Other';
   startDate: Date;
   returnDate: Date;
   status: 'Pending' | 'Approved' | 'Rejected';
