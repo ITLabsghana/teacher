@@ -1,13 +1,13 @@
 
 "use client";
 
-import type { Teacher, LeaveRequest } from '@/lib/types';
+import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { useDataContext } from '@/context/data-context';
-import { Bell, User, CalendarOff } from 'lucide-react';
+import { Bell, User, CalendarOff, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWithinInterval, addDays, parseISO } from 'date-fns';
 
-function StatsCards({ teachers, leaveRequests }: { teachers: Teacher[], leaveRequests: LeaveRequest[] }) {
+function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[], leaveRequests: LeaveRequest[], schools: School[] }) {
     const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
     const leavesEndingSoon = leaveRequests.filter(req => {
         if (req.status !== 'Approved') return false;
@@ -18,8 +18,20 @@ function StatsCards({ teachers, leaveRequests }: { teachers: Teacher[], leaveReq
         });
     }).length;
 
+    const enrollmentTotals = schools.reduce((acc, school) => {
+        if (school.enrollment) {
+            Object.values(school.enrollment).forEach(classData => {
+                acc.boys += classData.boys || 0;
+                acc.girls += classData.girls || 0;
+            });
+        }
+        return acc;
+    }, { boys: 0, girls: 0 });
+
+    const grandTotalStudents = enrollmentTotals.boys + enrollmentTotals.girls;
+
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Teachers</CardTitle>
@@ -40,6 +52,33 @@ function StatsCards({ teachers, leaveRequests }: { teachers: Teacher[], leaveReq
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{grandTotalStudents}</div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Boys</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{enrollmentTotals.boys}</div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Girls</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{enrollmentTotals.girls}</div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Leaves Ending Soon</CardTitle>
                     <Bell className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -48,7 +87,7 @@ function StatsCards({ teachers, leaveRequests }: { teachers: Teacher[], leaveReq
                     <p className="text-xs text-muted-foreground">In the next 7 days</p>
                 </CardContent>
             </Card>
-             <Card className="col-span-1 lg:col-span-1">
+             <Card className="col-span-full lg:col-span-2">
                 <CardHeader>
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                         <Bell className="h-4 w-4" />
@@ -70,7 +109,7 @@ function StatsCards({ teachers, leaveRequests }: { teachers: Teacher[], leaveReq
 }
 
 export default function DashboardPage() {
-    const { teachers, leaveRequests } = useDataContext();
+    const { teachers, leaveRequests, schools } = useDataContext();
 
     return (
         <>
@@ -78,7 +117,7 @@ export default function DashboardPage() {
                 <h1 className="text-4xl font-headline font-bold text-primary">Dashboard</h1>
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
             </header>
-            <StatsCards teachers={teachers} leaveRequests={leaveRequests} />
+            <StatsCards teachers={teachers} leaveRequests={leaveRequests} schools={schools} />
         </>
     );
 }
