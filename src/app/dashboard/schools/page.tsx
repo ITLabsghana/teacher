@@ -9,14 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { School } from '@/lib/types';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MoreHorizontal, Edit, Trash2, Users } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 
 
 function SchoolListView({ schools }: { schools: School[] }) {
     const router = useRouter();
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleRowClick = (schoolId: string) => {
         router.push(`/dashboard/schools/${schoolId}`);
@@ -31,9 +33,22 @@ function SchoolListView({ schools }: { schools: School[] }) {
         }, { boys: 0, girls: 0 });
     };
 
+    const filteredSchools = schools.filter(school =>
+        school.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="space-y-4">
-            {schools.length > 0 ? schools.map(school => {
+            <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search for a school..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 max-w-md"
+                />
+            </div>
+            {filteredSchools.length > 0 ? filteredSchools.map(school => {
                 const totals = calculateTotals(school);
                 const grandTotal = totals.boys + totals.girls;
 
@@ -71,7 +86,7 @@ function SchoolListView({ schools }: { schools: School[] }) {
                 );
             }) : (
                 <div className="text-center text-muted-foreground py-8">
-                    No schools added yet. Go to the 'Add/Edit School' tab to create one.
+                    {searchTerm ? `No schools found for "${searchTerm}".` : "No schools added yet. Go to the 'Add/Edit School' tab to create one."}
                 </div>
             )}
         </div>
