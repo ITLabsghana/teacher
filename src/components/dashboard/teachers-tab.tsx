@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Teacher, School } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,7 @@ interface TeachersTabProps {
 export default function TeachersTab({ teachers, setTeachers, schools }: TeachersTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const router = useRouter();
 
   const handleAdd = () => {
     setEditingTeacher(null);
@@ -37,12 +40,16 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
     setTeachers(teachers.filter(t => t.id !== teacherId));
   };
   
-  const getSchoolName = (schoolId: string) => {
+  const getSchoolName = (schoolId?: string) => {
     return schools.find(s => s.id === schoolId)?.name || 'N/A';
   };
   
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
+  };
+  
+  const handleRowClick = (teacherId: string) => {
+    router.push(`/dashboard/teachers/${teacherId}`);
   };
 
   return (
@@ -75,7 +82,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
           </TableHeader>
           <TableBody>
             {teachers.length > 0 ? teachers.map(teacher => (
-              <TableRow key={teacher.id}>
+              <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar>
@@ -101,20 +108,20 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
                 <TableCell className="text-right">
                   <AlertDialog>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" className="h-8 w-8 p-0">
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(teacher)}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(teacher); }}>Edit</DropdownMenuItem>
                         <AlertDialogTrigger asChild>
-                           <DropdownMenuItem className="text-destructive hover:!text-destructive">Delete</DropdownMenuItem>
+                           <DropdownMenuItem className="text-destructive hover:!text-destructive" onClick={(e) => e.stopPropagation()}>Delete</DropdownMenuItem>
                         </AlertDialogTrigger>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <AlertDialogContent>
+                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>This action cannot be undone. This will permanently delete the teacher's profile.</AlertDialogDescription>
