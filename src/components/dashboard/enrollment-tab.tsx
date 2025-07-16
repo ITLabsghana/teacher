@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { PenSquare, Save } from 'lucide-react';
 import { useDataContext } from '@/context/data-context';
 import { useParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface EnrollmentTabProps {
@@ -32,6 +33,7 @@ type EnrollmentData = { [className: string]: { boys: number; girls: number } };
 
 export default function EnrollmentTab({ schools, setSchools, selectedSchoolId: initialSchoolId, onSave }: EnrollmentTabProps) {
   const params = useParams();
+  const { toast } = useToast();
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(initialSchoolId ?? null);
   const [enrollmentData, setEnrollmentData] = useState<EnrollmentData>({});
   const [totalBoys, setTotalBoys] = useState(0);
@@ -79,16 +81,38 @@ export default function EnrollmentTab({ schools, setSchools, selectedSchoolId: i
   };
 
   const handleSave = () => {
-    if (!selectedSchoolId) return;
-    setSchools(prevSchools => 
-      prevSchools.map(school => 
-        school.id === selectedSchoolId 
-          ? { ...school, enrollment: enrollmentData } 
-          : school
-      )
-    );
-    if(onSave) {
-        onSave();
+    if (!selectedSchoolId) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Please select a school before saving.",
+        });
+        return;
+    }
+    
+    try {
+        setSchools(prevSchools => 
+          prevSchools.map(school => 
+            school.id === selectedSchoolId 
+              ? { ...school, enrollment: enrollmentData } 
+              : school
+          )
+        );
+        
+        toast({
+            title: "Success!",
+            description: "Enrollment data has been saved successfully.",
+        });
+        
+        if(onSave) {
+            onSave();
+        }
+    } catch(e) {
+         toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to save enrollment data.",
+        });
     }
   };
 
