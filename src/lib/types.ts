@@ -1,10 +1,40 @@
 export interface Teacher {
   id: string;
+  staffId: string;
   firstName: string;
   lastName: string;
   dateOfBirth: Date;
+  gender: 'Male' | 'Female';
+  registeredNo?: string;
+  ghanaCardNo?: string;
+  ssnitNo?: string;
+  tinNo?: string;
+  phoneNo?: string;
+  homeTown?: string;
+  email?: string;
+  address?: string;
+  academicQualification?: string;
+  professionalQualification?: string;
+  otherProfessionalQualification?: string;
+  rank?: string;
+  job?: 'Head Teacher' | 'Class Teacher' | 'Subject Teacher';
+  subjects?: string;
+  leadershipPosition?: string;
+  otherLeadershipPosition?: string;
+  areaOfSpecialization?: string;
+  lastPromotionDate?: Date;
+  previousSchool?: string;
   schoolId: string;
-  subject: string;
+  datePostedToCurrentSchool?: Date;
+  licensureNo?: string;
+  firstAppointmentDate?: Date;
+  dateConfirmed?: Date;
+  teacherUnion?: string;
+  photo?: string; // as a data URI
+  bankName?: string;
+  bankBranch?: string;
+  accountNumber?: string;
+  salaryScale?: string;
 }
 
 export interface School {

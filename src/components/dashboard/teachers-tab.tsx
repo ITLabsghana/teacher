@@ -10,6 +10,8 @@ import { MoreHorizontal, PlusCircle, Download, Upload } from 'lucide-react';
 import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { differenceInYears } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 interface TeachersTabProps {
   teachers: Teacher[];
@@ -38,6 +40,10 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
   const getSchoolName = (schoolId: string) => {
     return schools.find(s => s.id === schoolId)?.name || 'N/A';
   };
+  
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
+  };
 
   return (
     <Card>
@@ -59,21 +65,39 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Date of Birth</TableHead>
+              <TableHead>Staff ID</TableHead>
               <TableHead>Age</TableHead>
-              <TableHead>School</TableHead>
-              <TableHead>Subject</TableHead>
+              <TableHead>Current School</TableHead>
+              <TableHead>Job</TableHead>
+              <TableHead>Rank</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {teachers.length > 0 ? teachers.map(teacher => (
               <TableRow key={teacher.id}>
-                <TableCell>{teacher.firstName} {teacher.lastName}</TableCell>
-                <TableCell>{teacher.dateOfBirth.toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                        <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
+                        <AvatarFallback>{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <div className="font-medium">{teacher.firstName} {teacher.lastName}</div>
+                        <div className="text-sm text-muted-foreground">{teacher.email}</div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>{teacher.staffId}</TableCell>
                 <TableCell>{differenceInYears(new Date(), teacher.dateOfBirth)}</TableCell>
                 <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
-                <TableCell>{teacher.subject}</TableCell>
+                <TableCell>
+                    {teacher.job === 'Subject Teacher' ?
+                        <Badge variant="secondary">{teacher.job}: {teacher.subjects}</Badge> :
+                        <Badge variant="outline">{teacher.job}</Badge>
+                    }
+                </TableCell>
+                <TableCell>{teacher.rank}</TableCell>
                 <TableCell className="text-right">
                   <AlertDialog>
                     <DropdownMenu>
@@ -105,7 +129,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No teachers found. Start by adding a new teacher.
                 </TableCell>
               </TableRow>
