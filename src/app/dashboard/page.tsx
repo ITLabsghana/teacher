@@ -2,15 +2,9 @@
 
 import { useState } from 'react';
 import type { Teacher, School, LeaveRequest } from '@/lib/types';
-import { Bell, User, School as SchoolIcon, CalendarOff } from 'lucide-react';
+import { Bell, User, CalendarOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from '@/components/ui/badge';
-import TeachersTab from '@/components/dashboard/teachers-tab';
-import SchoolsTab from '@/components/dashboard/schools-tab';
-import LeaveTab from '@/components/dashboard/leave-tab';
 import { isWithinInterval, addDays, parseISO } from 'date-fns';
-
-type View = 'teachers' | 'schools' | 'leave';
 
 function StatsCards({ teachers, leaveRequests }: { teachers: Teacher[], leaveRequests: LeaveRequest[] }) {
     const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
@@ -75,63 +69,27 @@ function StatsCards({ teachers, leaveRequests }: { teachers: Teacher[], leaveReq
 }
 
 export default function DashboardPage() {
-    const [activeView, setActiveView] = useState<View>('teachers');
-    const [teachers, setTeachers] = useState<Teacher[]>([]);
-    const [schools, setSchools] = useState<School[]>([]);
-    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
-
-    const renderContent = () => {
-        switch (activeView) {
-            case 'teachers':
-                return <TeachersTab teachers={teachers} setTeachers={setTeachers} schools={schools} />;
-            case 'schools':
-                return <SchoolsTab schools={schools} setSchools={setSchools} />;
-            case 'leave':
-                return <LeaveTab leaveRequests={leaveRequests} setLeaveRequests={setLeaveRequests} teachers={teachers} />;
-            default:
-                return null;
-        }
-    };
-
-    const NavLink = ({ view, icon, label }: { view: View, icon: React.ReactNode, label: string }) => (
-        <button
-            onClick={() => setActiveView(view)}
-            className={`flex items-center p-3 text-sm font-medium rounded-lg w-full text-left transition-colors ${
-                activeView === view
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-secondary-foreground'
-            }`}
-        >
-            {icon}
-            <span className="ml-3">{label}</span>
-        </button>
-    );
+    // In a real app, this data would be fetched from a global state/context or API
+    const [teachers] = useState<Teacher[]>([]);
+    const [leaveRequests] = useState<LeaveRequest[]>([]);
 
     return (
-        <div className="flex min-h-screen bg-background">
-            <aside className="w-64 bg-card border-r border-border p-4 hidden md:flex flex-col">
-                <div className="flex items-center gap-2 p-3 mb-4">
-                     <div className="bg-primary text-primary-foreground rounded-full p-2">
-                        <SchoolIcon className="h-6 w-6" />
-                    </div>
-                    <h1 className="text-xl font-headline font-bold text-primary">Admin Panel</h1>
-                </div>
-                <nav className="flex flex-col gap-2">
-                    <NavLink view="teachers" icon={<User className="h-5 w-5" />} label="Teachers" />
-                    <NavLink view="schools" icon={<SchoolIcon className="h-5 w-5" />} label="Schools" />
-                    <NavLink view="leave" icon={<CalendarOff className="h-5 w-5" />} label="Leave Requests" />
-                </nav>
-            </aside>
-            <main className="flex-1 p-4 md:p-8">
-                 <header className="mb-8">
-                    <h1 className="text-4xl font-headline font-bold text-primary">Dashboard</h1>
-                    <p className="text-muted-foreground">Manage your institution's data from one place.</p>
-                </header>
-                <StatsCards teachers={teachers} leaveRequests={leaveRequests} />
-                <div className="mt-8">
-                    {renderContent()}
-                </div>
-            </main>
-        </div>
+        <>
+            <header className="mb-8">
+                <h1 className="text-4xl font-headline font-bold text-primary">Dashboard</h1>
+                <p className="text-muted-foreground">An overview of your institution's data.</p>
+            </header>
+            <StatsCards teachers={teachers} leaveRequests={leaveRequests} />
+            <div className="mt-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Welcome to the Admin Panel</CardTitle>
+                        <CardContent className="pt-4">
+                            <p>Use the sidebar to navigate to different sections of the application.</p>
+                        </CardContent>
+                    </CardHeader>
+                </Card>
+            </div>
+        </>
     );
 }
