@@ -68,7 +68,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
         <div className="mt-auto">
-          <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:bg-secondary hover:text-secondary-foreground" onClick={handleLogout}>
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
             <LogOut className="h-5 w-5 mr-3" />
             Log Out
           </Button>
