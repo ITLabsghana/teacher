@@ -3,12 +3,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { School, User, CalendarOff, GanttChartSquare, LayoutDashboard } from 'lucide-react';
+import { School, User as TeacherIcon, CalendarOff, GanttChartSquare, LayoutDashboard, Users } from 'lucide-react';
 import { DataProvider } from '@/context/data-context';
 
 function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
     const pathname = usePathname();
-    const isActive = pathname === href;
+    const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
+
 
     return (
         <Link
@@ -42,9 +43,10 @@ export default function DashboardLayout({
           </div>
           <nav className="flex flex-col gap-2">
             <NavLink href="/dashboard" icon={<LayoutDashboard className="h-5 w-5" />} label="Dashboard" />
-            <NavLink href="/dashboard/teachers" icon={<User className="h-5 w-5" />} label="Teachers" />
+            <NavLink href="/dashboard/teachers" icon={<TeacherIcon className="h-5 w-5" />} label="Teachers" />
             <NavLink href="/dashboard/schools" icon={<School className="h-5 w-5" />} label="Schools" />
             <NavLink href="/dashboard/leave" icon={<CalendarOff className="h-5 w-5" />} label="Leave Requests" />
+            <NavLink href="/dashboard/users" icon={<Users className="h-5 w-5" />} label="Manage Users" />
           </nav>
         </aside>
         <main className="flex-1 p-4 md:p-8">

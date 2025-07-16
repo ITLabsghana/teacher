@@ -53,3 +53,10 @@ export interface LeaveRequest {
   returnDate: Date;
   status: 'Pending' | 'Approved' | 'Rejected';
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Admin' | 'Editor' | 'Viewer';
+}

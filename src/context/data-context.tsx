@@ -2,12 +2,13 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { Teacher, School, LeaveRequest } from '@/lib/types';
+import type { Teacher, School, LeaveRequest, User } from '@/lib/types';
 
 // Keys for localStorage
 const TEACHERS_KEY = 'teachersData';
 const SCHOOLS_KEY = 'schoolsData';
 const LEAVE_REQUESTS_KEY = 'leaveRequestsData';
+const USERS_KEY = 'usersData';
 
 // Helper function to load data from localStorage
 const loadFromLocalStorage = (key: string, isDateHeavy: boolean = false) => {
@@ -56,6 +57,8 @@ interface DataContextProps {
   setSchools: React.Dispatch<React.SetStateAction<School[]>>;
   leaveRequests: LeaveRequest[];
   setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
+  users: User[];
+  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   isLoading: boolean;
 }
 
@@ -65,6 +68,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load data from localStorage on initial client-side render
@@ -72,6 +76,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setTeachers(loadFromLocalStorage(TEACHERS_KEY, true));
     setSchools(loadFromLocalStorage(SCHOOLS_KEY));
     setLeaveRequests(loadFromLocalStorage(LEAVE_REQUESTS_KEY, true));
+    setUsers(loadFromLocalStorage(USERS_KEY));
     setIsLoading(false);
   }, []);
 
@@ -109,9 +114,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [leaveRequests, isLoading]);
 
+  // Effect to save users to localStorage
+  useEffect(() => {
+    if (!isLoading) {
+        try {
+          window.localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        } catch (error) {
+          console.error("Failed to save users to localStorage", error);
+        }
+    }
+  }, [users, isLoading]);
+
 
   return (
-    <DataContext.Provider value={{ teachers, setTeachers, schools, setSchools, leaveRequests, setLeaveRequests, isLoading }}>
+    <DataContext.Provider value={{ teachers, setTeachers, schools, setSchools, leaveRequests, setLeaveRequests, users, setUsers, isLoading }}>
       {children}
     </DataContext.Provider>
   );
