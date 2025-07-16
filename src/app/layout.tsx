@@ -17,6 +17,9 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: 'Teacher Management Software',
   description: 'Manage teachers, schools, and leave requests efficiently.',
+  icons: {
+    icon: 'data:;base64,iVBORw0KGgo=',
+  },
 };
 
 export default function RootLayout({
