@@ -12,15 +12,33 @@ import { Download, Upload, FileText, FileWarning } from 'lucide-react';
 import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { School, Teacher, LeaveRequest, User } from '@/lib/types';
+
+type ReportFormat = 'pdf' | 'docx' | 'csv';
+type BackupFormat = 'json' | 'csv' | 'sql';
 
 export default function ReportsTab() {
-  const { teachers, schools, leaveRequests, users, setTeachers, setSchools, setLeaveRequests, setUsers } = useDataContext();
+  const { 
+    teachers, schools, leaveRequests, users, 
+    setTeachers, setSchools, setLeaveRequests, setUsers 
+  } = useDataContext();
   const { toast } = useToast();
+  
   const [reportType, setReportType] = useState('');
-  const [reportFormat, setReportFormat] = useState('pdf');
+  const [reportFormat, setReportFormat] = useState<ReportFormat>('pdf');
+  const [exportFormat, setExportFormat] = useState<BackupFormat>('json');
+  const [importFormat, setImportFormat] = useState<BackupFormat>('json');
   const [importError, setImportError] = useState('');
 
   const handleExport = () => {
+    if (exportFormat !== 'json') {
+      toast({
+        title: "Feature Not Implemented",
+        description: `${exportFormat.toUpperCase()} export is not yet available. Please use JSON.`,
+      });
+      return;
+    }
+
     const allData = {
       teachers,
       schools,
@@ -37,12 +55,22 @@ export default function ReportsTab() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: "Export Successful", description: "All data has been exported." });
+    toast({ title: "Export Successful", description: "All data has been exported as JSON." });
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (importFormat !== 'json') {
+      toast({
+        variant: 'destructive',
+        title: "Feature Not Implemented",
+        description: `Please use a JSON file for import.`,
+      });
+      event.target.value = ''; // Reset file input
+      return;
+    }
 
     setImportError('');
     const reader = new FileReader();
@@ -51,19 +79,39 @@ export default function ReportsTab() {
         const text = e.target?.result as string;
         const data = JSON.parse(text);
 
-        // Basic validation
         if (!data.teachers || !data.schools || !data.leaveRequests || !data.users) {
           throw new Error("Invalid backup file format. Missing required data keys.");
         }
+        
+        // Merge teachers
+        setTeachers(prev => {
+            const existingIds = new Set(prev.map(t => t.id));
+            const newTeachers = (data.teachers as Teacher[]).filter(t => !existingIds.has(t.id));
+            return [...prev, ...newTeachers];
+        });
 
-        // We can add more robust validation with Zod here in a real-world scenario.
+        // Merge schools
+        setSchools(prev => {
+            const existingIds = new Set(prev.map(s => s.id));
+            const newSchools = (data.schools as School[]).filter(s => !existingIds.has(s.id));
+            return [...prev, ...newSchools];
+        });
+        
+        // Merge leave requests
+        setLeaveRequests(prev => {
+            const existingIds = new Set(prev.map(l => l.id));
+            const newLeaveRequests = (data.leaveRequests as LeaveRequest[]).filter(l => !existingIds.has(l.id));
+            return [...prev, ...newLeaveRequests];
+        });
+        
+        // Merge users
+        setUsers(prev => {
+            const existingIds = new Set(prev.map(u => u.id));
+            const newUsers = (data.users as User[]).filter(u => !existingIds.has(u.id));
+            return [...prev, ...newUsers];
+        });
 
-        setTeachers(data.teachers);
-        setSchools(data.schools);
-        setLeaveRequests(data.leaveRequests);
-        setUsers(data.users);
-
-        toast({ title: "Import Successful", description: "All data has been restored from the backup file." });
+        toast({ title: "Import Successful", description: "Data has been successfully merged from the backup file." });
       } catch (error: any) {
         console.error("Import failed:", error);
         setImportError(error.message || "Failed to parse the backup file. Please ensure it's a valid JSON backup.");
@@ -91,7 +139,6 @@ export default function ReportsTab() {
         title: 'Report Generation',
         description: `Generating ${reportType} report as ${reportFormat}. (This is a placeholder action)`,
     });
-    // In a real application, this would trigger a report generation service.
   }
 
   return (
@@ -113,12 +160,13 @@ export default function ReportsTab() {
                   <SelectItem value="teacher-list">Teacher List</SelectItem>
                   <SelectItem value="school-enrollment">School Enrollment Summary</SelectItem>
                   <SelectItem value="leave-summary">Leave Summary</SelectItem>
+                  <SelectItem value="general-report">General Report</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex-1 space-y-2">
               <Label htmlFor="report-format">Format</Label>
-              <Select value={reportFormat} onValueChange={setReportFormat}>
+              <Select value={reportFormat} onValueChange={(v) => setReportFormat(v as ReportFormat)}>
                 <SelectTrigger id="report-format">
                   <SelectValue />
                 </SelectTrigger>
@@ -141,33 +189,55 @@ export default function ReportsTab() {
           <CardTitle>Data Management</CardTitle>
           <CardDescription>Backup your current data or restore from a previous backup.</CardDescription>
         </CardHeader>
-        <CardContent className="grid sm:grid-cols-2 gap-8">
-          {/* Export Section */}
+        <CardContent className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-4 p-6 border rounded-lg">
             <h3 className="text-lg font-medium flex items-center gap-2"><Download /> Export Data</h3>
-            <p className="text-sm text-muted-foreground">Download a full backup of all application data (teachers, schools, users, etc.) as a single JSON file.</p>
-            <Button onClick={handleExport} variant="secondary">Export All Data</Button>
+            <p className="text-sm text-muted-foreground">Download a full backup of all application data (teachers, schools, users, etc.).</p>
+            <div className="flex items-end gap-2">
+                <div className="flex-1">
+                    <Label htmlFor="export-format">Format</Label>
+                    <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as BackupFormat)}>
+                        <SelectTrigger id="export-format"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="json">JSON</SelectItem>
+                        <SelectItem value="csv">CSV (Excel)</SelectItem>
+                        <SelectItem value="sql">SQL</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button onClick={handleExport} variant="secondary">Export</Button>
+            </div>
           </div>
 
-          {/* Import Section */}
           <div className="space-y-4 p-6 border rounded-lg">
             <h3 className="text-lg font-medium flex items-center gap-2"><Upload /> Import Data</h3>
-            <p className="text-sm text-muted-foreground">Restore data from a JSON backup file. This will overwrite all existing data in the application.</p>
-            <div className="flex flex-col gap-2">
-                 <Button asChild variant="outline">
+            <p className="text-sm text-muted-foreground">Merge data from a backup file. Existing records will be ignored.</p>
+             <div className="flex items-end gap-2">
+                <div className="flex-1">
+                    <Label htmlFor="import-format">Format</Label>
+                    <Select value={importFormat} onValueChange={(v) => setImportFormat(v as BackupFormat)}>
+                        <SelectTrigger id="import-format"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="json">JSON</SelectItem>
+                            <SelectItem value="csv">CSV (Excel)</SelectItem>
+                            <SelectItem value="sql">SQL</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button asChild variant="outline">
                     <label htmlFor="import-file" className="cursor-pointer">
                         <Upload className="mr-2 h-4 w-4" />
-                        Choose Backup File
-                        <Input id="import-file" type="file" accept=".json" className="hidden" onChange={handleImport} />
+                        Choose File
+                        <Input id="import-file" type="file" accept=".json,.csv,.sql" className="hidden" onChange={handleImport} />
                     </label>
                 </Button>
-                {importError && (
-                    <Alert variant="destructive" className="mt-2">
-                        <FileWarning className="h-4 w-4" />
-                        <AlertDescription>{importError}</AlertDescription>
-                    </Alert>
-                )}
             </div>
+            {importError && (
+                <Alert variant="destructive" className="mt-2">
+                    <FileWarning className="h-4 w-4" />
+                    <AlertDescription>{importError}</AlertDescription>
+                </Alert>
+            )}
           </div>
         </CardContent>
       </Card>
