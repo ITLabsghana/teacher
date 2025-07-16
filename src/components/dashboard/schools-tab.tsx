@@ -8,9 +8,7 @@ import { MoreHorizontal, PlusCircle, Download, Upload, Edit, Trash2 } from 'luci
 import { SchoolForm } from './school-form';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import EnrollmentTab from './enrollment-tab';
-
+import { useRouter } from 'next/navigation';
 
 interface SchoolsTabProps {
   schools: School[];
@@ -20,6 +18,7 @@ interface SchoolsTabProps {
 function SchoolManagement({ schools, setSchools }: SchoolsTabProps) {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSchool, setEditingSchool] = useState<School | null>(null);
+    const router = useRouter();
 
     const handleAdd = () => {
         setEditingSchool(null);
@@ -35,6 +34,10 @@ function SchoolManagement({ schools, setSchools }: SchoolsTabProps) {
         setSchools(schools.filter(s => s.id !== schoolId));
     };
 
+    const handleRowClick = (schoolId: string) => {
+        router.push(`/dashboard/schools/${schoolId}`);
+    };
+
     return (
         <>
             <div className="flex justify-end mb-4">
@@ -46,30 +49,30 @@ function SchoolManagement({ schools, setSchools }: SchoolsTabProps) {
             </div>
             <div className="space-y-2">
                 {schools.length > 0 ? schools.map(school => (
-                    <div key={school.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                    <div key={school.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg cursor-pointer hover:bg-muted" onClick={() => handleRowClick(school.id)}>
                         <div>
                             <p className="font-semibold">{school.name}</p>
                         </div>
                         <AlertDialog>
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                     <Button variant="ghost" className="h-8 w-8 p-0">
                                         <span className="sr-only">Open menu</span>
                                         <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleEdit(school)}>
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(school); }}>
                                         <Edit className="mr-2 h-4 w-4" /> Edit
                                     </DropdownMenuItem>
                                     <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem className="text-destructive hover:!text-destructive">
+                                        <DropdownMenuItem className="text-destructive hover:!text-destructive" onClick={(e) => e.stopPropagation()}>
                                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                                         </DropdownMenuItem>
                                     </AlertDialogTrigger>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                            <AlertDialogContent>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                     <AlertDialogDescription>
@@ -101,28 +104,15 @@ function SchoolManagement({ schools, setSchools }: SchoolsTabProps) {
     );
 }
 
-
 export default function SchoolsTab({ schools, setSchools }: SchoolsTabProps) {
-
   return (
     <Card>
         <CardHeader>
-            <CardTitle>School & Enrollment Management</CardTitle>
-            <CardDescription>Add, categorize, and manage schools and their student enrollment.</CardDescription>
+            <CardTitle>School Management</CardTitle>
+            <CardDescription>Add, edit, and manage schools and their student enrollment.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Tabs defaultValue="schools">
-                <TabsList className="mb-4">
-                    <TabsTrigger value="schools">School Management</TabsTrigger>
-                    <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
-                </TabsList>
-                <TabsContent value="schools">
-                    <SchoolManagement schools={schools} setSchools={setSchools} />
-                </TabsContent>
-                <TabsContent value="enrollment">
-                    <EnrollmentTab schools={schools} setSchools={setSchools} />
-                </TabsContent>
-            </Tabs>
+            <SchoolManagement schools={schools} setSchools={setSchools} />
         </CardContent>
     </Card>
   );
