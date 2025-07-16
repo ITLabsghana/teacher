@@ -1,0 +1,118 @@
+"use client";
+
+import { useState } from 'react';
+import type { LeaveRequest, Teacher } from '@/lib/types';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, PlusCircle, Download, Upload } from 'lucide-react';
+import { LeaveForm } from './leave-form';
+import { Badge } from '@/components/ui/badge';
+
+interface LeaveTabProps {
+  leaveRequests: LeaveRequest[];
+  setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
+  teachers: Teacher[];
+}
+
+export default function LeaveTab({ leaveRequests, setLeaveRequests, teachers }: LeaveTabProps) {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const getTeacherName = (teacherId: string) => {
+    const teacher = teachers.find(t => t.id === teacherId);
+    return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'N/A';
+  };
+
+  const updateStatus = (leaveId: string, status: LeaveRequest['status']) => {
+    setLeaveRequests(prev => prev.map(req => req.id === leaveId ? { ...req, status } : req));
+  };
+  
+  const getStatusVariant = (status: LeaveRequest['status']): "default" | "secondary" | "destructive" => {
+    switch (status) {
+        case 'Approved': return 'default';
+        case 'Pending': return 'secondary';
+        case 'Rejected': return 'destructive';
+        default: return 'secondary';
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>Leave Tracking</CardTitle>
+                <CardDescription>Monitor and manage teacher leave requests.</CardDescription>
+            </div>
+            <div className="flex gap-2">
+                <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
+                <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export</Button>
+                <Button size="sm" onClick={() => setIsFormOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Add Request</Button>
+            </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Teacher</TableHead>
+              <TableHead>Leave Type</TableHead>
+              <TableHead>Start Date</TableHead>
+              <TableHead>Return Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {leaveRequests.length > 0 ? leaveRequests.map(req => (
+              <TableRow key={req.id}>
+                <TableCell>{getTeacherName(req.teacherId)}</TableCell>
+                <TableCell>{req.leaveType}</TableCell>
+                <TableCell>{req.startDate.toLocaleDateString()}</TableCell>
+                <TableCell>{req.returnDate.toLocaleDateString()}</TableCell>
+                <TableCell>
+                    <Badge variant={getStatusVariant(req.status)} className={req.status === 'Approved' ? 'bg-green-500' : ''}>{req.status}</Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                       <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Set Status</DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                              <DropdownMenuItem onClick={() => updateStatus(req.id, 'Approved')}>Approved</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => updateStatus(req.id, 'Pending')}>Pending</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => updateStatus(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            )) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  No leave requests found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <LeaveForm
+        isOpen={isFormOpen}
+        setIsOpen={setIsFormOpen}
+        setLeaveRequests={setLeaveRequests}
+        teachers={teachers}
+      />
+    </Card>
+  );
+}
