@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -162,6 +163,7 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
         setIsOpen={setIsFormOpen}
         editingUser={editingUser}
         setUsers={setUsers}
+        currentUser={currentUser}
       />
       <ResetPasswordForm
         isOpen={isResetPasswordFormOpen}

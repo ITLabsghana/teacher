@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { User } from '@/lib/types';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,13 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const userRoles: User['role'][] = ['Admin', 'Supervisor', 'Viewer'];
+const allUserRoles: User['role'][] = ['Admin', 'Supervisor', 'Viewer'];
 
 const userSchema = z.object({
   username: z.string().min(2, "Username is too short"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters long").optional(),
-  role: z.enum(userRoles, { required_error: "Role is required" }),
+  role: z.enum(allUserRoles, { required_error: "Role is required" }),
 });
 
 // For editing, password is not required
@@ -31,12 +32,21 @@ interface UserFormProps {
   setIsOpen: (isOpen: boolean) => void;
   editingUser: User | null;
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  currentUser: User | null;
 }
 
-export function UserForm({ isOpen, setIsOpen, editingUser, setUsers }: UserFormProps) {
+export function UserForm({ isOpen, setIsOpen, editingUser, setUsers, currentUser }: UserFormProps) {
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<UserFormData>({
     resolver: zodResolver(editingUser ? editUserSchema : userSchema),
   });
+
+  const availableRoles = useMemo(() => {
+    if (currentUser?.role === 'Supervisor') {
+      return allUserRoles.filter(role => role !== 'Admin');
+    }
+    return allUserRoles;
+  }, [currentUser]);
+
 
   useEffect(() => {
     if (isOpen) {
@@ -95,7 +105,7 @@ export function UserForm({ isOpen, setIsOpen, editingUser, setUsers }: UserFormP
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {userRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                    {availableRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}
