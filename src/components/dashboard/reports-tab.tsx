@@ -290,8 +290,8 @@ export default function ReportsTab() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription className="space-y-2">
-                                <p>This action cannot be undone. This will permanently delete all data in the application except for the default admin user.</p>
-                                <p>To confirm, please type <strong className="text-destructive-foreground">{CONFIRMATION_TEXT}</strong> below.</p>
+                                <span>This action cannot be undone. This will permanently delete all data in the application except for the default admin user.</span>
+                                <span>To confirm, please type <strong className="text-destructive-foreground">{CONFIRMATION_TEXT}</strong> below.</span>
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <Input
