@@ -34,7 +34,7 @@ function SchoolListView({ schools }: { schools: School[] }) {
                 </div>
             )) : (
                 <div className="text-center text-muted-foreground py-8">
-                    No schools added yet. Go to the 'Add School' tab to create one.
+                    No schools added yet. Go to the 'Add/Edit School' tab to create one.
                 </div>
             )}
         </div>
