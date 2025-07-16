@@ -10,15 +10,63 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User as UserIcon, Trash2, Upload } from 'lucide-react';
+import { User as UserIcon, Trash2, Upload, File as FileIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, differenceInYears } from 'date-fns';
+import { differenceInYears } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
+
+// Date Picker Component using 3 Selects
+const DatePickerSelect = ({ value, onChange, fromYear = 1950, toYear = new Date().getFullYear() }: { value?: Date, onChange: (date?: Date) => void, fromYear?: number, toYear?: number }) => {
+    const [day, setDay] = useState<string>(value ? String(value.getDate()) : '');
+    const [month, setMonth] = useState<string>(value ? String(value.getMonth()) : '');
+    const [year, setYear] = useState<string>(value ? String(value.getFullYear()) : '');
+
+    useEffect(() => {
+        if (value) {
+            setDay(String(value.getDate()));
+            setMonth(String(value.getMonth()));
+            setYear(String(value.getFullYear()));
+        } else {
+            setDay('');
+            setMonth('');
+            setYear('');
+        }
+    }, [value]);
+
+    const handleDateChange = (newDay: string, newMonth: string, newYear: string) => {
+        if (newDay && newMonth && newYear) {
+            const date = new Date(parseInt(newYear), parseInt(newMonth), parseInt(newDay));
+            onChange(date);
+        } else {
+            onChange(undefined);
+        }
+    };
+    
+    const days = Array.from({ length: 31 }, (_, i) => String(i + 1));
+    const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i), label: new Date(0, i).toLocaleString('default', { month: 'long' }) }));
+    const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => String(toYear - i));
+
+    return (
+        <div className="flex gap-2">
+            <Select value={day} onValueChange={d => { setDay(d); handleDateChange(d, month, year); }}>
+                <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                <SelectContent><ScrollArea className="h-48">{days.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</ScrollArea></SelectContent>
+            </Select>
+            <Select value={month} onValueChange={m => { setMonth(m); handleDateChange(day, m, year); }}>
+                <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                <SelectContent><ScrollArea className="h-48">{months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</ScrollArea></SelectContent>
+            </Select>
+            <Select value={year} onValueChange={y => { setYear(y); handleDateChange(day, month, y); }}>
+                <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                <SelectContent><ScrollArea className="h-48">{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</ScrollArea></SelectContent>
+            </Select>
+        </div>
+    );
+};
+
 
 const teacherSchema = z.object({
   // Personal Information
@@ -61,6 +109,12 @@ const teacherSchema = z.object({
   bankBranch: z.string().optional(),
   accountNumber: z.string().optional(),
   salaryScale: z.string().optional(),
+
+  // Documents
+  documents: z.array(z.object({
+      name: z.string(),
+      url: z.string()
+  })).optional(),
 }).refine(data => !(data.professionalQualification === 'Other' && !data.otherProfessionalQualification), {
   message: "Please specify the qualification",
   path: ["otherProfessionalQualification"],
@@ -100,8 +154,10 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
   const leadershipPosition = watch('leadershipPosition');
   const job = watch('job');
   const photo = watch('photo');
+  const documents = watch('documents', []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editingTeacher) {
@@ -112,6 +168,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
         datePostedToCurrentSchool: editingTeacher.datePostedToCurrentSchool ? new Date(editingTeacher.datePostedToCurrentSchool) : undefined,
         firstAppointmentDate: editingTeacher.firstAppointmentDate ? new Date(editingTeacher.firstAppointmentDate) : undefined,
         dateConfirmed: editingTeacher.dateConfirmed ? new Date(editingTeacher.dateConfirmed) : undefined,
+        documents: editingTeacher.documents || [],
       };
       
       reset(defaultValues);
@@ -152,6 +209,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
         bankBranch: '',
         accountNumber: '',
         salaryScale: '',
+        documents: [],
       });
     }
   }, [editingTeacher, isOpen, reset]);
@@ -188,6 +246,33 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
       }
   };
 
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newDocument = {
+          name: file.name,
+          url: reader.result as string,
+        };
+        setValue('documents', [...(documents || []), newDocument]);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleDocumentNameChange = (index: number, newName: string) => {
+      const updatedDocuments = [...(documents || [])];
+      updatedDocuments[index].name = newName;
+      setValue('documents', updatedDocuments);
+  };
+
+  const removeDocument = (index: number) => {
+      const updatedDocuments = [...(documents || [])];
+      updatedDocuments.splice(index, 1);
+      setValue('documents', updatedDocuments);
+  };
+
   const onSubmit = (data: TeacherFormData) => {
     if (editingTeacher) {
       setTeachers(prev => prev.map(t => t.id === editingTeacher.id ? { ...t, ...data, id: t.id } : t));
@@ -204,25 +289,10 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
             control={control}
             name={name}
             render={({ field }) => (
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value as Date, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar 
-                            mode="single" 
-                            selected={field.value as Date | undefined} 
-                            onSelect={field.onChange}
-                            captionLayout="dropdown-nav"
-                            fromYear={1950}
-                            toYear={new Date().getFullYear()}
-                            initialFocus 
-                        />
-                    </PopoverContent>
-                </Popover>
+                <DatePickerSelect
+                    value={field.value as Date | undefined}
+                    onChange={field.onChange}
+                />
             )}
         />
         {errors[name] && <p className="text-destructive text-xs mt-1">{(errors[name] as any)?.message}</p>}
@@ -309,6 +379,31 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
                          <div><Label>Account Number</Label><Input {...register('accountNumber')} /></div>
                          <div><Label>Salary Scale</Label><Input {...register('salaryScale')} /></div>
                     </div>
+
+                    <Separator />
+                    <h3 className="text-lg font-medium">Documents</h3>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            {documents?.map((doc, index) => (
+                                <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
+                                    <FileIcon className="h-5 w-5 text-muted-foreground" />
+                                    <Input 
+                                        value={doc.name} 
+                                        onChange={(e) => handleDocumentNameChange(index, e.target.value)}
+                                        className="flex-grow"
+                                    />
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeDocument(index)}>
+                                        <X className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                        <Button type="button" variant="outline" onClick={() => docFileInputRef.current?.click()}>
+                            <Upload className="mr-2 h-4 w-4" /> Upload Document
+                        </Button>
+                        <input type="file" ref={docFileInputRef} onChange={handleDocumentUpload} className="hidden" />
+                    </div>
+
                 </div>
             </ScrollArea>
             <DialogFooter className="pt-6 border-t">

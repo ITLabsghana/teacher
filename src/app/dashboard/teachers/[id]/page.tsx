@@ -6,7 +6,7 @@ import { useDataContext } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, File as FileIcon } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { TeacherForm } from '@/components/dashboard/teacher-form';
@@ -151,6 +151,28 @@ export default function TeacherDetailPage() {
                         <DetailItem label="Account Number" value={teacher.accountNumber} />
                         <DetailItem label="Salary Scale" value={teacher.salaryScale} />
                     </div>
+
+                    {teacher.documents && teacher.documents.length > 0 && (
+                        <>
+                            <Separator className="my-4" />
+                            <h3 className="text-xl font-semibold mb-4">Uploaded Documents</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {teacher.documents.map((doc, index) => (
+                                    <a 
+                                        key={index}
+                                        href={doc.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 p-3 border rounded-md hover:bg-secondary"
+                                    >
+                                        <FileIcon className="h-5 w-5 text-primary" />
+                                        <span className="truncate font-medium">{doc.name}</span>
+                                    </a>
+                                ))}
+                            </div>
+                        </>
+                    )}
+
                 </CardContent>
             </Card>
 

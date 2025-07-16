@@ -36,6 +36,7 @@ export interface Teacher {
   bankBranch?: string;
   accountNumber?: string;
   salaryScale?: string;
+  documents?: { name: string; url: string; }[];
 }
 
 export interface School {
