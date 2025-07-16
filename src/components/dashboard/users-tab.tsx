@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -12,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { UserForm } from './user-form';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useDataContext } from '@/context/data-context';
 
 
 interface UsersTabProps {
@@ -22,9 +22,7 @@ interface UsersTabProps {
 export default function UsersTab({ users, setUsers }: UsersTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-
-  // For this prototype, we'll assume the "logged in" user is the first user in the list.
-  const currentUser = users[0];
+  const { currentUser } = useDataContext();
 
   const handleAdd = () => {
     setEditingUser(null);
@@ -41,6 +39,7 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
   };
   
   const getInitials = (name: string) => {
+    if (!name) return '';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
@@ -77,7 +76,7 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Username</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -89,9 +88,9 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
                   <TableCell>
                     <div className="flex items-center gap-3">
                         <Avatar>
-                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                            <AvatarFallback>{getInitials(user.username)}</AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{user.name}</span>
+                        <span className="font-medium">{user.username}</span>
                     </div>
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
@@ -102,7 +101,7 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
                     <AlertDialog>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-8 w-8 p-0" disabled={user.id === currentUser?.id}>
                             <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>

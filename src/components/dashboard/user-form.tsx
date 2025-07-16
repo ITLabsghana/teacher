@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from 'react';
@@ -15,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const userRoles: User['role'][] = ['Admin', 'Supervisor', 'Viewer'];
 
 const userSchema = z.object({
-  name: z.string().min(2, "Name is too short"),
+  username: z.string().min(2, "Username is too short"),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
   role: z.enum(userRoles, { required_error: "Role is required" }),
 });
 
@@ -39,7 +39,7 @@ export function UserForm({ isOpen, setIsOpen, editingUser, setUsers }: UserFormP
         if (editingUser) {
             reset(editingUser);
         } else {
-            reset({ name: '', email: '', role: undefined });
+            reset({ username: '', email: '', password: '', role: undefined });
         }
     }
   }, [editingUser, isOpen, reset]);
@@ -64,14 +64,19 @@ export function UserForm({ isOpen, setIsOpen, editingUser, setUsers }: UserFormP
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
           <div>
-            <Label htmlFor="name">Full Name</Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && <p className="text-destructive text-xs mt-1">{errors.name.message}</p>}
+            <Label htmlFor="username">Username</Label>
+            <Input id="username" {...register('username')} />
+            {errors.username && <p className="text-destructive text-xs mt-1">{errors.username.message}</p>}
           </div>
           <div>
             <Label htmlFor="email">Email Address</Label>
             <Input id="email" type="email" {...register('email')} />
             {errors.email && <p className="text-destructive text-xs mt-1">{errors.email.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" {...register('password')} />
+            {errors.password && <p className="text-destructive text-xs mt-1">{errors.password.message}</p>}
           </div>
           <div>
             <Label>Role</Label>

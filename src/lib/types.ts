@@ -1,4 +1,3 @@
-
 export interface Teacher {
   id: string;
   staffId: string;
@@ -56,7 +55,8 @@ export interface LeaveRequest {
 
 export interface User {
   id: string;
-  name: string;
+  username: string;
   email: string;
+  password?: string;
   role: 'Admin' | 'Supervisor' | 'Viewer';
 }

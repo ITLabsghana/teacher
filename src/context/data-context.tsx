@@ -1,4 +1,3 @@
-
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -9,15 +8,16 @@ const TEACHERS_KEY = 'teachersData';
 const SCHOOLS_KEY = 'schoolsData';
 const LEAVE_REQUESTS_KEY = 'leaveRequestsData';
 const USERS_KEY = 'usersData';
+const CURRENT_USER_KEY = 'currentUser';
 
 // Helper function to load data from localStorage
 const loadFromLocalStorage = (key: string, isDateHeavy: boolean = false) => {
   if (typeof window === 'undefined') {
-    return [];
+    return null;
   }
   try {
     const item = window.localStorage.getItem(key);
-    if (!item) return [];
+    if (!item) return key === USERS_KEY ? [] : null; // Return empty array for users if not found
     
     const data = JSON.parse(item);
     
@@ -45,7 +45,7 @@ const loadFromLocalStorage = (key: string, isDateHeavy: boolean = false) => {
     return data;
   } catch (error) {
     console.error(`Error loading ${key} from localStorage`, error);
-    return [];
+    return key === USERS_KEY ? [] : null;
   }
 };
 
@@ -59,6 +59,8 @@ interface DataContextProps {
   setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
   users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
   isLoading: boolean;
 }
 
@@ -69,16 +71,46 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [schools, setSchools] = useState<School[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, _setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load data from localStorage on initial client-side render
   useEffect(() => {
-    setTeachers(loadFromLocalStorage(TEACHERS_KEY, true));
-    setSchools(loadFromLocalStorage(SCHOOLS_KEY));
-    setLeaveRequests(loadFromLocalStorage(LEAVE_REQUESTS_KEY, true));
-    setUsers(loadFromLocalStorage(USERS_KEY));
+    const storedTeachers = loadFromLocalStorage(TEACHERS_KEY, true) || [];
+    const storedSchools = loadFromLocalStorage(SCHOOLS_KEY) || [];
+    const storedLeaveRequests = loadFromLocalStorage(LEAVE_REQUESTS_KEY, true) || [];
+    let storedUsers = loadFromLocalStorage(USERS_KEY) || [];
+
+    // Seed initial admin user if no users exist
+    if (storedUsers.length === 0) {
+      const adminUser: User = {
+        id: crypto.randomUUID(),
+        username: 'Prof',
+        email: 'admin@example.com',
+        password: '12345678',
+        role: 'Admin',
+      };
+      storedUsers = [adminUser];
+      window.localStorage.setItem(USERS_KEY, JSON.stringify(storedUsers));
+    }
+
+    setTeachers(storedTeachers);
+    setSchools(storedSchools);
+    setLeaveRequests(storedLeaveRequests);
+    setUsers(storedUsers);
+    _setCurrentUser(loadFromLocalStorage(CURRENT_USER_KEY));
+
     setIsLoading(false);
   }, []);
+
+  const setCurrentUser = (user: User | null) => {
+    _setCurrentUser(user);
+    if (user) {
+      window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    } else {
+      window.localStorage.removeItem(CURRENT_USER_KEY);
+    }
+  };
 
 
   // Effect to save teachers to localStorage
@@ -127,7 +159,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <DataContext.Provider value={{ teachers, setTeachers, schools, setSchools, leaveRequests, setLeaveRequests, users, setUsers, isLoading }}>
+    <DataContext.Provider value={{ teachers, setTeachers, schools, setSchools, leaveRequests, setLeaveRequests, users, setUsers, currentUser, setCurrentUser, isLoading }}>
       {children}
     </DataContext.Provider>
   );

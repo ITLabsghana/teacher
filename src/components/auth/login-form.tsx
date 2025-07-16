@@ -1,20 +1,36 @@
 "use client";
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { School } from 'lucide-react';
+import { School, ShieldAlert } from 'lucide-react';
+import { useDataContext } from '@/context/data-context';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function LoginForm() {
   const router = useRouter();
+  const { users, setCurrentUser } = useDataContext();
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // In a real app, you'd have authentication logic here.
-    // For this UI-focused demo, we'll just redirect.
-    router.push('/dashboard');
+    setError('');
+
+    const user = users.find(
+      u => (u.username.toLowerCase() === identifier.toLowerCase() || u.email.toLowerCase() === identifier.toLowerCase()) && u.password === password
+    );
+
+    if (user) {
+      setCurrentUser(user);
+      router.push('/dashboard');
+    } else {
+      setError('Invalid credentials. Please try again.');
+    }
   };
 
   return (
@@ -28,13 +44,33 @@ export default function LoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="admin@example.com" required />
+            <Label htmlFor="identifier">Username or Email</Label>
+            <Input 
+              id="identifier" 
+              type="text" 
+              placeholder="e.g., Prof or admin@example.com" 
+              required 
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="••••••••" required />
+            <Input 
+              id="password" 
+              type="password" 
+              placeholder="••••••••" 
+              required 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
           <Button type="submit" className="w-full !mt-8 bg-accent hover:bg-accent/90">
             Login
