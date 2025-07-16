@@ -5,11 +5,12 @@ import type { User } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Trash2, Edit } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, PlusCircle, Trash2, Edit, KeyRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { UserForm } from './user-form';
+import { ResetPasswordForm } from './reset-password-form';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useDataContext } from '@/context/data-context';
 
@@ -21,7 +22,9 @@ interface UsersTabProps {
 
 export default function UsersTab({ users, setUsers }: UsersTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isResetPasswordFormOpen, setIsResetPasswordFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
   const { currentUser } = useDataContext();
 
   const handleAdd = () => {
@@ -33,6 +36,11 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
     setEditingUser(user);
     setIsFormOpen(true);
   };
+  
+  const handleResetPassword = (user: User) => {
+    setUserToResetPassword(user);
+    setIsResetPasswordFormOpen(true);
+  }
 
   const handleDelete = (userId: string) => {
     setUsers(users.filter(u => u.id !== userId));
@@ -110,6 +118,10 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
                           <DropdownMenuItem onClick={() => handleEdit(user)}>
                             <Edit className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleResetPassword(user)}>
+                            <KeyRound className="mr-2 h-4 w-4" /> Reset Password
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <AlertDialogTrigger asChild>
                             <DropdownMenuItem className="text-destructive hover:!text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -149,6 +161,12 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
         editingUser={editingUser}
+        setUsers={setUsers}
+      />
+      <ResetPasswordForm
+        isOpen={isResetPasswordFormOpen}
+        setIsOpen={setIsResetPasswordFormOpen}
+        user={userToResetPassword}
         setUsers={setUsers}
       />
     </>

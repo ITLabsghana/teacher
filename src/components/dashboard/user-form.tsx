@@ -16,9 +16,13 @@ const userRoles: User['role'][] = ['Admin', 'Supervisor', 'Viewer'];
 const userSchema = z.object({
   username: z.string().min(2, "Username is too short"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
+  password: z.string().min(8, "Password must be at least 8 characters long").optional(),
   role: z.enum(userRoles, { required_error: "Role is required" }),
 });
+
+// For editing, password is not required
+const editUserSchema = userSchema.omit({ password: true });
+
 
 type UserFormData = z.infer<typeof userSchema>;
 
@@ -31,7 +35,7 @@ interface UserFormProps {
 
 export function UserForm({ isOpen, setIsOpen, editingUser, setUsers }: UserFormProps) {
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(editingUser ? editUserSchema : userSchema),
   });
 
   useEffect(() => {
@@ -59,7 +63,7 @@ export function UserForm({ isOpen, setIsOpen, editingUser, setUsers }: UserFormP
         <DialogHeader>
           <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
           <DialogDescription>
-            {editingUser ? "Update the user's details." : "Fill in the details for the new user."}
+            {editingUser ? "Update the user's details. Password can be changed via 'Reset Password'." : "Fill in the details for the new user."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -73,11 +77,13 @@ export function UserForm({ isOpen, setIsOpen, editingUser, setUsers }: UserFormP
             <Input id="email" type="email" {...register('email')} />
             {errors.email && <p className="text-destructive text-xs mt-1">{errors.email.message}</p>}
           </div>
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register('password')} />
-            {errors.password && <p className="text-destructive text-xs mt-1">{errors.password.message}</p>}
-          </div>
+          {!editingUser && (
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" {...register('password')} />
+              {errors.password && <p className="text-destructive text-xs mt-1">{errors.password.message}</p>}
+            </div>
+          )}
           <div>
             <Label>Role</Label>
             <Controller
