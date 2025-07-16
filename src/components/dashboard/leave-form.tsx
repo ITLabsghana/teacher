@@ -123,3 +123,5 @@ export function LeaveForm({ isOpen, setIsOpen, setLeaveRequests, teachers }: Lea
     </Dialog>
   );
 }
+
+    

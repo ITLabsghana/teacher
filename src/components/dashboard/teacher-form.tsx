@@ -400,8 +400,14 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
                                   </div>
                               ))}
                           </div>
-                          <Button type="button" variant="outline" onClick={() => docFileInputRef.current?.click()}>
-                              <Upload className="mr-2 h-4 w-4" /> Upload Document
+                          <Button 
+                              type="button" 
+                              variant="outline"
+                              className="border-primary text-primary hover:bg-primary/10"
+                              onClick={() => docFileInputRef.current?.click()}
+                          >
+                              <Upload className="mr-2 h-4 w-4" /> 
+                              {documents && documents.length > 0 ? 'Upload Another Document' : 'Upload Document'}
                           </Button>
                           <input type="file" ref={docFileInputRef} onChange={handleDocumentUpload} className="hidden" />
                       </div>
@@ -418,3 +424,5 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
     </Dialog>
   );
 }
+
+    
