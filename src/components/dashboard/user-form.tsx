@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const userRoles: User['role'][] = ['Admin', 'Editor', 'Viewer'];
+const userRoles: User['role'][] = ['Admin', 'Supervisor', 'Viewer'];
 
 const userSchema = z.object({
   name: z.string().min(2, "Name is too short"),

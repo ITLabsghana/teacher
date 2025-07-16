@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { User } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,9 @@ interface UsersTabProps {
 export default function UsersTab({ users, setUsers }: UsersTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  // For this prototype, we'll assume the "logged in" user is the first user in the list.
+  const currentUser = users[0];
 
   const handleAdd = () => {
     setEditingUser(null);
@@ -44,10 +47,17 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
   const getRoleVariant = (role: User['role']): "default" | "secondary" | "outline" => {
     switch (role) {
       case 'Admin': return 'default';
-      case 'Editor': return 'secondary';
+      case 'Supervisor': return 'secondary';
       case 'Viewer': return 'outline';
     }
   };
+
+  const visibleUsers = useMemo(() => {
+    if (currentUser?.role === 'Supervisor') {
+      return users.filter(user => user.role !== 'Admin');
+    }
+    return users;
+  }, [users, currentUser]);
 
   return (
     <>
@@ -74,7 +84,7 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.length > 0 ? users.map(user => (
+              {visibleUsers.length > 0 ? visibleUsers.map(user => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
