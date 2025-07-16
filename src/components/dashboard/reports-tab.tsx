@@ -2,16 +2,17 @@
 "use client";
 
 import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Download, Upload, FileText, FileWarning } from 'lucide-react';
+import { Download, Upload, FileText, FileWarning, Trash2 } from 'lucide-react';
 import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { School, Teacher, LeaveRequest, User } from '@/lib/types';
 
 type ReportFormat = 'pdf' | 'docx' | 'csv';
@@ -139,7 +140,26 @@ export default function ReportsTab() {
         title: 'Report Generation',
         description: `Generating ${reportType} report as ${reportFormat}. (This is a placeholder action)`,
     });
-  }
+  };
+
+  const handleClearAllData = () => {
+    setTeachers([]);
+    setSchools([]);
+    setLeaveRequests([]);
+    
+    // Preserve the default admin user
+    const adminUser = users.find(u => u.username === 'Prof' && u.role === 'Admin');
+    const adminUserBlueprint: User = {
+        id: crypto.randomUUID(),
+        username: 'Prof',
+        email: 'admin@example.com',
+        password: 'Incre@com0248',
+        role: 'Admin',
+    };
+    setUsers(adminUser ? [adminUser] : [adminUserBlueprint]);
+
+    toast({ title: "All Data Cleared", description: "The application data has been reset." });
+  };
 
   return (
     <div className="space-y-6">
@@ -241,6 +261,46 @@ export default function ReportsTab() {
           </div>
         </CardContent>
       </Card>
+
+      <Separator />
+
+      <Card className="border-destructive">
+        <CardHeader>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardDescription>These actions are irreversible. Please proceed with caution.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="flex justify-between items-center p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+                <div>
+                    <h4 className="font-semibold">Clear All Application Data</h4>
+                    <p className="text-sm text-muted-foreground">Permanently delete all teachers, schools, leave requests, and non-admin users.</p>
+                </div>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Clear All Data
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete all data in the application except for the default admin user. Are you sure you want to proceed?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleClearAllData} className="bg-destructive hover:bg-destructive/90">
+                                Yes, Clear All Data
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
