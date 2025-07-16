@@ -79,16 +79,6 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
             </header>
             <StatsCards teachers={teachers} leaveRequests={leaveRequests} />
-            <div className="mt-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Welcome to the Admin Panel</CardTitle>
-                        <CardContent className="pt-4">
-                            <p>Use the sidebar to navigate to different sections of the application.</p>
-                        </CardContent>
-                    </CardHeader>
-                </Card>
-            </div>
         </>
     );
 }
