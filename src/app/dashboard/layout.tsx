@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { School, User, CalendarOff, GanttChartSquare } from 'lucide-react';
+import { School, User, CalendarOff, GanttChartSquare, LayoutDashboard } from 'lucide-react';
 import { DataProvider } from '@/context/data-context';
 
 function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
@@ -41,7 +41,7 @@ export default function DashboardLayout({
             <h1 className="text-xl font-headline font-bold text-primary">Admin Panel</h1>
           </div>
           <nav className="flex flex-col gap-2">
-            <NavLink href="/dashboard" icon={<User className="h-5 w-5" />} label="Dashboard" />
+            <NavLink href="/dashboard" icon={<LayoutDashboard className="h-5 w-5" />} label="Dashboard" />
             <NavLink href="/dashboard/teachers" icon={<User className="h-5 w-5" />} label="Teachers" />
             <NavLink href="/dashboard/schools" icon={<School className="h-5 w-5" />} label="Schools" />
             <NavLink href="/dashboard/leave" icon={<CalendarOff className="h-5 w-5" />} label="Leave Requests" />

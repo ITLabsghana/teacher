@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { LeaveRequest, Teacher } from '@/lib/types';
@@ -110,7 +111,17 @@ export function LeaveForm({ isOpen, setIsOpen, setLeaveRequests, teachers }: Lea
                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar 
+                                mode="single" 
+                                selected={field.value} 
+                                onSelect={field.onChange} 
+                                captionLayout="dropdown-nav"
+                                fromYear={1950}
+                                toYear={new Date().getFullYear() + 5}
+                                initialFocus 
+                            />
+                        </PopoverContent>
                     </Popover>
                   )}
                 />
@@ -129,7 +140,17 @@ export function LeaveForm({ isOpen, setIsOpen, setLeaveRequests, teachers }: Lea
                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                        <PopoverContent className="w-auto p-0">
+                             <Calendar 
+                                mode="single" 
+                                selected={field.value} 
+                                onSelect={field.onChange} 
+                                captionLayout="dropdown-nav"
+                                fromYear={1950}
+                                toYear={new Date().getFullYear() + 5}
+                                initialFocus 
+                            />
+                        </PopoverContent>
                     </Popover>
                   )}
                 />
