@@ -1,7 +1,8 @@
+
 "use client";
 
-import { useState } from 'react';
-import type { Teacher, School, LeaveRequest } from '@/lib/types';
+import type { Teacher, LeaveRequest } from '@/lib/types';
+import { useDataContext } from '@/context/data-context';
 import { Bell, User, CalendarOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWithinInterval, addDays, parseISO } from 'date-fns';
@@ -69,9 +70,7 @@ function StatsCards({ teachers, leaveRequests }: { teachers: Teacher[], leaveReq
 }
 
 export default function DashboardPage() {
-    // In a real app, this data would be fetched from a global state/context or API
-    const [teachers] = useState<Teacher[]>([]);
-    const [leaveRequests] = useState<LeaveRequest[]>([]);
+    const { teachers, leaveRequests } = useDataContext();
 
     return (
         <>

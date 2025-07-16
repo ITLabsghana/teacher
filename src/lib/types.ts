@@ -1,3 +1,4 @@
+
 export interface Teacher {
   id: string;
   staffId: string;
@@ -24,7 +25,7 @@ export interface Teacher {
   areaOfSpecialization?: string;
   lastPromotionDate?: Date;
   previousSchool?: string;
-  schoolId: string;
+  schoolId?: string;
   datePostedToCurrentSchool?: Date;
   licensureNo?: string;
   firstAppointmentDate?: Date;

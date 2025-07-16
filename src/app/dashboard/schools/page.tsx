@@ -1,14 +1,11 @@
+
 "use client";
 
-import { useState } from 'react';
-import type { School } from '@/lib/types';
+import { useDataContext } from '@/context/data-context';
 import SchoolsTab from '@/components/dashboard/schools-tab';
 
-// Mock data, in a real app this would come from a data store or API
-const initialSchools: School[] = [];
-
 export default function SchoolsPage() {
-  const [schools, setSchools] = useState<School[]>(initialSchools);
+  const { schools, setSchools } = useDataContext();
 
   return (
     <SchoolsTab schools={schools} setSchools={setSchools} />

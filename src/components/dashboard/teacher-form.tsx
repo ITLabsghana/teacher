@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
@@ -48,7 +49,7 @@ const teacherSchema = z.object({
   areaOfSpecialization: z.string().optional(),
   lastPromotionDate: z.date().optional(),
   previousSchool: z.string().optional(),
-  schoolId: z.string().min(1, "Current school is required"),
+  schoolId: z.string().optional(),
   datePostedToCurrentSchool: z.date().optional(),
   licensureNo: z.string().optional(),
   firstAppointmentDate: z.date().optional(),
@@ -180,7 +181,17 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
                             {field.value ? format(field.value as Date, "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value as Date} onSelect={field.onChange} initialFocus /></PopoverContent>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar 
+                            mode="single" 
+                            selected={field.value as Date} 
+                            onSelect={field.onChange}
+                            captionLayout="dropdown-nav"
+                            fromYear={1950}
+                            toYear={new Date().getFullYear()}
+                            initialFocus 
+                        />
+                    </PopoverContent>
                 </Popover>
             )}
         />
