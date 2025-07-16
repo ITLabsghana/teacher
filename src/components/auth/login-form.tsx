@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,8 +41,8 @@ export default function LoginForm() {
         <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
             <School className="h-8 w-8" />
         </div>
-        <CardTitle className="font-headline text-3xl">Teacher Management</CardTitle>
-        <CardDescription>Admin Login</CardDescription>
+        <CardTitle className="font-headline text-3xl">Teacher Management System</CardTitle>
+        <CardDescription>Login</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -92,6 +92,11 @@ export default function LoginForm() {
           </Button>
         </form>
       </CardContent>
+      <CardFooter>
+        <p className="text-xs text-muted-foreground text-center w-full">
+          Designed and created by ITLabs Ghana © 2025, contact 0248362847
+        </p>
+      </CardFooter>
     </Card>
   );
 }
