@@ -15,52 +15,88 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
-function SchoolList({ schools, setSchools }: { schools: School[], setSchools: React.Dispatch<React.SetStateAction<School[]>> }) {
-    const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingSchool, setEditingSchool] = useState<School | null>(null);
+function SchoolListView({ schools }: { schools: School[] }) {
     const router = useRouter();
-
-    const handleEdit = (school: School) => {
-        setEditingSchool(school);
-        setIsFormOpen(true);
-    };
-
-    const handleDelete = (schoolId: string) => {
-        setSchools(schools.filter(s => s.id !== schoolId));
-    };
 
     const handleRowClick = (schoolId: string) => {
         router.push(`/dashboard/schools/${schoolId}`);
     };
 
     return (
-        <>
-            <div className="space-y-2">
+        <div className="space-y-2">
+            {schools.length > 0 ? schools.map(school => (
+                <div 
+                    key={school.id} 
+                    className="flex items-center justify-between p-3 bg-secondary rounded-lg cursor-pointer hover:bg-muted" 
+                    onClick={() => handleRowClick(school.id)}
+                >
+                    <p className="font-semibold">{school.name}</p>
+                </div>
+            )) : (
+                <div className="text-center text-muted-foreground py-8">
+                    No schools added yet. Go to the 'Add School' tab to create one.
+                </div>
+            )}
+        </div>
+    );
+}
+
+function SchoolManagement({ schools, setSchools, onSchoolAdded }: { schools: School[], setSchools: React.Dispatch<React.SetStateAction<School[]>>, onSchoolAdded: () => void }) {
+    const [editingSchool, setEditingSchool] = useState<School | null>(null);
+
+    const handleEdit = (school: School) => {
+        setEditingSchool(school);
+        // Scroll to top to make the form visible
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    
+    const handleCancelEdit = () => {
+        setEditingSchool(null);
+    }
+
+    const handleDelete = (schoolId: string) => {
+        setSchools(schools.filter(s => s.id !== schoolId));
+    };
+
+    return (
+        <div className="space-y-8">
+            <SchoolForm 
+                setSchools={setSchools} 
+                editingSchool={editingSchool}
+                onCancelEdit={handleCancelEdit}
+                onSchoolAdded={() => {
+                    setEditingSchool(null);
+                    onSchoolAdded();
+                }}
+            />
+            
+            <div className="space-y-2 pt-4 border-t">
+                 <h3 className="text-lg font-medium text-muted-foreground mb-4">Existing Schools</h3>
                 {schools.length > 0 ? schools.map(school => (
-                    <div key={school.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg cursor-pointer hover:bg-muted" onClick={() => handleRowClick(school.id)}>
+                    <div key={school.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                         <div>
                             <p className="font-semibold">{school.name}</p>
                         </div>
                         <AlertDialog>
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" className="h-8 w-8 p-0">
                                         <span className="sr-only">Open menu</span>
                                         <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(school); }}>
+                                    <DropdownMenuItem onClick={() => handleEdit(school)}>
                                         <Edit className="mr-2 h-4 w-4" /> Edit
                                     </DropdownMenuItem>
                                     <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem className="text-destructive hover:!text-destructive" onClick={(e) => e.stopPropagation()}>
+                                        <DropdownMenuItem className="text-destructive hover:!text-destructive">
                                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                                         </DropdownMenuItem>
                                     </AlertDialogTrigger>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogContent>
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                     <AlertDialogDescription>
@@ -78,19 +114,11 @@ function SchoolList({ schools, setSchools }: { schools: School[], setSchools: Re
                     </div>
                 )) : (
                     <div className="text-center text-muted-foreground py-8">
-                        No schools added yet. Start by adding a new school.
+                        No schools found.
                     </div>
                 )}
             </div>
-            {/* The form is still needed for the edit functionality from the list */}
-            <SchoolForm
-                isOpen={isFormOpen}
-                setIsOpen={setIsFormOpen}
-                editingSchool={editingSchool}
-                setSchools={setSchools}
-                isDialog={true}
-            />
-        </>
+        </div>
     );
 }
 
@@ -107,20 +135,21 @@ export default function SchoolsPage() {
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
-                <TabsTrigger value="view">School List</TabsTrigger>
+                <TabsTrigger value="view">View Schools</TabsTrigger>
                 <TabsTrigger value="enrollment">Manage Enrollment</TabsTrigger>
-                <TabsTrigger value="add">Add New School</TabsTrigger>
+                <TabsTrigger value="add">Add/Edit School</TabsTrigger>
             </TabsList>
             <TabsContent value="view" className="mt-4">
-                <SchoolList schools={schools} setSchools={setSchools} />
+                <SchoolListView schools={schools} />
             </TabsContent>
             <TabsContent value="enrollment" className="mt-4">
                 <EnrollmentTab schools={schools} setSchools={setSchools} />
             </TabsContent>
             <TabsContent value="add" className="mt-4">
-                <SchoolForm 
+                <SchoolManagement 
+                    schools={schools}
                     setSchools={setSchools} 
-                    onSchoolAdded={() => setActiveTab('view')}
+                    onSchoolAdded={() => { /* can add toast here if needed */ }}
                 />
             </TabsContent>
         </Tabs>
