@@ -42,6 +42,7 @@ export interface School {
   id: string;
   name: string;
   category: 'KG1' | 'KG2' | 'Basic 1-6' | 'J.H.S 1-3' | 'S.H.S 1-3';
+  enrollment?: { [className: string]: { boys: number; girls: number } };
 }
 
 export interface LeaveRequest {

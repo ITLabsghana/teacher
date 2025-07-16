@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { School, User as TeacherIcon, CalendarOff, GanttChartSquare, LayoutDashboard, Users, LogOut } from 'lucide-react';
+import { School, User as TeacherIcon, CalendarOff, GanttChartSquare, LayoutDashboard, Users, LogOut, PenSquare } from 'lucide-react';
 import { DataProvider, useDataContext } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 
@@ -61,6 +61,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
           <NavLink href="/dashboard" icon={<LayoutDashboard className="h-5 w-5" />} label="Dashboard" />
           <NavLink href="/dashboard/teachers" icon={<TeacherIcon className="h-5 w-5" />} label="Teachers" />
           <NavLink href="/dashboard/schools" icon={<School className="h-5 w-5" />} label="Schools" />
+          <NavLink href="/dashboard/enrollment" icon={<PenSquare className="h-5 w-5" />} label="Enrollment" />
           <NavLink href="/dashboard/leave" icon={<CalendarOff className="h-5 w-5" />} label="Leave Requests" />
           {currentUser.role !== 'Viewer' && (
             <NavLink href="/dashboard/users" icon={<Users className="h-5 w-5" />} label="Manage Users" />
