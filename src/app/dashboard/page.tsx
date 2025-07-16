@@ -3,9 +3,9 @@
 
 import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { useDataContext } from '@/context/data-context';
-import { Bell, User, CalendarOff, Users } from 'lucide-react';
+import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isWithinInterval, addDays, parseISO } from 'date-fns';
+import { isWithinInterval, addDays, parseISO, differenceInYears, addYears } from 'date-fns';
 
 function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[], leaveRequests: LeaveRequest[], schools: School[] }) {
     const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
@@ -16,6 +16,15 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
             start: new Date(),
             end: addDays(new Date(), 7)
         });
+    }).length;
+
+    const nearingRetirementCount = teachers.filter(teacher => {
+        if (!teacher.dateOfBirth) return false;
+        const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
+        const age = differenceInYears(new Date(), dob);
+        const nextYear = addYears(new Date(), 1);
+        const ageInOneYear = differenceInYears(nextYear, dob);
+        return age < 60 && ageInOneYear >= 60;
     }).length;
 
     const enrollmentTotals = schools.reduce((acc, school) => {
@@ -87,6 +96,16 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     <p className="text-xs text-muted-foreground">In the next 7 days</p>
                 </CardContent>
             </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Nearing Retirement</CardTitle>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">+{nearingRetirementCount}</div>
+                    <p className="text-xs text-muted-foreground">In the next year</p>
+                </CardContent>
+            </Card>
              <Card className="col-span-full lg:col-span-2">
                 <CardHeader>
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -94,12 +113,18 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                         Notifications
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[80px] overflow-y-auto">
-                    {leavesEndingSoon > 0 ? (
+                <CardContent className="h-[80px] overflow-y-auto space-y-2">
+                    {leavesEndingSoon > 0 && (
                          <p className="text-xs text-muted-foreground">
-                            {leavesEndingSoon} teacher(s) returning from leave soon.
+                            - {leavesEndingSoon} teacher(s) returning from leave soon.
                         </p>
-                    ) : (
+                    )}
+                     {nearingRetirementCount > 0 && (
+                         <p className="text-xs text-muted-foreground">
+                            - {nearingRetirementCount} teacher(s) nearing retirement age.
+                        </p>
+                    )}
+                    {leavesEndingSoon === 0 && nearingRetirementCount === 0 && (
                         <p className="text-xs text-muted-foreground">No new notifications.</p>
                     )}
                 </CardContent>
