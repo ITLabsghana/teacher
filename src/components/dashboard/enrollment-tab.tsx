@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import type { School } from '@/lib/types';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { PenSquare, Save } from 'lucide-react';
 
 interface EnrollmentTabProps {
@@ -141,19 +141,23 @@ export default function EnrollmentTab({ schools, setSchools }: EnrollmentTabProp
                 )
               })}
             </TableBody>
-            <CardFooter className="bg-muted p-4 mt-4 rounded-b-lg">
-                <div className="flex justify-between w-full items-center">
-                    <div className="flex gap-8 font-bold">
-                        <span>Total Boys: {totalBoys}</span>
-                        <span>Total Girls: {totalGirls}</span>
-                        <span>Grand Total: {totalBoys + totalGirls}</span>
-                    </div>
-                    <Button onClick={handleSave}>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Enrollment Data
-                    </Button>
-                </div>
-            </CardFooter>
+            <TableFooter>
+                <TableRow>
+                    <TableCell colSpan={4} className="p-0">
+                         <div className="flex justify-between w-full items-center bg-muted p-4 mt-4 rounded-b-lg">
+                            <div className="flex gap-8 font-bold">
+                                <span>Total Boys: {totalBoys}</span>
+                                <span>Total Girls: {totalGirls}</span>
+                                <span>Grand Total: {totalBoys + totalGirls}</span>
+                            </div>
+                            <Button onClick={handleSave}>
+                                <Save className="mr-2 h-4 w-4" />
+                                Save Enrollment Data
+                            </Button>
+                        </div>
+                    </TableCell>
+                </TableRow>
+            </TableFooter>
           </Table>
         ) : (
           <div className="flex items-center justify-center h-48 text-muted-foreground">
