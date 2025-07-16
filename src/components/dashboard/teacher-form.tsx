@@ -105,22 +105,14 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
 
   useEffect(() => {
     if (editingTeacher) {
-      const defaultValues: Partial<TeacherFormData> = {};
-      
-      (Object.keys(editingTeacher) as Array<keyof Teacher>).forEach(key => {
-        if (key in teacherSchema.shape) {
-          const value = editingTeacher[key];
-          const dateFields: (keyof Teacher)[] = ['dateOfBirth', 'lastPromotionDate', 'datePostedToCurrentSchool', 'firstAppointmentDate', 'dateConfirmed'];
-          
-          if (dateFields.includes(key) && value) {
-            // @ts-ignore
-            defaultValues[key] = new Date(value);
-          } else if (value !== null && value !== undefined) {
-            // @ts-ignore
-            defaultValues[key] = value;
-          }
-        }
-      });
+      const defaultValues: Partial<TeacherFormData> = {
+        ...editingTeacher,
+        dateOfBirth: editingTeacher.dateOfBirth ? new Date(editingTeacher.dateOfBirth) : undefined,
+        lastPromotionDate: editingTeacher.lastPromotionDate ? new Date(editingTeacher.lastPromotionDate) : undefined,
+        datePostedToCurrentSchool: editingTeacher.datePostedToCurrentSchool ? new Date(editingTeacher.datePostedToCurrentSchool) : undefined,
+        firstAppointmentDate: editingTeacher.firstAppointmentDate ? new Date(editingTeacher.firstAppointmentDate) : undefined,
+        dateConfirmed: editingTeacher.dateConfirmed ? new Date(editingTeacher.dateConfirmed) : undefined,
+      };
       
       reset(defaultValues);
     } else {
