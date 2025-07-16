@@ -59,6 +59,7 @@ export default function LoginForm() {
               required 
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="off"
             />
           </div>
           <div className="space-y-2">
@@ -70,6 +71,7 @@ export default function LoginForm() {
               required 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
             />
           </div>
           <Button type="submit" className="w-full !mt-8 bg-accent hover:bg-accent/90">
