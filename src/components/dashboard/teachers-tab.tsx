@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Download, Upload, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { differenceInYears } from 'date-fns';
@@ -79,8 +79,6 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
                         <CardDescription>Add, edit, and manage teacher profiles.</CardDescription>
                     </div>
                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" disabled><Upload className="mr-2 h-4 w-4" /> Import</Button>
-                        <Button variant="outline" size="sm" disabled><Download className="mr-2 h-4 w-4" /> Export</Button>
                         <Button size="sm" disabled><PlusCircle className="mr-2 h-4 w-4" /> Add Teacher</Button>
                     </div>
                 </div>
@@ -103,8 +101,6 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
                 <CardDescription>Add, edit, and manage teacher profiles.</CardDescription>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
-                <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
-                <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export</Button>
                 <Button size="sm" onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" /> Add Teacher</Button>
             </div>
         </div>

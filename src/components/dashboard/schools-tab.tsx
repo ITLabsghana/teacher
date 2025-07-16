@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState } from 'react';
 import type { School } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Download, Upload, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { SchoolForm } from './school-form';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -42,8 +43,6 @@ function SchoolManagement({ schools, setSchools }: SchoolsTabProps) {
         <>
             <div className="flex justify-end mb-4">
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
-                    <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export</Button>
                     <Button size="sm" onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" /> Add School</Button>
                 </div>
             </div>

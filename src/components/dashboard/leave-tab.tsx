@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -6,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Download, Upload } from 'lucide-react';
+import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { LeaveForm } from './leave-form';
 import { Badge } from '@/components/ui/badge';
 
@@ -46,8 +47,6 @@ export default function LeaveTab({ leaveRequests, setLeaveRequests, teachers }: 
                 <CardDescription>Monitor and manage teacher leave requests.</CardDescription>
             </div>
             <div className="flex gap-2">
-                <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
-                <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export</Button>
                 <Button size="sm" onClick={() => setIsFormOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Add Request</Button>
             </div>
         </div>
