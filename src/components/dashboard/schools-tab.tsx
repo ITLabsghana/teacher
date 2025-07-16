@@ -4,20 +4,11 @@ import { useState } from 'react';
 import type { School } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { X, PlusCircle, Download, Upload } from 'lucide-react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { MoreHorizontal, PlusCircle, Download, Upload, Edit, Trash2 } from 'lucide-react';
+import { SchoolForm } from './school-form';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-const schoolCategories: School['category'][] = ['KG1', 'KG2', 'Basic 1-6', 'J.H.S 1-3', 'S.H.S 1-3'];
-
-const schoolSchema = z.object({
-    name: z.string().min(3, "School name is too short"),
-    category: z.enum(schoolCategories, { required_error: "Category is required" }),
-});
 
 interface SchoolsTabProps {
   schools: School[];
@@ -25,21 +16,25 @@ interface SchoolsTabProps {
 }
 
 export default function SchoolsTab({ schools, setSchools }: SchoolsTabProps) {
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<z.infer<typeof schoolSchema>>({
-    resolver: zodResolver(schoolSchema),
-    defaultValues: { name: '', category: undefined }
-  });
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingSchool, setEditingSchool] = useState<School | null>(null);
 
-  const onSubmit = (data: z.infer<typeof schoolSchema>) => {
-    setSchools(prev => [...prev, { ...data, id: crypto.randomUUID() }]);
-    reset();
+  const handleAdd = () => {
+    setEditingSchool(null);
+    setIsFormOpen(true);
   };
-  
+
+  const handleEdit = (school: School) => {
+    setEditingSchool(school);
+    setIsFormOpen(true);
+  };
+
   const handleDelete = (schoolId: string) => {
     setSchools(schools.filter(s => s.id !== schoolId));
   };
 
   return (
+    <>
     <Card>
         <CardHeader>
             <div className="flex justify-between items-start">
@@ -50,37 +45,11 @@ export default function SchoolsTab({ schools, setSchools }: SchoolsTabProps) {
                  <div className="flex gap-2">
                     <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
                     <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export</Button>
+                    <Button size="sm" onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" /> Add School</Button>
                 </div>
             </div>
         </CardHeader>
         <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="flex items-end gap-2 mb-6">
-                <div className="grid gap-1.5 flex-grow">
-                    <Label htmlFor="name">School Name</Label>
-                    <Input id="name" {...register('name')} placeholder="e.g., Accra High School" />
-                    {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
-                </div>
-                <div className="grid gap-1.5">
-                    <Label>Category</Label>
-                    <Controller
-                        control={control}
-                        name="category"
-                        render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Select Category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {schoolCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        )}
-                    />
-                    {errors.category && <p className="text-destructive text-xs">{errors.category.message}</p>}
-                </div>
-                <Button type="submit" size="sm" className="h-10"><PlusCircle className="mr-2 h-4 w-4" /> Add School</Button>
-            </form>
-
             <h3 className="text-lg font-medium mb-4">Existing Schools</h3>
             <div className="space-y-2">
                 {schools.length > 0 ? schools.map(school => (
@@ -89,9 +58,40 @@ export default function SchoolsTab({ schools, setSchools }: SchoolsTabProps) {
                             <p className="font-semibold">{school.name}</p>
                             <p className="text-sm text-muted-foreground">{school.category}</p>
                         </div>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => handleDelete(school.id)}>
-                            <X className="h-4 w-4" />
-                        </Button>
+                        <AlertDialog>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(school)}>
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </DropdownMenuItem>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem className="text-destructive hover:!text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the school and may affect associated teacher profiles.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(school.id)} className="bg-destructive hover:bg-destructive/90">
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
                 )) : (
                     <div className="text-center text-muted-foreground py-8">
@@ -101,5 +101,12 @@ export default function SchoolsTab({ schools, setSchools }: SchoolsTabProps) {
             </div>
         </CardContent>
     </Card>
+    <SchoolForm
+        isOpen={isFormOpen}
+        setIsOpen={setIsFormOpen}
+        editingSchool={editingSchool}
+        setSchools={setSchools}
+    />
+    </>
   );
 }
