@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { Teacher, School, LeaveRequest } from '@/lib/types';
 
 // Keys for localStorage
@@ -56,45 +56,62 @@ interface DataContextProps {
   setSchools: React.Dispatch<React.SetStateAction<School[]>>;
   leaveRequests: LeaveRequest[];
   setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
+  isLoading: boolean;
 }
 
 const DataContext = createContext<DataContextProps | undefined>(undefined);
 
-export function DataProvider({ children }: { children: React.ReactNode }) {
-  const [teachers, setTeachers] = useState<Teacher[]>(() => loadFromLocalStorage(TEACHERS_KEY, true));
-  const [schools, setSchools] = useState<School[]>(() => loadFromLocalStorage(SCHOOLS_KEY));
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(() => loadFromLocalStorage(LEAVE_REQUESTS_KEY, true));
+export function DataProvider({ children }: { children: ReactNode }) {
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load data from localStorage on initial client-side render
+  useEffect(() => {
+    setTeachers(loadFromLocalStorage(TEACHERS_KEY, true));
+    setSchools(loadFromLocalStorage(SCHOOLS_KEY));
+    setLeaveRequests(loadFromLocalStorage(LEAVE_REQUESTS_KEY, true));
+    setIsLoading(false);
+  }, []);
+
 
   // Effect to save teachers to localStorage
   useEffect(() => {
-    try {
-      window.localStorage.setItem(TEACHERS_KEY, JSON.stringify(teachers));
-    } catch (error) {
-      console.error("Failed to save teachers to localStorage", error);
+    if (!isLoading) {
+        try {
+          window.localStorage.setItem(TEACHERS_KEY, JSON.stringify(teachers));
+        } catch (error) {
+          console.error("Failed to save teachers to localStorage", error);
+        }
     }
-  }, [teachers]);
+  }, [teachers, isLoading]);
 
   // Effect to save schools to localStorage
   useEffect(() => {
-    try {
-      window.localStorage.setItem(SCHOOLS_KEY, JSON.stringify(schools));
-    } catch (error) {
-      console.error("Failed to save schools to localStorage", error);
+    if (!isLoading) {
+        try {
+          window.localStorage.setItem(SCHOOLS_KEY, JSON.stringify(schools));
+        } catch (error) {
+          console.error("Failed to save schools to localStorage", error);
+        }
     }
-  }, [schools]);
+  }, [schools, isLoading]);
 
   // Effect to save leave requests to localStorage
   useEffect(() => {
-    try {
-      window.localStorage.setItem(LEAVE_REQUESTS_KEY, JSON.stringify(leaveRequests));
-    } catch (error) {
-      console.error("Failed to save leave requests to localStorage", error);
+    if (!isLoading) {
+        try {
+          window.localStorage.setItem(LEAVE_REQUESTS_KEY, JSON.stringify(leaveRequests));
+        } catch (error) {
+          console.error("Failed to save leave requests to localStorage", error);
+        }
     }
-  }, [leaveRequests]);
+  }, [leaveRequests, isLoading]);
 
 
   return (
-    <DataContext.Provider value={{ teachers, setTeachers, schools, setSchools, leaveRequests, setLeaveRequests }}>
+    <DataContext.Provider value={{ teachers, setTeachers, schools, setSchools, leaveRequests, setLeaveRequests, isLoading }}>
       {children}
     </DataContext.Provider>
   );

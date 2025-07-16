@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { differenceInYears } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { useDataContext } from '@/context/data-context';
 
 interface TeachersTabProps {
   teachers: Teacher[];
@@ -25,6 +26,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const router = useRouter();
+  const { isLoading } = useDataContext();
 
   const handleAdd = () => {
     setEditingTeacher(null);
@@ -51,6 +53,31 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
   const handleRowClick = (teacherId: string) => {
     router.push(`/dashboard/teachers/${teacherId}`);
   };
+
+  if (isLoading) {
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle>Teacher Management</CardTitle>
+                        <CardDescription>Add, edit, and manage teacher profiles.</CardDescription>
+                    </div>
+                     <div className="flex gap-2">
+                        <Button variant="outline" size="sm" disabled><Upload className="mr-2 h-4 w-4" /> Import</Button>
+                        <Button variant="outline" size="sm" disabled><Download className="mr-2 h-4 w-4" /> Export</Button>
+                        <Button size="sm" disabled><PlusCircle className="mr-2 h-4 w-4" /> Add Teacher</Button>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="h-96 flex items-center justify-center">
+                    <p className="text-muted-foreground">Loading teacher data...</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+  }
 
   return (
     <Card>
