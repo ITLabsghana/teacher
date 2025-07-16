@@ -92,7 +92,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         role: 'Admin',
       };
       storedUsers = [adminUser];
-      window.localStorage.setItem(USERS_KEY, JSON.stringify(storedUsers));
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(USERS_KEY, JSON.stringify(storedUsers));
+      }
     }
 
     setTeachers(storedTeachers);
@@ -106,17 +108,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const setCurrentUser = (user: User | null) => {
     _setCurrentUser(user);
-    if (user) {
-      window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    } else {
-      window.localStorage.removeItem(CURRENT_USER_KEY);
+    if (typeof window !== 'undefined') {
+      if (user) {
+        window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+      } else {
+        window.localStorage.removeItem(CURRENT_USER_KEY);
+      }
     }
   };
 
 
   // Effect to save teachers to localStorage
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(TEACHERS_KEY, JSON.stringify(teachers));
         } catch (error) {
@@ -127,7 +131,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Effect to save schools to localStorage
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(SCHOOLS_KEY, JSON.stringify(schools));
         } catch (error) {
@@ -138,7 +142,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Effect to save leave requests to localStorage
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(LEAVE_REQUESTS_KEY, JSON.stringify(leaveRequests));
         } catch (error) {
@@ -149,7 +153,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Effect to save users to localStorage
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(USERS_KEY, JSON.stringify(users));
         } catch (error) {
