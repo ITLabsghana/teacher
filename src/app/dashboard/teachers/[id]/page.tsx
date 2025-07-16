@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 
 function DetailItem({ label, value }: { label: string; value?: string | number | null }) {
-    if (!value) return null;
+    if (!value && value !== 0) return null;
     return (
         <div>
             <p className="text-sm text-muted-foreground">{label}</p>
@@ -105,8 +105,8 @@ export default function TeacherDetailPage() {
                     <h3 className="text-xl font-semibold mb-4">Personal Information</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
                         <DetailItem label="Staff ID" value={teacher.staffId} />
-                        <DetailItem label="Date of Birth" value={teacher.dateOfBirth ? format(teacher.dateOfBirth, 'PPP') : null} />
-                        <DetailItem label="Age" value={teacher.dateOfBirth ? differenceInYears(new Date(), teacher.dateOfBirth) : null} />
+                        <DetailItem label="Date of Birth" value={teacher.dateOfBirth ? format(new Date(teacher.dateOfBirth), 'PPP') : null} />
+                        <DetailItem label="Age" value={teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : null} />
                         <DetailItem label="Gender" value={teacher.gender} />
                         <DetailItem label="Email" value={teacher.email} />
                         <DetailItem label="Phone No." value={teacher.phoneNo} />
@@ -136,10 +136,10 @@ export default function TeacherDetailPage() {
                         <DetailItem label="Leadership Position" value={teacher.leadershipPosition === 'Other' ? teacher.otherLeadershipPosition : teacher.leadershipPosition} />
                         <DetailItem label="Current School" value={getSchoolName(teacher.schoolId)} />
                         <DetailItem label="Previous School" value={teacher.previousSchool} />
-                        <DetailItem label="First Appointment Date" value={teacher.firstAppointmentDate ? format(teacher.firstAppointmentDate, 'PPP') : null} />
-                        <DetailItem label="Date Confirmed" value={teacher.dateConfirmed ? format(teacher.dateConfirmed, 'PPP') : null} />
-                        <DetailItem label="Last Promotion Date" value={teacher.lastPromotionDate ? format(teacher.lastPromotionDate, 'PPP') : null} />
-                        <DetailItem label="Date Posted To Current School" value={teacher.datePostedToCurrentSchool ? format(teacher.datePostedToCurrentSchool, 'PPP') : null} />
+                        <DetailItem label="First Appointment Date" value={teacher.firstAppointmentDate ? format(new Date(teacher.firstAppointmentDate), 'PPP') : null} />
+                        <DetailItem label="Date Confirmed" value={teacher.dateConfirmed ? format(new Date(teacher.dateConfirmed), 'PPP') : null} />
+                        <DetailItem label="Last Promotion Date" value={teacher.lastPromotionDate ? format(new Date(teacher.lastPromotionDate), 'PPP') : null} />
+                        <DetailItem label="Date Posted To Current School" value={teacher.datePostedToCurrentSchool ? format(new Date(teacher.datePostedToCurrentSchool), 'PPP') : null} />
                         <DetailItem label="Teacher Union" value={teacher.teacherUnion} />
                     </div>
 
@@ -154,13 +154,15 @@ export default function TeacherDetailPage() {
                 </CardContent>
             </Card>
 
-            <TeacherForm
-                isOpen={isFormOpen}
-                setIsOpen={setIsFormOpen}
-                editingTeacher={teacher}
-                setTeachers={setTeachers}
-                schools={schools}
-            />
+            {isFormOpen && (
+              <TeacherForm
+                  isOpen={isFormOpen}
+                  setIsOpen={setIsFormOpen}
+                  editingTeacher={teacher}
+                  setTeachers={setTeachers}
+                  schools={schools}
+              />
+            )}
         </div>
     );
 }

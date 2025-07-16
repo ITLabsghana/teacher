@@ -104,12 +104,19 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (editingTeacher) {
+    if (editingTeacher && teacherSchema.shape) {
       const teacherData: Partial<TeacherFormData> = {};
       for (const key in editingTeacher) {
         const typedKey = key as keyof Teacher;
         if (Object.prototype.hasOwnProperty.call(teacherSchema.shape, typedKey)) {
-          const value = editingTeacher[typedKey];
+          let value = editingTeacher[typedKey];
+
+          // Ensure date fields are Date objects
+          const dateFields = ['dateOfBirth', 'lastPromotionDate', 'datePostedToCurrentSchool', 'firstAppointmentDate', 'dateConfirmed'];
+          if (dateFields.includes(key) && value && typeof value === 'string') {
+            value = new Date(value);
+          }
+          
           // @ts-ignore
           teacherData[typedKey] = value instanceof Date ? value : (value !== null ? value : undefined);
         }
