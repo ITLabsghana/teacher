@@ -145,7 +145,7 @@ export default function DashboardPage() {
     return (
         <>
             <header className="mb-8">
-                <h1 className="text-4xl font-headline font-bold text-primary">Dashboard</h1>
+                <h1 className="text-4xl font-headline font-bold text-primary">TMS Dashboard</h1>
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
             </header>
             <StatsCards teachers={teachers} leaveRequests={leaveRequests} schools={schools} />

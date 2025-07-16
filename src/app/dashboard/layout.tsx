@@ -53,7 +53,7 @@ function InnerLayout({ children }: { children: ReactNode }) {
           <div className="bg-primary text-primary-foreground rounded-full p-2">
             <LayoutDashboard className="h-6 w-6" />
           </div>
-          <h1 className="text-xl font-headline font-bold text-primary">Admin Panel</h1>
+          <h1 className="text-xl font-headline font-bold text-primary">TMS Panel</h1>
         </div>
         <nav className="flex flex-col gap-2 flex-grow">
           <NavLink href="/dashboard" icon={<LayoutDashboard className="h-5 w-5" />} label="Dashboard" />
@@ -72,8 +72,15 @@ function InnerLayout({ children }: { children: ReactNode }) {
           </Button>
         </div>
       </aside>
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-        {children}
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto flex flex-col">
+        <div className="flex-grow">
+            {children}
+        </div>
+        <footer className="mt-8">
+             <p className="text-xs text-muted-foreground text-center w-full">
+                Designed and created by ITLabs Ghana © 2025, contact 0248362847
+            </p>
+        </footer>
       </main>
     </div>
   );
