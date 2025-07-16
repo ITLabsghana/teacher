@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { School } from '@/lib/types';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -22,17 +22,54 @@ function SchoolListView({ schools }: { schools: School[] }) {
         router.push(`/dashboard/schools/${schoolId}`);
     };
 
+    const calculateTotals = (school: School) => {
+        const enrollment = school.enrollment || {};
+        return Object.values(enrollment).reduce((acc, curr) => {
+            acc.boys += curr.boys || 0;
+            acc.girls += curr.girls || 0;
+            return acc;
+        }, { boys: 0, girls: 0 });
+    };
+
     return (
-        <div className="space-y-2">
-            {schools.length > 0 ? schools.map(school => (
-                <div 
-                    key={school.id} 
-                    className="flex items-center justify-between p-3 bg-secondary rounded-lg cursor-pointer hover:bg-muted" 
-                    onClick={() => handleRowClick(school.id)}
-                >
-                    <p className="font-semibold">{school.name}</p>
-                </div>
-            )) : (
+        <div className="space-y-4">
+            {schools.length > 0 ? schools.map(school => {
+                const totals = calculateTotals(school);
+                const grandTotal = totals.boys + totals.girls;
+
+                return (
+                    <div 
+                        key={school.id} 
+                        className="p-4 bg-secondary rounded-lg cursor-pointer hover:bg-muted transition-colors" 
+                        onClick={() => handleRowClick(school.id)}
+                    >
+                        <h3 className="font-bold text-lg text-primary">{school.name}</h3>
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                            <div className="flex items-center gap-2 p-3 bg-background rounded-md">
+                                <Users className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-muted-foreground">Total Boys</p>
+                                    <p className="font-semibold">{totals.boys}</p>
+                                </div>
+                            </div>
+                             <div className="flex items-center gap-2 p-3 bg-background rounded-md">
+                                <Users className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-muted-foreground">Total Girls</p>
+                                    <p className="font-semibold">{totals.girls}</p>
+                                </div>
+                            </div>
+                             <div className="flex items-center gap-2 p-3 bg-background rounded-md">
+                                <Users className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-muted-foreground">Grand Total</p>
+                                    <p className="font-semibold">{grandTotal}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }) : (
                 <div className="text-center text-muted-foreground py-8">
                     No schools added yet. Go to the 'Add/Edit School' tab to create one.
                 </div>
