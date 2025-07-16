@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -87,7 +88,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         id: crypto.randomUUID(),
         username: 'Prof',
         email: 'admin@example.com',
-        password: '12345678',
+        password: 'Incre@com0248',
         role: 'Admin',
       };
       storedUsers = [adminUser];

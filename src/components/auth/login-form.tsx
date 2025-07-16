@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -55,7 +56,6 @@ export default function LoginForm() {
             <Input 
               id="identifier" 
               type="text" 
-              placeholder="e.g., Prof or admin@example.com" 
               required 
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
@@ -67,7 +67,6 @@ export default function LoginForm() {
             <Input 
               id="password" 
               type="password" 
-              placeholder="••••••••" 
               required 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
