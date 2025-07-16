@@ -104,31 +104,62 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (editingTeacher && teacherSchema.shape) {
-      const teacherData: Partial<TeacherFormData> = {};
-      for (const key in editingTeacher) {
-        const typedKey = key as keyof Teacher;
-        if (Object.prototype.hasOwnProperty.call(teacherSchema.shape, typedKey)) {
-          let value = editingTeacher[typedKey];
-
-          // Ensure date fields are Date objects
-          const dateFields = ['dateOfBirth', 'lastPromotionDate', 'datePostedToCurrentSchool', 'firstAppointmentDate', 'dateConfirmed'];
-          if (dateFields.includes(key) && value && typeof value === 'string') {
-            value = new Date(value);
-          }
+    if (editingTeacher) {
+      const defaultValues: Partial<TeacherFormData> = {};
+      
+      (Object.keys(editingTeacher) as Array<keyof Teacher>).forEach(key => {
+        if (key in teacherSchema.shape) {
+          const value = editingTeacher[key];
+          const dateFields: (keyof Teacher)[] = ['dateOfBirth', 'lastPromotionDate', 'datePostedToCurrentSchool', 'firstAppointmentDate', 'dateConfirmed'];
           
-          // @ts-ignore
-          teacherData[typedKey] = value instanceof Date ? value : (value !== null ? value : undefined);
+          if (dateFields.includes(key) && value) {
+            // @ts-ignore
+            defaultValues[key] = new Date(value);
+          } else if (value !== null && value !== undefined) {
+            // @ts-ignore
+            defaultValues[key] = value;
+          }
         }
-      }
-      reset(teacherData);
+      });
+      
+      reset(defaultValues);
     } else {
       reset({
+        staffId: '',
         firstName: '',
         lastName: '',
         dateOfBirth: undefined,
+        gender: undefined,
+        registeredNo: '',
+        ghanaCardNo: '',
+        ssnitNo: '',
+        tinNo: '',
+        phoneNo: '',
+        homeTown: '',
+        email: '',
+        address: '',
+        photo: '',
+        academicQualification: '',
+        professionalQualification: '',
+        otherProfessionalQualification: '',
+        rank: '',
+        job: undefined,
+        subjects: '',
+        leadershipPosition: '',
+        otherLeadershipPosition: '',
+        areaOfSpecialization: '',
+        lastPromotionDate: undefined,
+        previousSchool: '',
         schoolId: '',
-        staffId: ''
+        datePostedToCurrentSchool: undefined,
+        licensureNo: '',
+        firstAppointmentDate: undefined,
+        dateConfirmed: undefined,
+        teacherUnion: '',
+        bankName: '',
+        bankBranch: '',
+        accountNumber: '',
+        salaryScale: '',
       });
     }
   }, [editingTeacher, isOpen, reset]);
@@ -191,7 +222,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
                     <PopoverContent className="w-auto p-0">
                         <Calendar 
                             mode="single" 
-                            selected={field.value as Date} 
+                            selected={field.value as Date | undefined} 
                             onSelect={field.onChange}
                             captionLayout="dropdown-nav"
                             fromYear={1950}
