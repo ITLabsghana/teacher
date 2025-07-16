@@ -5,15 +5,11 @@ import type { LeaveRequest, Teacher } from '@/lib/types';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { DatePickerSelect } from '@/components/dashboard/teacher-form';
 
 const leaveTypes: LeaveRequest['leaveType'][] = ['Sick', 'Vacation', 'Personal', 'Other'];
 
@@ -50,6 +46,23 @@ export function LeaveForm({ isOpen, setIsOpen, setLeaveRequests, teachers }: Lea
     setIsOpen(false);
     reset();
   };
+
+  const renderDatePicker = (name: "startDate" | "returnDate", label: string) => (
+    <div>
+        <Label>{label}</Label>
+        <Controller
+            control={control}
+            name={name}
+            render={({ field }) => (
+                <DatePickerSelect
+                    value={field.value as Date | undefined}
+                    onChange={field.onChange}
+                />
+            )}
+        />
+        {errors[name] && <p className="text-destructive text-xs mt-1">{(errors[name] as any)?.message}</p>}
+    </div>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if(!open) reset(); }}>
@@ -97,67 +110,14 @@ export function LeaveForm({ isOpen, setIsOpen, setLeaveRequests, teachers }: Lea
             />
             {errors.leaveType && <p className="text-destructive text-xs mt-1">{errors.leaveType.message}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Start Date</Label>
-               <Controller
-                  control={control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar 
-                                mode="single" 
-                                selected={field.value} 
-                                onSelect={field.onChange} 
-                                captionLayout="dropdown-nav"
-                                fromYear={1950}
-                                toYear={new Date().getFullYear() + 5}
-                                initialFocus 
-                            />
-                        </PopoverContent>
-                    </Popover>
-                  )}
-                />
-              {errors.startDate && <p className="text-destructive text-xs mt-1">{errors.startDate.message}</p>}
-            </div>
-            <div>
-              <Label>Return Date</Label>
-               <Controller
-                  control={control}
-                  name="returnDate"
-                  render={({ field }) => (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                             <Calendar 
-                                mode="single" 
-                                selected={field.value} 
-                                onSelect={field.onChange} 
-                                captionLayout="dropdown-nav"
-                                fromYear={1950}
-                                toYear={new Date().getFullYear() + 5}
-                                initialFocus 
-                            />
-                        </PopoverContent>
-                    </Popover>
-                  )}
-                />
-              {errors.returnDate && <p className="text-destructive text-xs mt-1">{errors.returnDate.message}</p>}
-            </div>
+          <div className="grid grid-cols-1 gap-4">
+            {renderDatePicker("startDate", "Start Date")}
+            {renderDatePicker("returnDate", "Return Date")}
+             {errors.returnDate && <p className="text-destructive text-xs -mt-3 text-center">{errors.returnDate.message}</p>}
           </div>
-          <Button type="submit" className="w-full mt-4 bg-accent hover:bg-accent/90">Submit Request</Button>
+          <DialogFooter>
+            <Button type="submit" className="w-full mt-4 bg-accent hover:bg-accent/90">Submit Request</Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

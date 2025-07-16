@@ -19,7 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 
 // Date Picker Component using 3 Selects
-const DatePickerSelect = ({ value, onChange, fromYear = 1950, toYear = new Date().getFullYear() }: { value?: Date, onChange: (date?: Date) => void, fromYear?: number, toYear?: number }) => {
+export const DatePickerSelect = ({ value, onChange, fromYear = 1950, toYear = new Date().getFullYear() }: { value?: Date, onChange: (date?: Date) => void, fromYear?: number, toYear?: number }) => {
     const [day, setDay] = useState<string>(value ? String(value.getDate()) : '');
     const [month, setMonth] = useState<string>(value ? String(value.getMonth()) : '');
     const [year, setYear] = useState<string>(value ? String(value.getFullYear()) : '');
@@ -381,27 +381,30 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
                     </div>
 
                     <Separator />
-                    <h3 className="text-lg font-medium">Documents</h3>
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            {documents?.map((doc, index) => (
-                                <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
-                                    <FileIcon className="h-5 w-5 text-muted-foreground" />
-                                    <Input 
-                                        value={doc.name} 
-                                        onChange={(e) => handleDocumentNameChange(index, e.target.value)}
-                                        className="flex-grow"
-                                    />
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeDocument(index)}>
-                                        <X className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                        <Button type="button" variant="outline" onClick={() => docFileInputRef.current?.click()}>
-                            <Upload className="mr-2 h-4 w-4" /> Upload Document
-                        </Button>
-                        <input type="file" ref={docFileInputRef} onChange={handleDocumentUpload} className="hidden" />
+                    <div>
+                      <h3 className="text-lg font-medium">Documents</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Add teacher documents like certificates.</p>
+                      <div className="space-y-4">
+                          <div className="space-y-2">
+                              {documents?.map((doc, index) => (
+                                  <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
+                                      <FileIcon className="h-5 w-5 text-muted-foreground" />
+                                      <Input 
+                                          value={doc.name} 
+                                          onChange={(e) => handleDocumentNameChange(index, e.target.value)}
+                                          className="flex-grow"
+                                      />
+                                      <Button type="button" variant="ghost" size="icon" onClick={() => removeDocument(index)}>
+                                          <X className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                  </div>
+                              ))}
+                          </div>
+                          <Button type="button" variant="outline" onClick={() => docFileInputRef.current?.click()}>
+                              <Upload className="mr-2 h-4 w-4" /> Upload Document
+                          </Button>
+                          <input type="file" ref={docFileInputRef} onChange={handleDocumentUpload} className="hidden" />
+                      </div>
                     </div>
 
                 </div>
