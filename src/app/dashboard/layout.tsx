@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { School, User as TeacherIcon, CalendarOff, GanttChartSquare, LayoutDashboard, Users, LogOut, PenSquare } from 'lucide-react';
+import { School, User as TeacherIcon, CalendarOff, LayoutDashboard, Users, LogOut, PenSquare } from 'lucide-react';
 import { DataProvider, useDataContext } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 
@@ -53,15 +53,14 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
       <aside className="w-64 bg-card border-r border-border p-4 hidden md:flex flex-col">
         <div className="flex items-center gap-2 p-3 mb-4">
           <div className="bg-primary text-primary-foreground rounded-full p-2">
-            <GanttChartSquare className="h-6 w-6" />
+            <LayoutDashboard className="h-6 w-6" />
           </div>
           <h1 className="text-xl font-headline font-bold text-primary">Admin Panel</h1>
         </div>
         <nav className="flex flex-col gap-2 flex-grow">
           <NavLink href="/dashboard" icon={<LayoutDashboard className="h-5 w-5" />} label="Dashboard" />
           <NavLink href="/dashboard/teachers" icon={<TeacherIcon className="h-5 w-5" />} label="Teachers" />
-          <NavLink href="/dashboard/schools" icon={<School className="h-5 w-5" />} label="Schools" />
-          <NavLink href="/dashboard/enrollment" icon={<PenSquare className="h-5 w-5" />} label="Enrollment" />
+          <NavLink href="/dashboard/schools" icon={<School className="h-5 w-5" />} label="Schools & Enrollment" />
           <NavLink href="/dashboard/leave" icon={<CalendarOff className="h-5 w-5" />} label="Leave Requests" />
           {currentUser.role !== 'Viewer' && (
             <NavLink href="/dashboard/users" icon={<Users className="h-5 w-5" />} label="Manage Users" />

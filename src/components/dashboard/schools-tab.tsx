@@ -8,6 +8,8 @@ import { MoreHorizontal, PlusCircle, Download, Upload, Edit, Trash2 } from 'luci
 import { SchoolForm } from './school-form';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import EnrollmentTab from './enrollment-tab';
 
 
 interface SchoolsTabProps {
@@ -15,48 +17,38 @@ interface SchoolsTabProps {
   setSchools: React.Dispatch<React.SetStateAction<School[]>>;
 }
 
-export default function SchoolsTab({ schools, setSchools }: SchoolsTabProps) {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingSchool, setEditingSchool] = useState<School | null>(null);
+function SchoolManagement({ schools, setSchools }: SchoolsTabProps) {
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingSchool, setEditingSchool] = useState<School | null>(null);
 
-  const handleAdd = () => {
-    setEditingSchool(null);
-    setIsFormOpen(true);
-  };
+    const handleAdd = () => {
+        setEditingSchool(null);
+        setIsFormOpen(true);
+    };
 
-  const handleEdit = (school: School) => {
-    setEditingSchool(school);
-    setIsFormOpen(true);
-  };
+    const handleEdit = (school: School) => {
+        setEditingSchool(school);
+        setIsFormOpen(true);
+    };
 
-  const handleDelete = (schoolId: string) => {
-    setSchools(schools.filter(s => s.id !== schoolId));
-  };
+    const handleDelete = (schoolId: string) => {
+        setSchools(schools.filter(s => s.id !== schoolId));
+    };
 
-  return (
-    <>
-    <Card>
-        <CardHeader>
-            <div className="flex justify-between items-start">
-                <div>
-                    <CardTitle>School Management</CardTitle>
-                    <CardDescription>Add, categorize, and manage schools.</CardDescription>
-                </div>
-                 <div className="flex gap-2">
+    return (
+        <>
+            <div className="flex justify-end mb-4">
+                <div className="flex gap-2">
                     <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
                     <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export</Button>
                     <Button size="sm" onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" /> Add School</Button>
                 </div>
             </div>
-        </CardHeader>
-        <CardContent>
-            <h3 className="text-lg font-medium mb-4">Existing Schools</h3>
             <div className="space-y-2">
                 {schools.length > 0 ? schools.map(school => (
                     <div key={school.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                         <div>
                             <p className="font-semibold">{school.name}</p>
-                            <p className="text-sm text-muted-foreground">{school.category}</p>
                         </div>
                         <AlertDialog>
                             <DropdownMenu>
@@ -99,14 +91,39 @@ export default function SchoolsTab({ schools, setSchools }: SchoolsTabProps) {
                     </div>
                 )}
             </div>
+            <SchoolForm
+                isOpen={isFormOpen}
+                setIsOpen={setIsFormOpen}
+                editingSchool={editingSchool}
+                setSchools={setSchools}
+            />
+        </>
+    );
+}
+
+
+export default function SchoolsTab({ schools, setSchools }: SchoolsTabProps) {
+
+  return (
+    <Card>
+        <CardHeader>
+            <CardTitle>School & Enrollment Management</CardTitle>
+            <CardDescription>Add, categorize, and manage schools and their student enrollment.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Tabs defaultValue="schools">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="schools">School Management</TabsTrigger>
+                    <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
+                </TabsList>
+                <TabsContent value="schools">
+                    <SchoolManagement schools={schools} setSchools={setSchools} />
+                </TabsContent>
+                <TabsContent value="enrollment">
+                    <EnrollmentTab schools={schools} setSchools={setSchools} />
+                </TabsContent>
+            </Tabs>
         </CardContent>
     </Card>
-    <SchoolForm
-        isOpen={isFormOpen}
-        setIsOpen={setIsFormOpen}
-        editingSchool={editingSchool}
-        setSchools={setSchools}
-    />
-    </>
   );
 }
