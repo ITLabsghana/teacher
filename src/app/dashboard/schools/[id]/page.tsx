@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import EnrollmentTab from '@/components/dashboard/enrollment-tab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -22,6 +22,7 @@ export default function SchoolDetailPage() {
     const router = useRouter();
     const params = useParams();
     const { schools, setSchools } = useDataContext();
+    const [activeTab, setActiveTab] = useState('overview');
 
     const schoolId = params.id as string;
     const school = schools.find(s => s.id === schoolId);
@@ -71,7 +72,7 @@ export default function SchoolDetailPage() {
                     <CardDescription>Enrollment Information</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Tabs defaultValue="overview">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="overview">
                         <TabsList className="mb-4">
                             <TabsTrigger value="overview">Enrollment Overview</TabsTrigger>
                             <TabsTrigger value="manage">Manage Enrollment</TabsTrigger>
@@ -110,7 +111,12 @@ export default function SchoolDetailPage() {
                             </Table>
                         </TabsContent>
                         <TabsContent value="manage">
-                            <EnrollmentTab schools={schools} setSchools={setSchools} />
+                            <EnrollmentTab 
+                                schools={schools} 
+                                setSchools={setSchools} 
+                                selectedSchoolId={schoolId} 
+                                onSave={() => setActiveTab('overview')} 
+                            />
                         </TabsContent>
                     </Tabs>
                 </CardContent>

@@ -10,10 +10,15 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { PenSquare, Save } from 'lucide-react';
+import { useDataContext } from '@/context/data-context';
+import { useParams } from 'next/navigation';
+
 
 interface EnrollmentTabProps {
   schools: School[];
   setSchools: React.Dispatch<React.SetStateAction<School[]>>;
+  selectedSchoolId?: string | null;
+  onSave?: () => void;
 }
 
 const allClassLevels = [
@@ -25,11 +30,19 @@ const allClassLevels = [
 
 type EnrollmentData = { [className: string]: { boys: number; girls: number } };
 
-export default function EnrollmentTab({ schools, setSchools }: EnrollmentTabProps) {
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
+export default function EnrollmentTab({ schools, setSchools, selectedSchoolId: initialSchoolId, onSave }: EnrollmentTabProps) {
+  const params = useParams();
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(initialSchoolId ?? null);
   const [enrollmentData, setEnrollmentData] = useState<EnrollmentData>({});
   const [totalBoys, setTotalBoys] = useState(0);
   const [totalGirls, setTotalGirls] = useState(0);
+  const isDetailPage = !!params.id;
+
+  useEffect(() => {
+    if (initialSchoolId) {
+        setSelectedSchoolId(initialSchoolId);
+    }
+  }, [initialSchoolId]);
 
   useEffect(() => {
     if (selectedSchoolId) {
@@ -74,18 +87,15 @@ export default function EnrollmentTab({ schools, setSchools }: EnrollmentTabProp
           : school
       )
     );
-    // Maybe show a toast notification here
+    if(onSave) {
+        onSave();
+    }
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-            <div>
-                <CardTitle className="flex items-center gap-2"><PenSquare /> Enrollment Management</CardTitle>
-                <CardDescription>Add or update student enrollment numbers for each school.</CardDescription>
-            </div>
-            <div className="w-72">
+  const content = (
+      <>
+        {!isDetailPage && (
+            <div className="w-72 mb-6">
                 <Label>Select School</Label>
                 <Select onValueChange={setSelectedSchoolId} value={selectedSchoolId ?? undefined}>
                     <SelectTrigger>
@@ -96,9 +106,7 @@ export default function EnrollmentTab({ schools, setSchools }: EnrollmentTabProp
                     </SelectContent>
                 </Select>
             </div>
-        </div>
-      </CardHeader>
-      <CardContent>
+        )}
         {selectedSchoolId ? (
           <Table>
             <TableHeader>
@@ -164,6 +172,25 @@ export default function EnrollmentTab({ schools, setSchools }: EnrollmentTabProp
             <p>Please select a school to view or edit enrollment data.</p>
           </div>
         )}
+    </>
+  );
+
+  if (isDetailPage) {
+      return content;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle className="flex items-center gap-2"><PenSquare /> Enrollment Management</CardTitle>
+                <CardDescription>Add or update student enrollment numbers for each school.</CardDescription>
+            </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {content}
       </CardContent>
     </Card>
   );
