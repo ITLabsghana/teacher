@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Teacher, School } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -43,31 +43,35 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
   const handleDelete = (teacherId: string) => {
     setTeachers(teachers.filter(t => t.id !== teacherId));
   };
-  
+
   const getSchoolName = (schoolId?: string) => {
     return schools.find(s => s.id === schoolId)?.name || 'N/A';
   };
-  
+
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
   };
-  
+
   const handleRowClick = (teacherId: string) => {
     router.push(`/dashboard/teachers/${teacherId}`);
   };
 
-  const filteredTeachers = teachers.filter(teacher => {
+  const filteredTeachers = useMemo(() => {
+    if (!searchTerm) return teachers;
+    
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
-
-    return (
-      teacher.firstName.toLowerCase().includes(lowerCaseSearchTerm) ||
-      teacher.lastName.toLowerCase().includes(lowerCaseSearchTerm) ||
-      teacher.staffId.toLowerCase().includes(lowerCaseSearchTerm) ||
-      (teacher.registeredNo && teacher.registeredNo.toLowerCase().includes(lowerCaseSearchTerm)) ||
-      schoolName.includes(lowerCaseSearchTerm)
-    );
-  });
+    
+    return teachers.filter(teacher => {
+        const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
+        return (
+          (teacher.firstName && teacher.firstName.toLowerCase().includes(lowerCaseSearchTerm)) ||
+          (teacher.lastName && teacher.lastName.toLowerCase().includes(lowerCaseSearchTerm)) ||
+          (teacher.staffId && teacher.staffId.toLowerCase().includes(lowerCaseSearchTerm)) ||
+          (teacher.registeredNo && teacher.registeredNo.toLowerCase().includes(lowerCaseSearchTerm)) ||
+          schoolName.includes(lowerCaseSearchTerm)
+        );
+    });
+  }, [teachers, searchTerm, schools]);
 
   if (isLoading) {
     return (
@@ -106,7 +110,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
         </div>
         <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
+            <Input
                 placeholder="Search by name, staff ID, school..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -143,7 +147,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
                   </div>
                 </TableCell>
                 <TableCell>{teacher.staffId}</TableCell>
-                <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), teacher.dateOfBirth) : 'N/A'}</TableCell>
+                <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : 'N/A'}</TableCell>
                 <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
                 <TableCell>
                     {teacher.job === 'Subject Teacher' ?
@@ -184,7 +188,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
             )) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
-                  No teachers found matching your search.
+                  {searchTerm ? 'No teachers found matching your search.' : 'No teachers have been added yet.'}
                 </TableCell>
               </TableRow>
             )}

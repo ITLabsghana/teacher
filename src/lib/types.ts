@@ -3,7 +3,7 @@ export interface Teacher {
   staffId: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: Date;
+  dateOfBirth?: Date;
   gender: 'Male' | 'Female';
   registeredNo?: string;
   ghanaCardNo?: string;

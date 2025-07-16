@@ -1,16 +1,16 @@
+
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { School, User as TeacherIcon, CalendarOff, LayoutDashboard, Users, LogOut, FileText } from 'lucide-react';
 import { DataProvider, useDataContext } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 
-function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+function NavLink({ href, icon, label }: { href: string; icon: ReactNode; label: string }) {
     const pathname = usePathname();
     const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
-
 
     return (
         <Link
@@ -27,12 +27,11 @@ function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; l
     );
 }
 
-function InnerLayout({ children }: { children: React.ReactNode }) {
+function InnerLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { currentUser, setCurrentUser, isLoading } = useDataContext();
 
   useEffect(() => {
-    // If there's no logged-in user and data has finished loading, redirect to login page.
     if (!isLoading && !currentUser) {
       router.replace('/');
     }
@@ -44,7 +43,6 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   };
 
   if (isLoading || !currentUser) {
-    // Render a loading state or null while we wait for the data or redirect
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
@@ -81,11 +79,10 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <DataProvider>

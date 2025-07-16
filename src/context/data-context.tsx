@@ -4,51 +4,44 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { Teacher, School, LeaveRequest, User } from '@/lib/types';
 
-// Keys for localStorage
 const TEACHERS_KEY = 'teachersData';
 const SCHOOLS_KEY = 'schoolsData';
 const LEAVE_REQUESTS_KEY = 'leaveRequestsData';
 const USERS_KEY = 'usersData';
 const CURRENT_USER_KEY = 'currentUser';
 
-// Helper function to load data from localStorage
-const loadFromLocalStorage = (key: string, isDateHeavy: boolean = false) => {
+const loadFromLocalStorage = (key: string) => {
   if (typeof window === 'undefined') {
     return null;
   }
   try {
     const item = window.localStorage.getItem(key);
-    if (!item) return key === USERS_KEY ? [] : null; // Return empty array for users if not found
-    
-    const data = JSON.parse(item);
-    
-    // For data structures with dates, we need to convert strings back to Date objects.
-    if (isDateHeavy && Array.isArray(data)) {
-        if (key === TEACHERS_KEY) {
-            return data.map((t: Teacher) => ({
-                ...t,
-                dateOfBirth: t.dateOfBirth ? new Date(t.dateOfBirth) : new Date(),
-                lastPromotionDate: t.lastPromotionDate ? new Date(t.lastPromotionDate) : undefined,
-                datePostedToCurrentSchool: t.datePostedToCurrentSchool ? new Date(t.datePostedToCurrentSchool) : undefined,
-                firstAppointmentDate: t.firstAppointmentDate ? new Date(t.firstAppointmentDate) : undefined,
-                dateConfirmed: t.dateConfirmed ? new Date(t.dateConfirmed) : undefined,
-            }));
-        }
-        if (key === LEAVE_REQUESTS_KEY) {
-            return data.map((lr: LeaveRequest) => ({
-                ...lr,
-                startDate: lr.startDate ? new Date(lr.startDate) : new Date(),
-                returnDate: lr.returnDate ? new Date(lr.returnDate) : new Date(),
-            }));
-        }
-    }
-    
-    return data;
+    return item ? JSON.parse(item) : null;
   } catch (error) {
     console.error(`Error loading ${key} from localStorage`, error);
-    return key === USERS_KEY ? [] : null;
+    return null;
   }
 };
+
+const reviver = (key: string, value: any) => {
+    if (key.toLowerCase().includes('date') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(value)) {
+        return new Date(value);
+    }
+    return value;
+};
+
+const loadWithDateReviver = (key: string) => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    try {
+        const item = window.localStorage.getItem(key);
+        return item ? JSON.parse(item, reviver) : null;
+    } catch (error) {
+        console.error(`Error loading ${key} from localStorage`, error);
+        return null;
+    }
+}
 
 
 interface DataContextProps {
@@ -75,14 +68,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [currentUser, _setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load data from localStorage on initial client-side render
   useEffect(() => {
-    const storedTeachers = loadFromLocalStorage(TEACHERS_KEY, true) || [];
+    const storedTeachers = loadWithDateReviver(TEACHERS_KEY) || [];
     const storedSchools = loadFromLocalStorage(SCHOOLS_KEY) || [];
-    const storedLeaveRequests = loadFromLocalStorage(LEAVE_REQUESTS_KEY, true) || [];
+    const storedLeaveRequests = loadWithDateReviver(LEAVE_REQUESTS_KEY) || [];
     let storedUsers = loadFromLocalStorage(USERS_KEY) || [];
 
-    // Seed initial admin user if no users exist
     if (storedUsers.length === 0) {
       const adminUser: User = {
         id: crypto.randomUUID(),
@@ -109,16 +100,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const setCurrentUser = (user: User | null) => {
     _setCurrentUser(user);
     if (typeof window !== 'undefined') {
-      if (user) {
-        window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-      } else {
-        window.localStorage.removeItem(CURRENT_USER_KEY);
+      try {
+        if (user) {
+          window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+        } else {
+          window.localStorage.removeItem(CURRENT_USER_KEY);
+        }
+      } catch (error) {
+          console.error("Failed to save current user to localStorage", error);
       }
     }
   };
 
 
-  // Effect to save teachers to localStorage
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined') {
         try {
@@ -129,7 +123,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [teachers, isLoading]);
 
-  // Effect to save schools to localStorage
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined') {
         try {
@@ -140,7 +133,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [schools, isLoading]);
 
-  // Effect to save leave requests to localStorage
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined') {
         try {
@@ -151,7 +143,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [leaveRequests, isLoading]);
 
-  // Effect to save users to localStorage
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined') {
         try {

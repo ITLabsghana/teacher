@@ -3,11 +3,10 @@
 
 import { useDataContext } from '@/context/data-context';
 import { SchoolForm } from '@/components/dashboard/school-form';
-import EnrollmentTab from '@/components/dashboard/enrollment-tab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { School } from '@/lib/types';
-import { useState } from 'react';
+import { useState, useMemo, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
 import { MoreHorizontal, Edit, Trash2, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 
+const EnrollmentTab = lazy(() => import('@/components/dashboard/enrollment-tab'));
 
 function SchoolListView({ schools }: { schools: School[] }) {
     const router = useRouter();
@@ -33,9 +33,9 @@ function SchoolListView({ schools }: { schools: School[] }) {
         }, { boys: 0, girls: 0 });
     };
 
-    const filteredSchools = schools.filter(school =>
+    const filteredSchools = useMemo(() => schools.filter(school =>
         school.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    ), [schools, searchTerm]);
 
     return (
         <div className="space-y-4">
@@ -53,9 +53,9 @@ function SchoolListView({ schools }: { schools: School[] }) {
                 const grandTotal = totals.boys + totals.girls;
 
                 return (
-                    <div 
-                        key={school.id} 
-                        className="p-4 bg-secondary rounded-lg cursor-pointer hover:bg-muted transition-colors" 
+                    <div
+                        key={school.id}
+                        className="p-4 bg-secondary rounded-lg cursor-pointer hover:bg-muted transition-colors"
                         onClick={() => handleRowClick(school.id)}
                     >
                         <h3 className="font-bold text-lg text-primary">{school.name}</h3>
@@ -98,10 +98,9 @@ function SchoolManagement({ schools, setSchools, onSchoolAdded }: { schools: Sch
 
     const handleEdit = (school: School) => {
         setEditingSchool(school);
-        // Scroll to top to make the form visible
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
-    
+
     const handleCancelEdit = () => {
         setEditingSchool(null);
     }
@@ -112,8 +111,8 @@ function SchoolManagement({ schools, setSchools, onSchoolAdded }: { schools: Sch
 
     return (
         <div className="space-y-8">
-            <SchoolForm 
-                setSchools={setSchools} 
+            <SchoolForm
+                setSchools={setSchools}
                 editingSchool={editingSchool}
                 onCancelEdit={handleCancelEdit}
                 onSchoolAdded={() => {
@@ -121,7 +120,7 @@ function SchoolManagement({ schools, setSchools, onSchoolAdded }: { schools: Sch
                     onSchoolAdded();
                 }}
             />
-            
+
             <div className="space-y-2 pt-4 border-t">
                  <h3 className="text-lg font-medium text-muted-foreground mb-4">Existing Schools</h3>
                 {schools.length > 0 ? schools.map(school => (
@@ -195,12 +194,14 @@ export default function SchoolsPage() {
                 <SchoolListView schools={schools} />
             </TabsContent>
             <TabsContent value="enrollment" className="mt-4">
-                <EnrollmentTab schools={schools} setSchools={setSchools} />
+                <Suspense fallback={<div>Loading...</div>}>
+                    <EnrollmentTab schools={schools} setSchools={setSchools} />
+                </Suspense>
             </TabsContent>
             <TabsContent value="add" className="mt-4">
-                <SchoolManagement 
+                <SchoolManagement
                     schools={schools}
-                    setSchools={setSchools} 
+                    setSchools={setSchools}
                     onSchoolAdded={() => { /* can add toast here if needed */ }}
                 />
             </TabsContent>

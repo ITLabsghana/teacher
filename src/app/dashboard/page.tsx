@@ -6,38 +6,44 @@ import { useDataContext } from '@/context/data-context';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWithinInterval, addDays, parseISO, differenceInYears, addYears } from 'date-fns';
+import { useMemo } from 'react';
 
 function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[], leaveRequests: LeaveRequest[], schools: School[] }) {
-    const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
-    const leavesEndingSoon = leaveRequests.filter(req => {
-        if (req.status !== 'Approved') return false;
-        const returnDate = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
-        return isWithinInterval(returnDate, {
-            start: new Date(),
-            end: addDays(new Date(), 7)
-        });
-    }).length;
+    const stats = useMemo(() => {
+        const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
 
-    const nearingRetirementCount = teachers.filter(teacher => {
-        if (!teacher.dateOfBirth) return false;
-        const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
-        const age = differenceInYears(new Date(), dob);
-        const nextYear = addYears(new Date(), 1);
-        const ageInOneYear = differenceInYears(nextYear, dob);
-        return age < 60 && ageInOneYear >= 60;
-    }).length;
-
-    const enrollmentTotals = schools.reduce((acc, school) => {
-        if (school.enrollment) {
-            Object.values(school.enrollment).forEach(classData => {
-                acc.boys += classData.boys || 0;
-                acc.girls += classData.girls || 0;
+        const leavesEndingSoon = leaveRequests.filter(req => {
+            if (req.status !== 'Approved' || !req.returnDate) return false;
+            const returnDate = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
+            return isWithinInterval(returnDate, {
+                start: new Date(),
+                end: addDays(new Date(), 7)
             });
-        }
-        return acc;
-    }, { boys: 0, girls: 0 });
+        }).length;
 
-    const grandTotalStudents = enrollmentTotals.boys + enrollmentTotals.girls;
+        const nearingRetirementCount = teachers.filter(teacher => {
+            if (!teacher.dateOfBirth) return false;
+            const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
+            const age = differenceInYears(new Date(), dob);
+            const nextYear = addYears(new Date(), 1);
+            const ageInOneYear = differenceInYears(nextYear, dob);
+            return age < 60 && ageInOneYear >= 60;
+        }).length;
+
+        const enrollmentTotals = schools.reduce((acc, school) => {
+            if (school.enrollment) {
+                Object.values(school.enrollment).forEach(classData => {
+                    acc.boys += classData.boys || 0;
+                    acc.girls += classData.girls || 0;
+                });
+            }
+            return acc;
+        }, { boys: 0, girls: 0 });
+
+        const grandTotalStudents = enrollmentTotals.boys + enrollmentTotals.girls;
+
+        return { onLeaveCount, leavesEndingSoon, nearingRetirementCount, enrollmentTotals, grandTotalStudents };
+    }, [teachers, leaveRequests, schools]);
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -56,7 +62,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{onLeaveCount}</div>
+                    <div className="text-2xl font-bold">{stats.onLeaveCount}</div>
                 </CardContent>
             </Card>
             <Card>
@@ -65,7 +71,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{grandTotalStudents}</div>
+                    <div className="text-2xl font-bold">{stats.grandTotalStudents}</div>
                 </CardContent>
             </Card>
             <Card>
@@ -74,7 +80,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{enrollmentTotals.boys}</div>
+                    <div className="text-2xl font-bold">{stats.enrollmentTotals.boys}</div>
                 </CardContent>
             </Card>
             <Card>
@@ -83,7 +89,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{enrollmentTotals.girls}</div>
+                    <div className="text-2xl font-bold">{stats.enrollmentTotals.girls}</div>
                 </CardContent>
             </Card>
             <Card>
@@ -92,7 +98,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     <Bell className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">+{leavesEndingSoon}</div>
+                    <div className="text-2xl font-bold">+{stats.leavesEndingSoon}</div>
                     <p className="text-xs text-muted-foreground">In the next 7 days</p>
                 </CardContent>
             </Card>
@@ -102,7 +108,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">+{nearingRetirementCount}</div>
+                    <div className="text-2xl font-bold">+{stats.nearingRetirementCount}</div>
                     <p className="text-xs text-muted-foreground">In the next year</p>
                 </CardContent>
             </Card>
@@ -114,17 +120,17 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[80px] overflow-y-auto space-y-2">
-                    {leavesEndingSoon > 0 && (
+                    {stats.leavesEndingSoon > 0 && (
                          <p className="text-xs text-muted-foreground">
-                            - {leavesEndingSoon} teacher(s) returning from leave soon.
+                            - {stats.leavesEndingSoon} teacher(s) returning from leave soon.
                         </p>
                     )}
-                     {nearingRetirementCount > 0 && (
+                     {stats.nearingRetirementCount > 0 && (
                          <p className="text-xs text-muted-foreground">
-                            - {nearingRetirementCount} teacher(s) nearing retirement age.
+                            - {stats.nearingRetirementCount} teacher(s) nearing retirement age.
                         </p>
                     )}
-                    {leavesEndingSoon === 0 && nearingRetirementCount === 0 && (
+                    {stats.leavesEndingSoon === 0 && stats.nearingRetirementCount === 0 && (
                         <p className="text-xs text-muted-foreground">No new notifications.</p>
                     )}
                 </CardContent>

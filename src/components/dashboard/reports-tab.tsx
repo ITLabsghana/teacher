@@ -19,12 +19,12 @@ type ReportFormat = 'pdf' | 'docx' | 'csv';
 type BackupFormat = 'json' | 'csv' | 'sql';
 
 export default function ReportsTab() {
-  const { 
-    teachers, schools, leaveRequests, users, 
-    setTeachers, setSchools, setLeaveRequests, setUsers 
+  const {
+    teachers, schools, leaveRequests, users,
+    setTeachers, setSchools, setLeaveRequests, setUsers
   } = useDataContext();
   const { toast } = useToast();
-  
+
   const [reportType, setReportType] = useState('');
   const [reportFormat, setReportFormat] = useState<ReportFormat>('pdf');
   const [exportFormat, setExportFormat] = useState<BackupFormat>('json');
@@ -86,36 +86,13 @@ export default function ReportsTab() {
         if (!data.teachers || !data.schools || !data.leaveRequests || !data.users) {
           throw new Error("Invalid backup file format. Missing required data keys.");
         }
-        
-        // Merge teachers
-        setTeachers(prev => {
-            const existingIds = new Set(prev.map(t => t.id));
-            const newTeachers = (data.teachers as Teacher[]).filter(t => !existingIds.has(t.id));
-            return [...prev, ...newTeachers];
-        });
 
-        // Merge schools
-        setSchools(prev => {
-            const existingIds = new Set(prev.map(s => s.id));
-            const newSchools = (data.schools as School[]).filter(s => !existingIds.has(s.id));
-            return [...prev, ...newSchools];
-        });
-        
-        // Merge leave requests
-        setLeaveRequests(prev => {
-            const existingIds = new Set(prev.map(l => l.id));
-            const newLeaveRequests = (data.leaveRequests as LeaveRequest[]).filter(l => !existingIds.has(l.id));
-            return [...prev, ...newLeaveRequests];
-        });
-        
-        // Merge users
-        setUsers(prev => {
-            const existingIds = new Set(prev.map(u => u.id));
-            const newUsers = (data.users as User[]).filter(u => !existingIds.has(u.id));
-            return [...prev, ...newUsers];
-        });
+        setTeachers(data.teachers as Teacher[]);
+        setSchools(data.schools as School[]);
+        setLeaveRequests(data.leaveRequests as LeaveRequest[]);
+        setUsers(data.users as User[]);
 
-        toast({ title: "Import Successful", description: "Data has been successfully merged from the backup file." });
+        toast({ title: "Import Successful", description: "Data has been successfully restored from the backup file." });
       } catch (error: any) {
         console.error("Import failed:", error);
         setImportError(error.message || "Failed to parse the backup file. Please ensure it's a valid JSON backup.");
@@ -129,7 +106,7 @@ export default function ReportsTab() {
     reader.readAsText(file);
     event.target.value = ''; // Reset file input
   };
-  
+
   const handleGenerateReport = () => {
     if (!reportType) {
         toast({
@@ -149,8 +126,7 @@ export default function ReportsTab() {
     setTeachers([]);
     setSchools([]);
     setLeaveRequests([]);
-    
-    // Preserve the default admin user
+
     const adminUser = users.find(u => u.username === 'Prof' && u.role === 'Admin');
     const adminUserBlueprint: User = {
         id: crypto.randomUUID(),
@@ -235,7 +211,7 @@ export default function ReportsTab() {
 
           <div className="space-y-4 p-6 border rounded-lg">
             <h3 className="text-lg font-medium flex items-center gap-2"><Upload /> Import Data</h3>
-            <p className="text-sm text-muted-foreground">Merge data from a backup file. Existing records will be ignored.</p>
+            <p className="text-sm text-muted-foreground">Restore data from a backup file. This will overwrite all current data.</p>
              <div className="flex items-end gap-2">
                 <div className="flex-1">
                     <Label htmlFor="import-format">Format</Label>
@@ -289,9 +265,8 @@ export default function ReportsTab() {
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription className="space-y-2">
-                                <span>This action cannot be undone. This will permanently delete all data in the application except for the default admin user.</span>
-                                <span>To confirm, please type <strong className="text-destructive-foreground">{CONFIRMATION_TEXT}</strong> below.</span>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete all data in the application except for the default admin user. To confirm, please type <strong className="text-destructive-foreground">{CONFIRMATION_TEXT}</strong> below.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <Input
@@ -302,8 +277,8 @@ export default function ReportsTab() {
                         />
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                                onClick={handleClearAllData} 
+                            <AlertDialogAction
+                                onClick={handleClearAllData}
                                 className="bg-destructive hover:bg-destructive/90"
                                 disabled={clearDataConfirmation !== CONFIRMATION_TEXT}
                             >
