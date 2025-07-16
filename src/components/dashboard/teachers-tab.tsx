@@ -8,13 +8,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Download, Upload } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Download, Upload, Search } from 'lucide-react';
 import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { differenceInYears } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useDataContext } from '@/context/data-context';
+import { Input } from '@/components/ui/input';
 
 interface TeachersTabProps {
   teachers: Teacher[];
@@ -25,6 +26,7 @@ interface TeachersTabProps {
 export default function TeachersTab({ teachers, setTeachers, schools }: TeachersTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const { isLoading } = useDataContext();
 
@@ -54,6 +56,19 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
     router.push(`/dashboard/teachers/${teacherId}`);
   };
 
+  const filteredTeachers = teachers.filter(teacher => {
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
+
+    return (
+      teacher.firstName.toLowerCase().includes(lowerCaseSearchTerm) ||
+      teacher.lastName.toLowerCase().includes(lowerCaseSearchTerm) ||
+      teacher.staffId.toLowerCase().includes(lowerCaseSearchTerm) ||
+      (teacher.registeredNo && teacher.registeredNo.toLowerCase().includes(lowerCaseSearchTerm)) ||
+      schoolName.includes(lowerCaseSearchTerm)
+    );
+  });
+
   if (isLoading) {
     return (
         <Card>
@@ -82,16 +97,25 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <CardTitle>Teacher Management</CardTitle>
                 <CardDescription>Add, edit, and manage teacher profiles.</CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
                 <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" /> Import</Button>
                 <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Export</Button>
                 <Button size="sm" onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" /> Add Teacher</Button>
             </div>
+        </div>
+        <div className="mt-4 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+                placeholder="Search by name, staff ID, school..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 max-w-md"
+            />
         </div>
       </CardHeader>
       <CardContent>
@@ -108,7 +132,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
             </TableRow>
           </TableHeader>
           <TableBody>
-            {teachers.length > 0 ? teachers.map(teacher => (
+            {filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
               <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -123,7 +147,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
                   </div>
                 </TableCell>
                 <TableCell>{teacher.staffId}</TableCell>
-                <TableCell>{differenceInYears(new Date(), teacher.dateOfBirth)}</TableCell>
+                <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), teacher.dateOfBirth) : 'N/A'}</TableCell>
                 <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
                 <TableCell>
                     {teacher.job === 'Subject Teacher' ?
@@ -164,7 +188,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
             )) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
-                  No teachers found. Start by adding a new teacher.
+                  No teachers found matching your search.
                 </TableCell>
               </TableRow>
             )}
