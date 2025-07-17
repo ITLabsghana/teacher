@@ -59,4 +59,5 @@ export interface User {
   email: string;
   password?: string;
   role: 'Admin' | 'Supervisor' | 'Viewer';
+  auth_id?: string;
 }

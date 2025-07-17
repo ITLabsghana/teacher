@@ -72,7 +72,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const { data: userProfile, error } = await supabase
           .from('users')
           .select('*')
-          .eq('auth_id', authUser.id)
+          .eq('email', authUser.email)
           .single();
         
         if (error && error.code !== 'PGRST116') { // PGRST116: 'exact-one-row-not-found'
@@ -84,8 +84,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       } else {
         setCurrentUser(null);
       }
-      // Re-fetch data on auth change if needed
-      fetchData();
     });
 
     return () => {
