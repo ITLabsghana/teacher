@@ -31,9 +31,9 @@ export default function LoginForm() {
 
     if (signInError) {
       setError(signInError.message);
-    } else {
-      router.push('/dashboard');
     }
+    // No longer need to manually push, the DataContext auth listener will handle it.
+    
     setIsLoading(false);
   };
 

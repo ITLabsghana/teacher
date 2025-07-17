@@ -4,6 +4,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Teacher, School, LeaveRequest, User } from '@/lib/types';
 import { supabase, getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, addSchool as dbAddSchool, updateSchool as dbUpdateSchool, deleteSchool as dbDeleteSchool, addLeaveRequest as dbAddLeaveRequest, updateLeaveRequest as dbUpdateLeaveRequest, addUser as dbAddUser, updateUser as dbUpdateUser, deleteUser as dbDeleteUser } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+
 
 interface DataContextProps {
   teachers: Teacher[];
@@ -41,9 +43,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   const fetchData = useCallback(async () => {
-    setIsLoading(true);
+    // No need to set loading here, it's handled by the auth state
     try {
       const [teachersData, schoolsData, leaveRequestsData, usersData] = await Promise.all([
         getTeachers(),
@@ -57,38 +60,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setUsers(usersData);
     } catch (error) {
       console.error("Failed to fetch initial data:", error);
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const authUser = session?.user ?? null;
-      if (authUser) {
-        // Fetch our custom user profile from the 'users' table
-        const { data: userProfile, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', authUser.email)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') { // PGRST116: 'exact-one-row-not-found'
-          console.error('Error fetching user profile:', error);
-          setCurrentUser(null);
-        } else {
-          setCurrentUser(userProfile);
-          if (isLoading) {
-            await fetchData();
-          }
-        }
-      } else {
-        setCurrentUser(null);
-      }
-    });
-
-    // Check initial session
-    const checkSession = async () => {
+    const checkInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { data: userProfile, error } = await supabase
@@ -102,17 +78,50 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setCurrentUser(null);
         } else {
           setCurrentUser(userProfile);
+          await fetchData();
         }
       }
-      await fetchData();
+      setIsLoading(false); // Initial check is complete
     };
 
-    checkSession();
+    checkInitialSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const authUser = session?.user ?? null;
+      if (authUser) {
+        const { data: userProfile, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', authUser.email)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching user profile:', error);
+          setCurrentUser(null);
+        } else if (userProfile) {
+            const wasNotLoggedIn = !currentUser;
+            setCurrentUser(userProfile);
+            await fetchData();
+            if(wasNotLoggedIn) {
+                router.replace('/dashboard');
+            }
+        } else {
+            setCurrentUser(null);
+        }
+      } else {
+        setCurrentUser(null);
+        router.replace('/');
+      }
+      if (isLoading) {
+        setIsLoading(false);
+      }
+    });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchData, isLoading]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // CRUD Implementations
   const handleAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
