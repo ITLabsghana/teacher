@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerSelect } from '@/components/dashboard/teacher-form';
+import { useDataContext } from '@/context/data-context';
+import { useToast } from '@/hooks/use-toast';
 
 const leaveTypes: LeaveRequest['leaveType'][] = ['Sick', 'Maternity', 'Paternity', 'Casual', 'Other'];
 
@@ -27,24 +29,25 @@ const leaveSchema = z.object({
 interface LeaveFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
   teachers: Teacher[];
 }
 
-export function LeaveForm({ isOpen, setIsOpen, setLeaveRequests, teachers }: LeaveFormProps) {
+export function LeaveForm({ isOpen, setIsOpen, teachers }: LeaveFormProps) {
+  const { addLeaveRequest } = useDataContext();
+  const { toast } = useToast();
   const { handleSubmit, control, reset, formState: { errors } } = useForm<z.infer<typeof leaveSchema>>({
     resolver: zodResolver(leaveSchema),
   });
 
-  const onSubmit = (data: z.infer<typeof leaveSchema>) => {
-    const newRequest: LeaveRequest = {
-        ...data,
-        id: crypto.randomUUID(),
-        status: 'Pending'
-    };
-    setLeaveRequests(prev => [...prev, newRequest]);
-    setIsOpen(false);
-    reset();
+  const onSubmit = async (data: z.infer<typeof leaveSchema>) => {
+    try {
+        await addLeaveRequest(data);
+        toast({ title: 'Success', description: 'Leave request submitted.' });
+        setIsOpen(false);
+        reset();
+    } catch(err: any) {
+        toast({ variant: 'destructive', title: 'Error', description: err.message });
+    }
   };
 
   const renderDatePicker = (name: "startDate" | "returnDate", label: string) => (
@@ -123,5 +126,3 @@ export function LeaveForm({ isOpen, setIsOpen, setLeaveRequests, teachers }: Lea
     </Dialog>
   );
 }
-
-    

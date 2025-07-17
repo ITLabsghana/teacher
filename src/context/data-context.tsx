@@ -1,16 +1,9 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Teacher, School, LeaveRequest, User } from '@/lib/types';
-
-const defaultAdminUser: User = {
-    id: 'default-admin',
-    username: 'Prof',
-    email: 'admin@example.com',
-    password: 'Incre@com0248',
-    role: 'Admin',
-};
+import { supabase, getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher, updateTeacher, deleteTeacher, addSchool, updateSchool, deleteSchool, addLeaveRequest, updateLeaveRequest, addUser, updateUser, deleteUser } from '@/lib/supabase';
 
 interface DataContextProps {
   teachers: Teacher[];
@@ -24,6 +17,19 @@ interface DataContextProps {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
   isLoading: boolean;
+  
+  // Exposed CRUD functions
+  addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
+  updateTeacher: (teacher: Teacher) => Promise<void>;
+  deleteTeacher: (id: string) => Promise<void>;
+  addSchool: (school: Omit<School, 'id'>) => Promise<void>;
+  updateSchool: (school: School) => Promise<void>;
+  deleteSchool: (id: string) => Promise<void>;
+  addLeaveRequest: (request: Omit<LeaveRequest, 'id' | 'status'>) => Promise<void>;
+  updateLeaveRequest: (request: LeaveRequest) => Promise<void>;
+  addUser: (user: Omit<User, 'id'>) => Promise<void>;
+  updateUser: (user: User) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextProps | undefined>(undefined);
@@ -32,12 +38,135 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
-  const [users, setUsers] = useState<User[]>([defaultAdminUser]);
+  const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Data is now in-memory, no loading needed.
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [teachersData, schoolsData, leaveRequestsData, usersData] = await Promise.all([
+        getTeachers(),
+        getSchools(),
+        getLeaveRequests(),
+        getUsers(),
+      ]);
+      setTeachers(teachersData);
+      setSchools(schoolsData);
+      setLeaveRequests(leaveRequestsData);
+      setUsers(usersData);
+    } catch (error) {
+      console.error("Failed to fetch initial data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const authUser = session?.user ?? null;
+      if (authUser) {
+        // Fetch our custom user profile from the 'users' table
+        const { data: userProfile, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_id', authUser.id)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116: 'exact-one-row-not-found'
+          console.error('Error fetching user profile:', error);
+          setCurrentUser(null);
+        } else {
+          setCurrentUser(userProfile);
+        }
+      } else {
+        setCurrentUser(null);
+      }
+      // Re-fetch data on auth change if needed
+      fetchData();
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [fetchData]);
+
+  // CRUD Implementations
+  const handleAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
+      await addTeacher(teacher);
+      setTeachers(await getTeachers());
+  };
+  const handleUpdateTeacher = async (teacher: Teacher) => {
+      await updateTeacher(teacher);
+      setTeachers(await getTeachers());
+  };
+  const handleDeleteTeacher = async (id: string) => {
+      await deleteTeacher(id);
+      setTeachers(await getTeachers());
+  };
+
+  const handleAddSchool = async (school: Omit<School, 'id'>) => {
+      await addSchool(school);
+      setSchools(await getSchools());
+  };
+  const handleUpdateSchool = async (school: School) => {
+      await updateSchool(school);
+      setSchools(await getSchools());
+  };
+  const handleDeleteSchool = async (id: string) => {
+      await deleteSchool(id);
+      setSchools(await getSchools());
+  };
+  
+  const handleAddLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status'>) => {
+      await addLeaveRequest(request);
+      setLeaveRequests(await getLeaveRequests());
+  };
+
+  const handleUpdateLeaveRequest = async (request: LeaveRequest) => {
+      await updateLeaveRequest(request);
+      setLeaveRequests(await getLeaveRequests());
+  };
+  
+  const handleAddUser = async (user: Omit<User, 'id'>) => {
+      await addUser(user);
+      setUsers(await getUsers());
+  };
+
+  const handleUpdateUser = async (user: User) => {
+      await updateUser(user);
+      setUsers(await getUsers());
+  };
+  
+  const handleDeleteUser = async (id: string) => {
+      await deleteUser(id);
+      setUsers(await getUsers());
+  };
+
+  const value = {
+    teachers, setTeachers,
+    schools, setSchools,
+    leaveRequests, setLeaveRequests,
+    users, setUsers,
+    currentUser, setCurrentUser,
+    isLoading,
+    addTeacher: handleAddTeacher,
+    updateTeacher: handleUpdateTeacher,
+    deleteTeacher: handleDeleteTeacher,
+    addSchool: handleAddSchool,
+    updateSchool: handleUpdateSchool,
+    deleteSchool: handleDeleteSchool,
+    addLeaveRequest: handleAddLeaveRequest,
+    updateLeaveRequest: handleUpdateLeaveRequest,
+    addUser: handleAddUser,
+    updateUser: handleUpdateUser,
+    deleteUser: handleDeleteUser
+  };
 
   return (
-    <DataContext.Provider value={{ teachers, setTeachers, schools, setSchools, leaveRequests, setLeaveRequests, users, setUsers, currentUser, setCurrentUser, isLoading }}>
+    <DataContext.Provider value={value}>
       {children}
     </DataContext.Provider>
   );

@@ -8,6 +8,7 @@ import { School, User as TeacherIcon, CalendarOff, LayoutDashboard, Users, LogOu
 import { DataProvider, useDataContext } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { supabase } from '@/lib/supabase';
 
 function NavLink({ href, icon, label, onClick }: { href: string; icon: ReactNode; label: string, onClick?: () => void }) {
     const pathname = usePathname();
@@ -44,7 +45,7 @@ function MainNav({ onLogout, currentUser, onLinkClick }: { onLogout: () => void;
               <NavLink href="/dashboard/schools" icon={<School className="h-5 w-5" />} label="Schools & Enrollment" onClick={onLinkClick} />
               <NavLink href="/dashboard/leave" icon={<CalendarOff className="h-5 w-5" />} label="Leave Requests" onClick={onLinkClick} />
               <NavLink href="/dashboard/reports" icon={<FileText className="h-5 w-5" />} label="Reports & Data" onClick={onLinkClick} />
-              {currentUser.role !== 'Viewer' && (
+              {currentUser?.role !== 'Viewer' && (
                 <NavLink href="/dashboard/users" icon={<Users className="h-5 w-5" />} label="Manage Users" onClick={onLinkClick} />
               )}
             </nav>
@@ -61,7 +62,7 @@ function MainNav({ onLogout, currentUser, onLinkClick }: { onLogout: () => void;
 
 function InnerLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { currentUser, setCurrentUser, isLoading } = useDataContext();
+  const { currentUser, isLoading } = useDataContext();
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
   useEffect(() => {
@@ -70,8 +71,8 @@ function InnerLayout({ children }: { children: ReactNode }) {
     }
   }, [currentUser, isLoading, router]);
 
-  const handleLogout = () => {
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     router.push('/');
   };
 

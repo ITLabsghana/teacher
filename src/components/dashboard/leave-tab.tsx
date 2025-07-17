@@ -10,23 +10,27 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { LeaveForm } from './leave-form';
 import { Badge } from '@/components/ui/badge';
+import { useDataContext } from '@/context/data-context';
 
 interface LeaveTabProps {
   leaveRequests: LeaveRequest[];
-  setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
   teachers: Teacher[];
 }
 
-export default function LeaveTab({ leaveRequests, setLeaveRequests, teachers }: LeaveTabProps) {
+export default function LeaveTab({ leaveRequests, teachers }: LeaveTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { updateLeaveRequest } = useDataContext();
 
   const getTeacherName = (teacherId: string) => {
     const teacher = teachers.find(t => t.id === teacherId);
     return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'N/A';
   };
 
-  const updateStatus = (leaveId: string, status: LeaveRequest['status']) => {
-    setLeaveRequests(prev => prev.map(req => req.id === leaveId ? { ...req, status } : req));
+  const handleUpdateStatus = (leaveId: string, status: LeaveRequest['status']) => {
+    const request = leaveRequests.find(req => req.id === leaveId);
+    if(request) {
+        updateLeaveRequest({ ...request, status });
+    }
   };
   
   const getStatusVariant = (status: LeaveRequest['status']): "default" | "secondary" | "destructive" => {
@@ -68,8 +72,8 @@ export default function LeaveTab({ leaveRequests, setLeaveRequests, teachers }: 
               <TableRow key={req.id}>
                 <TableCell>{getTeacherName(req.teacherId)}</TableCell>
                 <TableCell>{req.leaveType}</TableCell>
-                <TableCell>{req.startDate.toLocaleDateString()}</TableCell>
-                <TableCell>{req.returnDate.toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(req.startDate).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(req.returnDate).toLocaleDateString()}</TableCell>
                 <TableCell>
                     <Badge variant={getStatusVariant(req.status)} className={req.status === 'Approved' ? 'bg-green-500' : ''}>{req.status}</Badge>
                 </TableCell>
@@ -86,9 +90,9 @@ export default function LeaveTab({ leaveRequests, setLeaveRequests, teachers }: 
                           <DropdownMenuSubTrigger>Set Status</DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
                             <DropdownMenuSubContent>
-                              <DropdownMenuItem onClick={() => updateStatus(req.id, 'Approved')}>Approved</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => updateStatus(req.id, 'Pending')}>Pending</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => updateStatus(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(req.id, 'Approved')}>Approved</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(req.id, 'Pending')}>Pending</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(req.id, 'Rejected')}>Rejected</DropdownMenuItem>
                             </DropdownMenuSubContent>
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
@@ -109,7 +113,6 @@ export default function LeaveTab({ leaveRequests, setLeaveRequests, teachers }: 
       <LeaveForm
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
-        setLeaveRequests={setLeaveRequests}
         teachers={teachers}
       />
     </Card>

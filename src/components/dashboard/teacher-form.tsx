@@ -17,6 +17,9 @@ import { differenceInYears } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
+import { useDataContext } from '@/context/data-context';
+import { useToast } from '@/hooks/use-toast';
+
 
 // Date Picker Component using 3 Selects
 export const DatePickerSelect = ({ value, onChange, fromYear = 1950, toYear = new Date().getFullYear() }: { value?: Date, onChange: (date?: Date) => void, fromYear?: number, toYear?: number }) => {
@@ -139,11 +142,12 @@ interface TeacherFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   editingTeacher: Teacher | null;
-  setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>;
   schools: School[];
 }
 
-export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, schools }: TeacherFormProps) {
+export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: TeacherFormProps) {
+  const { addTeacher, updateTeacher } = useDataContext();
+  const { toast } = useToast();
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<TeacherFormData>({
     resolver: zodResolver(teacherSchema),
   });
@@ -273,13 +277,19 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
       setValue('documents', updatedDocuments);
   };
 
-  const onSubmit = (data: TeacherFormData) => {
-    if (editingTeacher) {
-      setTeachers(prev => prev.map(t => t.id === editingTeacher.id ? { ...t, ...data, id: t.id } : t));
-    } else {
-      setTeachers(prev => [...prev, { ...data, id: crypto.randomUUID() }]);
+  const onSubmit = async (data: TeacherFormData) => {
+    try {
+        if (editingTeacher) {
+          await updateTeacher({ ...editingTeacher, ...data });
+          toast({ title: 'Success', description: 'Teacher profile updated.' });
+        } else {
+          await addTeacher(data);
+          toast({ title: 'Success', description: 'New teacher added.' });
+        }
+        setIsOpen(false);
+    } catch(err: any) {
+        toast({ variant: 'destructive', title: 'Error', description: err.message });
     }
-    setIsOpen(false);
   };
   
   const renderDatePicker = (name: keyof TeacherFormData, label: string) => (

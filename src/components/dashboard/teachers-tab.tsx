@@ -23,12 +23,12 @@ interface TeachersTabProps {
   schools: School[];
 }
 
-export default function TeachersTab({ teachers, setTeachers, schools }: TeachersTabProps) {
+export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
-  const { isLoading } = useDataContext();
+  const { isLoading, deleteTeacher: deleteTeacherFromDb } = useDataContext();
 
   const handleAdd = () => {
     setEditingTeacher(null);
@@ -41,7 +41,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
   };
 
   const handleDelete = (teacherId: string) => {
-    setTeachers(teachers.filter(t => t.id !== teacherId));
+    deleteTeacherFromDb(teacherId);
   };
 
   const getSchoolName = useCallback((schoolId?: string) => {
@@ -197,7 +197,6 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
         editingTeacher={editingTeacher}
-        setTeachers={setTeachers}
         schools={schools}
       />
     </Card>

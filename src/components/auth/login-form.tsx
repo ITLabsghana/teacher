@@ -8,31 +8,33 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { School, ShieldAlert, Eye, EyeOff } from 'lucide-react';
-import { useDataContext } from '@/context/data-context';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginForm() {
   const router = useRouter();
-  const { users, setCurrentUser } = useDataContext();
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    setIsLoading(true);
 
-    const user = users.find(
-      u => (u.username.toLowerCase() === identifier.toLowerCase() || u.email.toLowerCase() === identifier.toLowerCase()) && u.password === password
-    );
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (user) {
-      setCurrentUser(user);
-      router.push('/dashboard');
+    if (signInError) {
+      setError(signInError.message);
     } else {
-      setError('Invalid credentials. Please try again.');
+      router.push('/dashboard');
     }
+    setIsLoading(false);
   };
 
   return (
@@ -53,15 +55,15 @@ export default function LoginForm() {
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="identifier">Username or Email</Label>
+            <Label htmlFor="email">Email</Label>
             <Input 
-              id="identifier" 
-              type="text" 
+              id="email" 
+              type="email" 
               required 
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              autoComplete="off"
-              placeholder="Username or Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder="Email"
             />
           </div>
           <div className="space-y-2">
@@ -73,7 +75,7 @@ export default function LoginForm() {
                   required 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
+                  autoComplete="current-password"
                   placeholder="Password"
                 />
                 <Button 
@@ -87,8 +89,8 @@ export default function LoginForm() {
                 </Button>
             </div>
           </div>
-          <Button type="submit" className="w-full !mt-8 bg-accent hover:bg-accent/90">
-            Login
+          <Button type="submit" className="w-full !mt-8 bg-accent hover:bg-accent/90" disabled={isLoading}>
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
         </form>
       </CardContent>
