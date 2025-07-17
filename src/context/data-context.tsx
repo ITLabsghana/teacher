@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Teacher, School, LeaveRequest, User } from '@/lib/types';
-import { supabase, getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher, updateTeacher, deleteTeacher, addSchool, updateSchool, deleteSchool, addLeaveRequest, updateLeaveRequest, addUser, updateUser, deleteUser } from '@/lib/supabase';
+import { supabase, getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, addSchool as dbAddSchool, updateSchool as dbUpdateSchool, deleteSchool as dbDeleteSchool, addLeaveRequest as dbAddLeaveRequest, updateLeaveRequest as dbUpdateLeaveRequest, addUser as dbAddUser, updateUser as dbUpdateUser, deleteUser as dbDeleteUser } from '@/lib/supabase';
 
 interface DataContextProps {
   teachers: Teacher[];
@@ -63,8 +63,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetchData();
-
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const authUser = session?.user ?? null;
       if (authUser) {
@@ -80,66 +78,91 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setCurrentUser(null);
         } else {
           setCurrentUser(userProfile);
+          if (isLoading) {
+            await fetchData();
+          }
         }
       } else {
         setCurrentUser(null);
       }
     });
 
+    // Check initial session
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: userProfile, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', session.user.email)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching user profile on initial load:', error);
+          setCurrentUser(null);
+        } else {
+          setCurrentUser(userProfile);
+        }
+      }
+      await fetchData();
+    };
+
+    checkSession();
+
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchData]);
+  }, [fetchData, isLoading]);
 
   // CRUD Implementations
   const handleAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
-      await addTeacher(teacher);
+      await dbAddTeacher(teacher);
       setTeachers(await getTeachers());
   };
   const handleUpdateTeacher = async (teacher: Teacher) => {
-      await updateTeacher(teacher);
+      await dbUpdateTeacher(teacher);
       setTeachers(await getTeachers());
   };
   const handleDeleteTeacher = async (id: string) => {
-      await deleteTeacher(id);
+      await dbDeleteTeacher(id);
       setTeachers(await getTeachers());
   };
 
   const handleAddSchool = async (school: Omit<School, 'id'>) => {
-      await addSchool(school);
+      await dbAddSchool(school);
       setSchools(await getSchools());
   };
   const handleUpdateSchool = async (school: School) => {
-      await updateSchool(school);
+      await dbUpdateSchool(school);
       setSchools(await getSchools());
   };
   const handleDeleteSchool = async (id: string) => {
-      await deleteSchool(id);
+      await dbDeleteSchool(id);
       setSchools(await getSchools());
   };
   
   const handleAddLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status'>) => {
-      await addLeaveRequest(request);
+      await dbAddLeaveRequest(request);
       setLeaveRequests(await getLeaveRequests());
   };
 
   const handleUpdateLeaveRequest = async (request: LeaveRequest) => {
-      await updateLeaveRequest(request);
+      await dbUpdateLeaveRequest(request);
       setLeaveRequests(await getLeaveRequests());
   };
   
   const handleAddUser = async (user: Omit<User, 'id'>) => {
-      await addUser(user);
+      await dbAddUser(user);
       setUsers(await getUsers());
   };
 
   const handleUpdateUser = async (user: User) => {
-      await updateUser(user);
+      await dbUpdateUser(user);
       setUsers(await getUsers());
   };
   
   const handleDeleteUser = async (id: string) => {
-      await deleteUser(id);
+      await dbDeleteUser(id);
       setUsers(await getUsers());
   };
 
