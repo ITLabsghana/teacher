@@ -26,17 +26,20 @@ function SchoolListView({ schools }: { schools: School[] }) {
 
     const calculateTotals = (school: School) => {
         const enrollment = school.enrollment || {};
-        return Object.values(enrollment).reduce((acc, curr) => {
+        const totals = Object.values(enrollment).reduce((acc, curr) => {
             acc.boys += curr.boys || 0;
             acc.girls += curr.girls || 0;
             return acc;
         }, { boys: 0, girls: 0 });
+        const grandTotal = totals.boys + totals.girls;
+        return { ...totals, grandTotal };
     };
 
     const filteredSchools = useMemo(() => {
         if (!searchTerm) return schools;
+        const lowercasedTerm = searchTerm.toLowerCase();
         return schools.filter(school =>
-            school.name.toLowerCase().includes(searchTerm.toLowerCase())
+            school.name.toLowerCase().includes(lowercasedTerm)
         );
     }, [schools, searchTerm]);
 
@@ -53,7 +56,6 @@ function SchoolListView({ schools }: { schools: School[] }) {
             </div>
             {filteredSchools.length > 0 ? filteredSchools.map(school => {
                 const totals = calculateTotals(school);
-                const grandTotal = totals.boys + totals.girls;
 
                 return (
                     <div
@@ -81,7 +83,7 @@ function SchoolListView({ schools }: { schools: School[] }) {
                                 <Users className="h-5 w-5 text-muted-foreground" />
                                 <div>
                                     <p className="text-muted-foreground">Grand Total</p>
-                                    <p className="font-semibold">{grandTotal}</p>
+                                    <p className="font-semibold">{totals.grandTotal}</p>
                                 </div>
                             </div>
                         </div>

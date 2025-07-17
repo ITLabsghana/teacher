@@ -24,10 +24,9 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
         const nearingRetirementCount = teachers.filter(teacher => {
             if (!teacher.dateOfBirth) return false;
             const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
-            const age = differenceInYears(new Date(), dob);
+            const retirementDate = addYears(dob, 60);
             const nextYear = addYears(new Date(), 1);
-            const ageInOneYear = differenceInYears(nextYear, dob);
-            return age < 60 && ageInOneYear >= 60;
+            return retirementDate > new Date() && retirementDate <= nextYear;
         }).length;
 
         const enrollmentTotals = schools.reduce((acc, school) => {

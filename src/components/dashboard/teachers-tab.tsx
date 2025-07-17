@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Teacher, School } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -44,10 +44,10 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
     setTeachers(teachers.filter(t => t.id !== teacherId));
   };
 
-  const getSchoolName = (schoolId?: string) => {
+  const getSchoolName = useCallback((schoolId?: string) => {
     if (!schoolId) return 'N/A';
     return schools.find(s => s.id === schoolId)?.name || 'N/A';
-  };
+  }, [schools]);
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
@@ -62,17 +62,12 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
     
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     
-    return teachers.filter(teacher => {
-        const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
-        return (
-          (teacher.firstName && teacher.firstName.toLowerCase().includes(lowerCaseSearchTerm)) ||
-          (teacher.lastName && teacher.lastName.toLowerCase().includes(lowerCaseSearchTerm)) ||
-          (teacher.staffId && teacher.staffId.toLowerCase().includes(lowerCaseSearchTerm)) ||
-          (teacher.registeredNo && teacher.registeredNo.toLowerCase().includes(lowerCaseSearchTerm)) ||
-          schoolName.includes(lowerCaseSearchTerm)
-        );
-    });
-  }, [teachers, searchTerm, schools]);
+    return teachers.filter(teacher => 
+      Object.values(teacher).some(value => 
+        String(value).toLowerCase().includes(lowerCaseSearchTerm)
+      ) || getSchoolName(teacher.schoolId).toLowerCase().includes(lowerCaseSearchTerm)
+    );
+  }, [teachers, searchTerm, getSchoolName]);
 
   if (isLoading) {
     return (
@@ -112,7 +107,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
         <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-                placeholder="Search by name, staff ID, school..."
+                placeholder="Search by name, ID, school..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 max-w-md"
@@ -152,9 +147,9 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
                   <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : 'N/A'}</TableCell>
                   <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
                   <TableCell>
-                      {teacher.job === 'Subject Teacher' ?
+                      {teacher.job === 'Subject Teacher' && teacher.subjects ?
                           <Badge variant="secondary">{teacher.job}: {teacher.subjects}</Badge> :
-                          <Badge variant="outline">{teacher.job}</Badge>
+                          teacher.job ? <Badge variant="outline">{teacher.job}</Badge> : null
                       }
                   </TableCell>
                   <TableCell>{teacher.rank}</TableCell>
