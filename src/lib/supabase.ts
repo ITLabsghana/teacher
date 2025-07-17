@@ -30,6 +30,14 @@ export const getUsers = async (): Promise<User[]> => {
     return data || [];
 };
 
+export const getUserByUsername = async (username: string): Promise<User | null> => {
+    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
+        throw error;
+    }
+    return data;
+}
+
 export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher> => {
     const { data, error } = await supabase.from('teachers').insert([teacher]).select();
     if (error) throw error;

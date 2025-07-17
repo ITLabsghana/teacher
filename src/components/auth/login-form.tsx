@@ -2,18 +2,16 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { School, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { supabase } from '@/lib/supabase';
+import { supabase, getUserByUsername } from '@/lib/supabase';
 
 export default function LoginForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,13 +22,33 @@ export default function LoginForm() {
     setError('');
     setIsLoading(true);
 
+    let emailToAuth = identifier;
+
+    // If identifier doesn't look like an email, assume it's a username
+    if (!identifier.includes('@')) {
+      try {
+        const user = await getUserByUsername(identifier);
+        if (user) {
+          emailToAuth = user.email;
+        } else {
+          setError("Invalid username or password.");
+          setIsLoading(false);
+          return;
+        }
+      } catch (e) {
+        setError("An error occurred. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+    }
+
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+      email: emailToAuth,
       password,
     });
 
     if (signInError) {
-      setError(signInError.message);
+      setError("Invalid username or password.");
     }
     // No longer need to manually push, the DataContext auth listener will handle it.
     
@@ -55,15 +73,15 @@ export default function LoginForm() {
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="identifier">Email or Username</Label>
             <Input 
-              id="email" 
-              type="email" 
+              id="identifier" 
+              type="text" 
               required 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               autoComplete="email"
-              placeholder="Email"
+              placeholder="Email or Username"
             />
           </div>
           <div className="space-y-2">
