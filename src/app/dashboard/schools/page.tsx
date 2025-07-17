@@ -33,9 +33,12 @@ function SchoolListView({ schools }: { schools: School[] }) {
         }, { boys: 0, girls: 0 });
     };
 
-    const filteredSchools = useMemo(() => schools.filter(school =>
-        school.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [schools, searchTerm]);
+    const filteredSchools = useMemo(() => {
+        if (!searchTerm) return schools;
+        return schools.filter(school =>
+            school.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [schools, searchTerm]);
 
     return (
         <div className="space-y-4">

@@ -45,6 +45,7 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
   };
 
   const getSchoolName = (schoolId?: string) => {
+    if (!schoolId) return 'N/A';
     return schools.find(s => s.id === schoolId)?.name || 'N/A';
   };
 
@@ -119,81 +120,83 @@ export default function TeachersTab({ teachers, setTeachers, schools }: Teachers
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Staff ID</TableHead>
-              <TableHead>Age</TableHead>
-              <TableHead>Current School</TableHead>
-              <TableHead>Job</TableHead>
-              <TableHead>Rank</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
-              <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                        <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
-                        <AvatarFallback>{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <div className="font-medium">{teacher.firstName} {teacher.lastName}</div>
-                        <div className="text-sm text-muted-foreground">{teacher.email}</div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>{teacher.staffId}</TableCell>
-                <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : 'N/A'}</TableCell>
-                <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
-                <TableCell>
-                    {teacher.job === 'Subject Teacher' ?
-                        <Badge variant="secondary">{teacher.job}: {teacher.subjects}</Badge> :
-                        <Badge variant="outline">{teacher.job}</Badge>
-                    }
-                </TableCell>
-                <TableCell>{teacher.rank}</TableCell>
-                <TableCell className="text-right">
-                  <AlertDialog>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(teacher); }}>Edit</DropdownMenuItem>
-                        <AlertDialogTrigger asChild>
-                           <DropdownMenuItem className="text-destructive hover:!text-destructive" onClick={(e) => e.stopPropagation()}>Delete</DropdownMenuItem>
-                        </AlertDialogTrigger>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>This action cannot be undone. This will permanently delete the teacher's profile.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(teacher.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </TableCell>
-              </TableRow>
-            )) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  {searchTerm ? 'No teachers found matching your search.' : 'No teachers have been added yet.'}
-                </TableCell>
+                <TableHead>Name</TableHead>
+                <TableHead>Staff ID</TableHead>
+                <TableHead>Age</TableHead>
+                <TableHead>Current School</TableHead>
+                <TableHead>Job</TableHead>
+                <TableHead>Rank</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
+                <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                          <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
+                          <AvatarFallback>{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                          <div className="font-medium">{teacher.firstName} {teacher.lastName}</div>
+                          <div className="text-sm text-muted-foreground">{teacher.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{teacher.staffId}</TableCell>
+                  <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : 'N/A'}</TableCell>
+                  <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
+                  <TableCell>
+                      {teacher.job === 'Subject Teacher' ?
+                          <Badge variant="secondary">{teacher.job}: {teacher.subjects}</Badge> :
+                          <Badge variant="outline">{teacher.job}</Badge>
+                      }
+                  </TableCell>
+                  <TableCell>{teacher.rank}</TableCell>
+                  <TableCell className="text-right">
+                    <AlertDialog>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(teacher); }}>Edit</DropdownMenuItem>
+                          <AlertDialogTrigger asChild>
+                             <DropdownMenuItem className="text-destructive hover:!text-destructive" onClick={(e) => e.stopPropagation()}>Delete</DropdownMenuItem>
+                          </AlertDialogTrigger>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>This action cannot be undone. This will permanently delete the teacher's profile.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(teacher.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    {searchTerm ? 'No teachers found matching your search.' : 'No teachers have been added yet.'}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
       <TeacherForm
         isOpen={isFormOpen}

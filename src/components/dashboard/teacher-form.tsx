@@ -424,5 +424,3 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
     </Dialog>
   );
 }
-
-    

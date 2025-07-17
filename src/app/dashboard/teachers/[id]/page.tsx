@@ -176,17 +176,13 @@ export default function TeacherDetailPage() {
                 </CardContent>
             </Card>
 
-            {isFormOpen && (
-              <TeacherForm
-                  isOpen={isFormOpen}
-                  setIsOpen={setIsFormOpen}
-                  editingTeacher={teacher}
-                  setTeachers={setTeachers}
-                  schools={schools}
-              />
-            )}
+            <TeacherForm
+                isOpen={isFormOpen}
+                setIsOpen={setIsFormOpen}
+                editingTeacher={teacher}
+                setTeachers={setTeachers}
+                schools={schools}
+            />
         </div>
     );
 }
-
-    
