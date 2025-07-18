@@ -184,7 +184,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: Teac
         dateOfBirth: undefined,
         gender: undefined,
         registeredNo: '',
-        ghanaCardNo: '',
+        ghanaCardNo: 'GHA-',
         ssnitNo: '',
         tinNo: '',
         phoneNo: '',
@@ -227,15 +227,27 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: Teac
   }, [dob]);
 
   const handleGhanaCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/[^A-Z0-9-]/gi, '').toUpperCase();
-    value = value.replace('GHA', '').replace(/-/g, '');
-    let formatted = 'GHA-';
-    if (value.length > 0) {
-        formatted += value.substring(0, 7);
+    const prefix = "GHA-";
+    let value = e.target.value;
+
+    if (!value.startsWith(prefix)) {
+        value = prefix;
     }
-    if (value.length >= 8) {
-        formatted += '-' + value.substring(7, 8);
+    
+    let numbers = value.substring(prefix.length).replace(/[^0-9]/g, '');
+
+    if (numbers.length > 10) {
+        numbers = numbers.slice(0, 10);
     }
+    
+    let formatted = prefix;
+    if (numbers.length > 0) {
+        formatted += numbers.substring(0, 9);
+    }
+    if (numbers.length === 10) {
+        formatted += '-' + numbers.substring(9);
+    }
+
     setValue('ghanaCardNo', formatted);
   };
 
@@ -352,7 +364,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: Teac
                     <h3 className="text-lg font-medium">Contact & Identification</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         <div><Label>Registered No.</Label><Input {...register('registeredNo')} /></div>
-                        <div><Label>Ghana Card No.</Label><Input {...register('ghanaCardNo')} placeholder="GHA-XXXXXXX-X" onChange={handleGhanaCardChange} /></div>
+                        <div><Label>Ghana Card No.</Label><Controller control={control} name="ghanaCardNo" render={({ field }) => ( <Input {...field} placeholder="GHA-XXXXXXXXX-X" onChange={(e) => { handleGhanaCardChange(e); field.onChange(e); }} /> )}/></div>
                         <div><Label>SSNIT No.</Label><Input {...register('ssnitNo')} /></div>
                         <div><Label>TIN No.</Label><Input {...register('tinNo')} /></div>
                         <div><Label>Phone No.</Label><Input {...register('phoneNo')} /></div>
