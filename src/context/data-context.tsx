@@ -46,6 +46,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const fetchData = useCallback(async () => {
+    setIsLoading(true);
     try {
       const [teachersData, schoolsData, leaveRequestsData, usersData] = await Promise.all([
         getTeachers(),
@@ -59,6 +60,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setUsers(usersData);
     } catch (error) {
       console.error("Failed to fetch initial data:", error);
+    } finally {
+        setIsLoading(false);
     }
   }, []);
 
@@ -66,24 +69,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const authUser = session?.user ?? null;
       if (authUser) {
-        const { data: userProfile, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('auth_id', authUser.id)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching user profile:', error);
-          setCurrentUser(null);
-        } else if (userProfile) {
-            const wasNotLoggedIn = !currentUser;
-            setCurrentUser(userProfile);
-            await fetchData();
-            if(wasNotLoggedIn) {
-                router.replace('/dashboard');
+        if (!currentUser) { // Only fetch profile if not already set
+            const { data: userProfile, error } = await supabase
+              .from('users')
+              .select('*')
+              .eq('auth_id', authUser.id)
+              .single();
+            
+            if (error && error.code !== 'PGRST116') {
+              console.error('Error fetching user profile:', error);
+              setCurrentUser(null);
+            } else if (userProfile) {
+                const wasNotLoggedIn = !currentUser;
+                setCurrentUser(userProfile);
+                await fetchData();
+                if(wasNotLoggedIn) {
+                    router.replace('/dashboard');
+                }
+            } else {
+                setCurrentUser(null);
             }
-        } else {
-            setCurrentUser(null);
         }
       } else {
         setCurrentUser(null);
@@ -93,7 +98,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setUsers([]);
         router.replace('/');
       }
-      setIsLoading(false);
+      if (isLoading) setIsLoading(false);
     });
 
     return () => {
