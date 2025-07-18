@@ -46,7 +46,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const fetchData = useCallback(async () => {
-    // No need to set loading here, it's handled by the auth state
     try {
       const [teachersData, schoolsData, leaveRequestsData, usersData] = await Promise.all([
         getTeachers(),
@@ -64,35 +63,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const checkInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: userProfile, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching user profile on initial load:', error);
-          setCurrentUser(null);
-        } else {
-          setCurrentUser(userProfile);
-          await fetchData();
-        }
-      }
-      setIsLoading(false); // Initial check is complete
-    };
-
-    checkInitialSession();
-
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const authUser = session?.user ?? null;
       if (authUser) {
         const { data: userProfile, error } = await supabase
           .from('users')
           .select('*')
-          .eq('email', authUser.email)
+          .eq('auth_id', authUser.id)
           .single();
         
         if (error && error.code !== 'PGRST116') {
@@ -110,11 +87,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }
       } else {
         setCurrentUser(null);
+        setTeachers([]);
+        setSchools([]);
+        setLeaveRequests([]);
+        setUsers([]);
         router.replace('/');
       }
-      if (isLoading) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     });
 
     return () => {
