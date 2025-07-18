@@ -11,17 +11,10 @@ import { useMemo, useState } from 'react';
 import EnrollmentTab from '@/components/dashboard/enrollment-tab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const allClassLevels = [
-  'KG1', 'KG2', 
-  'Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6',
-  'J.H.S 1', 'J.H.S 2', 'J.H.S 3',
-  'S.H.S 1', 'S.H.S 2', 'S.H.S 3'
-];
-
 export default function SchoolDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const { schools, setSchools } = useDataContext();
+    const { schools } = useDataContext(); // No longer need setSchools here
     const [activeTab, setActiveTab] = useState('overview');
 
     const schoolId = params.id as string;
@@ -29,28 +22,27 @@ export default function SchoolDetailPage() {
 
     const enrollmentData = useMemo(() => {
         const data = school?.enrollment || {};
-        const totals = allClassLevels.reduce((acc, level) => {
+        const classLevels = Object.keys(data).sort(); // Sort the existing class levels
+
+        const details = classLevels.map(level => {
             const boys = data[level]?.boys || 0;
             const girls = data[level]?.girls || 0;
-            acc.totalBoys += boys;
-            acc.totalGirls += girls;
-            acc.grandTotal += boys + girls;
+            return {
+                level,
+                boys,
+                girls,
+                total: boys + girls,
+            };
+        });
+
+        const totals = details.reduce((acc, item) => {
+            acc.totalBoys += item.boys;
+            acc.totalGirls += item.girls;
+            acc.grandTotal += item.total;
             return acc;
         }, { totalBoys: 0, totalGirls: 0, grandTotal: 0 });
 
-        return {
-            details: allClassLevels.map(level => {
-                const boys = data[level]?.boys || 0;
-                const girls = data[level]?.girls || 0;
-                return {
-                    level,
-                    boys,
-                    girls,
-                    total: boys + girls,
-                };
-            }),
-            ...totals,
-        };
+        return { details, ...totals };
     }, [school]);
 
     if (!school) {
@@ -78,42 +70,47 @@ export default function SchoolDetailPage() {
                             <TabsTrigger value="manage">Manage Enrollment</TabsTrigger>
                         </TabsList>
                         <TabsContent value="overview">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Class</TableHead>
-                                        <TableHead>Boys</TableHead>
-                                        <TableHead>Girls</TableHead>
-                                        <TableHead>Total Students</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {enrollmentData.details.map(item => (
-                                        <TableRow key={item.level}>
-                                            <TableCell className="font-medium">{item.level}</TableCell>
-                                            <TableCell>{item.boys}</TableCell>
-                                            <TableCell>{item.girls}</TableCell>
-                                            <TableCell>{item.total}</TableCell>
+                            {enrollmentData.details.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Class</TableHead>
+                                            <TableHead>Boys</TableHead>
+                                            <TableHead>Girls</TableHead>
+                                            <TableHead>Total Students</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                                <TableFooter>
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="p-0">
-                                            <div className="flex justify-end gap-8 font-bold bg-muted p-4 mt-4 rounded-b-lg">
-                                                <span>Total Boys: {enrollmentData.totalBoys}</span>
-                                                <span>Total Girls: {enrollmentData.totalGirls}</span>
-                                                <span>Grand Total: {enrollmentData.grandTotal}</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                </TableFooter>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {enrollmentData.details.map(item => (
+                                            <TableRow key={item.level}>
+                                                <TableCell className="font-medium">{item.level}</TableCell>
+                                                <TableCell>{item.boys}</TableCell>
+                                                <TableCell>{item.girls}</TableCell>
+                                                <TableCell>{item.total}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                    <TableFooter>
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="p-0">
+                                                <div className="flex justify-end gap-8 font-bold bg-muted p-4 mt-4 rounded-b-lg">
+                                                    <span>Total Boys: {enrollmentData.totalBoys}</span>
+                                                    <span>Total Girls: {enrollmentData.totalGirls}</span>
+                                                    <span>Grand Total: {enrollmentData.grandTotal}</span>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    </TableFooter>
+                                </Table>
+                            ) : (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    No enrollment data has been added for this school.
+                                </div>
+                            )}
                         </TabsContent>
                         <TabsContent value="manage">
                             <EnrollmentTab 
                                 schools={schools} 
-                                setSchools={setSchools} 
                                 selectedSchoolId={schoolId} 
                                 onSave={() => setActiveTab('overview')} 
                             />

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { School } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,14 +20,12 @@ const schoolSchema = z.object({
 type SchoolFormData = z.infer<typeof schoolSchema>;
 
 interface SchoolFormProps {
-  setSchools: React.Dispatch<React.SetStateAction<School[]>>;
   editingSchool?: School | null;
   onSchoolAdded?: () => void;
   onCancelEdit?: () => void;
 }
 
 export function SchoolForm({ 
-    setSchools, 
     editingSchool, 
     onSchoolAdded,
     onCancelEdit

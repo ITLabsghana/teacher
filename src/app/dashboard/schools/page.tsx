@@ -98,8 +98,9 @@ function SchoolListView({ schools }: { schools: School[] }) {
     );
 }
 
-function SchoolManagement({ schools, setSchools, onSchoolAdded }: { schools: School[], setSchools: React.Dispatch<React.SetStateAction<School[]>>, onSchoolAdded: () => void }) {
+function SchoolManagement({ schools, onSchoolAdded }: { schools: School[], onSchoolAdded: () => void }) {
     const [editingSchool, setEditingSchool] = useState<School | null>(null);
+    const { deleteSchool } = useDataContext();
 
     const handleEdit = (school: School) => {
         setEditingSchool(school);
@@ -111,13 +112,12 @@ function SchoolManagement({ schools, setSchools, onSchoolAdded }: { schools: Sch
     }
 
     const handleDelete = (schoolId: string) => {
-        setSchools(schools.filter(s => s.id !== schoolId));
+        deleteSchool(schoolId);
     };
 
     return (
         <div className="space-y-8">
             <SchoolForm
-                setSchools={setSchools}
                 editingSchool={editingSchool}
                 onCancelEdit={handleCancelEdit}
                 onSchoolAdded={() => {
@@ -179,7 +179,7 @@ function SchoolManagement({ schools, setSchools, onSchoolAdded }: { schools: Sch
 }
 
 export default function SchoolsPage() {
-  const { schools, setSchools } = useDataContext();
+  const { schools } = useDataContext();
   const [activeTab, setActiveTab] = useState('view');
 
   return (
@@ -200,13 +200,12 @@ export default function SchoolsPage() {
             </TabsContent>
             <TabsContent value="enrollment" className="mt-4">
                 <Suspense fallback={<div>Loading...</div>}>
-                    <EnrollmentTab schools={schools} setSchools={setSchools} />
+                    <EnrollmentTab schools={schools} />
                 </Suspense>
             </TabsContent>
             <TabsContent value="add" className="mt-4">
                 <SchoolManagement
                     schools={schools}
-                    setSchools={setSchools}
                     onSchoolAdded={() => { /* can add toast here if needed */ }}
                 />
             </TabsContent>

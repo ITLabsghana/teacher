@@ -9,35 +9,28 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { PenSquare, Save } from 'lucide-react';
+import { PenSquare, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { useDataContext } from '@/context/data-context';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
-
 interface EnrollmentTabProps {
   schools: School[];
-  setSchools: React.Dispatch<React.SetStateAction<School[]>>;
   selectedSchoolId?: string | null;
   onSave?: () => void;
 }
 
-const allClassLevels = [
-  'KG1', 'KG2', 
-  'Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6',
-  'J.H.S 1', 'J.H.S 2', 'J.H.S 3',
-  'S.H.S 1', 'S.H.S 2', 'S.H.S 3'
-];
-
 type EnrollmentData = { [className: string]: { boys: number; girls: number } };
 
-export default function EnrollmentTab({ schools, setSchools, selectedSchoolId: initialSchoolId, onSave }: EnrollmentTabProps) {
+export default function EnrollmentTab({ schools, selectedSchoolId: initialSchoolId, onSave }: EnrollmentTabProps) {
   const params = useParams();
   const { toast } = useToast();
+  const { updateSchool } = useDataContext();
+
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(initialSchoolId ?? null);
   const [enrollmentData, setEnrollmentData] = useState<EnrollmentData>({});
-  const [totalBoys, setTotalBoys] = useState(0);
-  const [totalGirls, setTotalGirls] = useState(0);
+  const [newClassName, setNewClassName] = useState('');
+
   const isDetailPage = !!params.id;
 
   useEffect(() => {
@@ -49,25 +42,19 @@ export default function EnrollmentTab({ schools, setSchools, selectedSchoolId: i
   useEffect(() => {
     if (selectedSchoolId) {
       const school = schools.find(s => s.id === selectedSchoolId);
-      const initialData = allClassLevels.reduce((acc, level) => {
-        acc[level] = { boys: school?.enrollment?.[level]?.boys || 0, girls: school?.enrollment?.[level]?.girls || 0 };
-        return acc;
-      }, {} as EnrollmentData);
-      setEnrollmentData(initialData);
+      setEnrollmentData(school?.enrollment || {});
     } else {
       setEnrollmentData({});
     }
   }, [selectedSchoolId, schools]);
 
-  useEffect(() => {
-    const totals = Object.values(enrollmentData).reduce((acc, curr) => {
-        acc.boys += Number(curr.boys) || 0;
-        acc.girls += Number(curr.girls) || 0;
-        return acc;
-    }, { boys: 0, girls: 0 });
-    setTotalBoys(totals.boys);
-    setTotalGirls(totals.girls);
-  }, [enrollmentData]);
+  const sortedClassLevels = Object.keys(enrollmentData).sort();
+
+  const totals = sortedClassLevels.reduce((acc, level) => {
+    acc.boys += Number(enrollmentData[level]?.boys) || 0;
+    acc.girls += Number(enrollmentData[level]?.girls) || 0;
+    return acc;
+  }, { boys: 0, girls: 0 });
 
   const handleInputChange = (className: string, gender: 'boys' | 'girls', value: string) => {
     const numberValue = parseInt(value, 10);
@@ -79,39 +66,54 @@ export default function EnrollmentTab({ schools, setSchools, selectedSchoolId: i
       },
     }));
   };
+  
+  const handleAddNewClass = () => {
+    if (!newClassName) {
+        toast({ variant: "destructive", title: "Error", description: "Please enter a class name." });
+        return;
+    }
+    if (enrollmentData[newClassName] !== undefined) {
+        toast({ variant: "destructive", title: "Error", description: "This class already exists." });
+        return;
+    }
+    setEnrollmentData(prev => ({ ...prev, [newClassName]: { boys: 0, girls: 0 } }));
+    setNewClassName('');
+  };
+  
+  const handleRemoveClass = (className: string) => {
+      setEnrollmentData(prev => {
+          const newState = { ...prev };
+          delete newState[className];
+          return newState;
+      });
+  };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedSchoolId) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Please select a school before saving.",
-        });
+        toast({ variant: "destructive", title: "Error", description: "Please select a school before saving." });
+        return;
+    }
+
+    const schoolToUpdate = schools.find(s => s.id === selectedSchoolId);
+    if (!schoolToUpdate) {
+        toast({ variant: "destructive", title: "Error", description: "Could not find the school to update." });
         return;
     }
     
     try {
-        setSchools(prevSchools => 
-          prevSchools.map(school => 
-            school.id === selectedSchoolId 
-              ? { ...school, enrollment: enrollmentData } 
-              : school
-          )
-        );
+        const updatedSchool = { ...schoolToUpdate, enrollment: enrollmentData };
+        await updateSchool(updatedSchool);
         
-        toast({
-            title: "Success!",
-            description: "Enrollment data has been saved successfully.",
-        });
+        toast({ title: "Success!", description: "Enrollment data has been saved successfully." });
         
-        if(onSave) {
+        if (onSave) {
             onSave();
         }
-    } catch(e) {
+    } catch(e: any) {
          toast({
             variant: "destructive",
             title: "Error",
-            description: "Failed to save enrollment data.",
+            description: e.message || "Failed to save enrollment data.",
         });
     }
   };
@@ -132,65 +134,96 @@ export default function EnrollmentTab({ schools, setSchools, selectedSchoolId: i
             </div>
         )}
         {selectedSchoolId ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">Class Level</TableHead>
-                <TableHead>Boys</TableHead>
-                <TableHead>Girls</TableHead>
-                <TableHead>Total Students</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allClassLevels.map(level => {
-                const boys = enrollmentData[level]?.boys || 0;
-                const girls = enrollmentData[level]?.girls || 0;
-                const total = boys + girls;
-                
-                return (
-                  <TableRow key={level}>
-                    <TableCell className="font-medium">{level}</TableCell>
-                    <TableCell>
-                      <Input 
-                        type="number"
-                        min="0"
-                        className="w-24"
-                        value={boys}
-                        onChange={e => handleInputChange(level, 'boys', e.target.value)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                       <Input 
-                        type="number"
-                        min="0"
-                        className="w-24"
-                        value={girls}
-                        onChange={e => handleInputChange(level, 'girls', e.target.value)}
-                      />
-                    </TableCell>
-                    <TableCell>{total}</TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-            <TableFooter>
+          <div className="space-y-4">
+            <div className="flex gap-2 items-end">
+                <div className="flex-grow">
+                    <Label htmlFor="new-class-name">New Class Name</Label>
+                    <Input 
+                        id="new-class-name"
+                        placeholder="e.g., Basic 1, JHS 2, Form 1"
+                        value={newClassName}
+                        onChange={e => setNewClassName(e.target.value)}
+                    />
+                </div>
+                <Button onClick={handleAddNewClass} variant="outline">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Class
+                </Button>
+            </div>
+
+            <Table>
+                <TableHeader>
                 <TableRow>
-                    <TableCell colSpan={4} className="p-0">
-                         <div className="flex justify-between w-full items-center bg-muted p-4 mt-4 rounded-b-lg">
-                            <div className="flex gap-8 font-bold">
-                                <span>Total Boys: {totalBoys}</span>
-                                <span>Total Girls: {totalGirls}</span>
-                                <span>Grand Total: {totalBoys + totalGirls}</span>
-                            </div>
-                            <Button onClick={handleSave}>
-                                <Save className="mr-2 h-4 w-4" />
-                                Save Enrollment Data
-                            </Button>
-                        </div>
-                    </TableCell>
+                    <TableHead className="w-[200px]">Class Level</TableHead>
+                    <TableHead>Boys</TableHead>
+                    <TableHead>Girls</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-            </TableFooter>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                {sortedClassLevels.length > 0 ? sortedClassLevels.map(level => {
+                    const boys = enrollmentData[level]?.boys || 0;
+                    const girls = enrollmentData[level]?.girls || 0;
+                    const total = boys + girls;
+                    
+                    return (
+                    <TableRow key={level}>
+                        <TableCell className="font-medium">{level}</TableCell>
+                        <TableCell>
+                        <Input 
+                            type="number"
+                            min="0"
+                            className="w-24"
+                            value={boys}
+                            onChange={e => handleInputChange(level, 'boys', e.target.value)}
+                        />
+                        </TableCell>
+                        <TableCell>
+                        <Input 
+                            type="number"
+                            min="0"
+                            className="w-24"
+                            value={girls}
+                            onChange={e => handleInputChange(level, 'girls', e.target.value)}
+                        />
+                        </TableCell>
+                        <TableCell>{total}</TableCell>
+                        <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleRemoveClass(level)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </TableCell>
+                    </TableRow>
+                    )
+                }) : (
+                    <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                            No classes added yet. Use the input above to add a class.
+                        </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+                {sortedClassLevels.length > 0 && (
+                    <TableFooter>
+                        <TableRow>
+                            <TableCell colSpan={5} className="p-0">
+                                <div className="flex justify-between w-full items-center bg-muted p-4 mt-4 rounded-b-lg">
+                                    <div className="flex gap-8 font-bold">
+                                        <span>Total Boys: {totals.boys}</span>
+                                        <span>Total Girls: {totals.girls}</span>
+                                        <span>Grand Total: {totals.boys + totals.girls}</span>
+                                    </div>
+                                    <Button onClick={handleSave}>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        Save Enrollment Data
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    </TableFooter>
+                )}
+            </Table>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-48 text-muted-foreground">
             <p>Please select a school to view or edit enrollment data.</p>
