@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { useMemo, useState } from 'react';
 import EnrollmentTab from '@/components/dashboard/enrollment-tab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { sortClassLevels } from '@/lib/utils';
 
 export default function SchoolDetailPage() {
     const router = useRouter();
@@ -22,7 +23,7 @@ export default function SchoolDetailPage() {
 
     const enrollmentData = useMemo(() => {
         const data = school?.enrollment || {};
-        const classLevels = Object.keys(data).sort(); // Sort the existing class levels
+        const classLevels = sortClassLevels(Object.keys(data));
 
         const details = classLevels.map(level => {
             const boys = data[level]?.boys || 0;

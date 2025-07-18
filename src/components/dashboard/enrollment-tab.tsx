@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { School } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { PenSquare, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { useDataContext } from '@/context/data-context';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { CLASS_LEVELS, sortClassLevels } from '@/lib/utils';
 
 interface EnrollmentTabProps {
   schools: School[];
@@ -29,7 +30,7 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
 
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(initialSchoolId ?? null);
   const [enrollmentData, setEnrollmentData] = useState<EnrollmentData>({});
-  const [newClassName, setNewClassName] = useState('');
+  const [classToAdd, setClassToAdd] = useState('');
 
   const isDetailPage = !!params.id;
 
@@ -48,7 +49,11 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
     }
   }, [selectedSchoolId, schools]);
 
-  const sortedClassLevels = Object.keys(enrollmentData).sort();
+  const sortedClassLevels = useMemo(() => sortClassLevels(Object.keys(enrollmentData)), [enrollmentData]);
+
+  const availableClassesToAdd = useMemo(() => {
+    return CLASS_LEVELS.filter(level => !enrollmentData[level]);
+  }, [enrollmentData]);
 
   const totals = sortedClassLevels.reduce((acc, level) => {
     acc.boys += Number(enrollmentData[level]?.boys) || 0;
@@ -68,16 +73,16 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
   };
   
   const handleAddNewClass = () => {
-    if (!newClassName) {
-        toast({ variant: "destructive", title: "Error", description: "Please enter a class name." });
+    if (!classToAdd) {
+        toast({ variant: "destructive", title: "Error", description: "Please select a class to add." });
         return;
     }
-    if (enrollmentData[newClassName] !== undefined) {
+    if (enrollmentData[classToAdd] !== undefined) {
         toast({ variant: "destructive", title: "Error", description: "This class already exists." });
         return;
     }
-    setEnrollmentData(prev => ({ ...prev, [newClassName]: { boys: 0, girls: 0 } }));
-    setNewClassName('');
+    setEnrollmentData(prev => ({ ...prev, [classToAdd]: { boys: 0, girls: 0 } }));
+    setClassToAdd('');
   };
   
   const handleRemoveClass = (className: string) => {
@@ -138,14 +143,18 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
             <div className="flex gap-2 items-end">
                 <div className="flex-grow">
                     <Label htmlFor="new-class-name">New Class Name</Label>
-                    <Input 
-                        id="new-class-name"
-                        placeholder="e.g., Basic 1, JHS 2, Form 1"
-                        value={newClassName}
-                        onChange={e => setNewClassName(e.target.value)}
-                    />
+                    <Select value={classToAdd} onValueChange={setClassToAdd}>
+                        <SelectTrigger id="new-class-name">
+                            <SelectValue placeholder="Select a class to add..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableClassesToAdd.map(level => (
+                                <SelectItem key={level} value={level}>{level}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
-                <Button onClick={handleAddNewClass} variant="outline">
+                <Button onClick={handleAddNewClass} variant="outline" disabled={!classToAdd}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Class
                 </Button>
             </div>
@@ -198,7 +207,7 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
                 }) : (
                     <TableRow>
                         <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                            No classes added yet. Use the input above to add a class.
+                            No classes added yet. Use the dropdown above to add a class.
                         </TableCell>
                     </TableRow>
                 )}
