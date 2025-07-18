@@ -21,9 +21,10 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
             .filter(req => {
                 if (req.status !== 'Approved' || !req.returnDate) return false;
                 const returnDate = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
+                // Show notifications for teachers returning in the next 10 days
                 return isWithinInterval(returnDate, {
                     start: new Date(),
-                    end: addDays(new Date(), 7)
+                    end: addDays(new Date(), 10)
                 });
             })
             .map(req => {
@@ -41,6 +42,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                 if (!teacher.dateOfBirth) return false;
                 const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
                 const retirementDate = addYears(dob, 60);
+                // Show notifications for teachers retiring in the next 12 months (1 year)
                 const nextYear = addYears(new Date(), 1);
                 return retirementDate > new Date() && retirementDate <= nextYear;
             })
@@ -130,7 +132,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">+{stats.leavesEndingSoon}</div>
-                    <p className="text-xs text-muted-foreground">In the next 7 days</p>
+                    <p className="text-xs text-muted-foreground">In the next 10 days</p>
                 </CardContent>
             </Card>
              <Card>
@@ -150,7 +152,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                         Notifications
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[80px] overflow-y-auto space-y-2 text-sm text-muted-foreground">
+                <CardContent className="h-[80px] overflow-y-auto space-y-2 text-muted-foreground">
                     {stats.leavesEndingSoonDetails.length > 0 && stats.leavesEndingSoonDetails.map((leave, index) => (
                         <p key={`leave-${index}`}>
                             - <strong>{leave.teacherName}</strong> returns from leave 
