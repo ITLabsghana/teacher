@@ -5,29 +5,48 @@ import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { useDataContext } from '@/context/data-context';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isWithinInterval, addDays, parseISO, differenceInYears, addYears } from 'date-fns';
+import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, format } from 'date-fns';
 import { useMemo } from 'react';
 
 function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[], leaveRequests: LeaveRequest[], schools: School[] }) {
     const stats = useMemo(() => {
         const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
 
-        const leavesEndingSoon = leaveRequests.filter(req => {
-            if (req.status !== 'Approved' || !req.returnDate) return false;
-            const returnDate = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
-            return isWithinInterval(returnDate, {
-                start: new Date(),
-                end: addDays(new Date(), 7)
-            });
-        }).length;
+        const getTeacherName = (teacherId: string) => {
+            const teacher = teachers.find(t => t.id === teacherId);
+            return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher';
+        };
 
-        const nearingRetirementCount = teachers.filter(teacher => {
-            if (!teacher.dateOfBirth) return false;
-            const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
-            const retirementDate = addYears(dob, 60);
-            const nextYear = addYears(new Date(), 1);
-            return retirementDate > new Date() && retirementDate <= nextYear;
-        }).length;
+        const leavesEndingSoonDetails = leaveRequests
+            .filter(req => {
+                if (req.status !== 'Approved' || !req.returnDate) return false;
+                const returnDate = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
+                return isWithinInterval(returnDate, {
+                    start: new Date(),
+                    end: addDays(new Date(), 7)
+                });
+            })
+            .map(req => ({
+                teacherName: getTeacherName(req.teacherId),
+                returnDate: req.returnDate,
+            }));
+
+        const nearingRetirementDetails = teachers
+            .filter(teacher => {
+                if (!teacher.dateOfBirth) return false;
+                const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
+                const retirementDate = addYears(dob, 60);
+                const nextYear = addYears(new Date(), 1);
+                return retirementDate > new Date() && retirementDate <= nextYear;
+            })
+            .map(teacher => {
+                 const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth!) : teacher.dateOfBirth!;
+                 const retirementDate = addYears(dob, 60);
+                 return {
+                    name: `${teacher.firstName} ${teacher.lastName}`,
+                    timeToRetirement: formatDistanceToNow(retirementDate, { addSuffix: true }),
+                 }
+            });
 
         const enrollmentTotals = schools.reduce((acc, school) => {
             if (school.enrollment) {
@@ -41,7 +60,15 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
 
         const grandTotalStudents = enrollmentTotals.boys + enrollmentTotals.girls;
 
-        return { onLeaveCount, leavesEndingSoon, nearingRetirementCount, enrollmentTotals, grandTotalStudents };
+        return { 
+            onLeaveCount, 
+            leavesEndingSoon: leavesEndingSoonDetails.length, 
+            nearingRetirementCount: nearingRetirementDetails.length, 
+            enrollmentTotals, 
+            grandTotalStudents,
+            leavesEndingSoonDetails,
+            nearingRetirementDetails,
+        };
     }, [teachers, leaveRequests, schools]);
 
     return (
@@ -118,19 +145,19 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                         Notifications
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[80px] overflow-y-auto space-y-2">
-                    {stats.leavesEndingSoon > 0 && (
-                         <p className="text-xs text-muted-foreground">
-                            - {stats.leavesEndingSoon} teacher(s) returning from leave soon.
+                <CardContent className="h-[80px] overflow-y-auto space-y-2 text-xs text-muted-foreground">
+                    {stats.leavesEndingSoonDetails.length > 0 && stats.leavesEndingSoonDetails.map((leave, index) => (
+                        <p key={`leave-${index}`}>
+                            - <strong>{leave.teacherName}</strong> returns from leave on {format(leave.returnDate, 'MMM d, yyyy')}.
                         </p>
-                    )}
-                     {stats.nearingRetirementCount > 0 && (
-                         <p className="text-xs text-muted-foreground">
-                            - {stats.nearingRetirementCount} teacher(s) nearing retirement age.
+                    ))}
+                    {stats.nearingRetirementDetails.length > 0 && stats.nearingRetirementDetails.map((retiree, index) => (
+                         <p key={`retire-${index}`}>
+                            - <strong>{retiree.name}</strong> is due for retirement {retiree.timeToRetirement}.
                         </p>
-                    )}
+                    ))}
                     {stats.leavesEndingSoon === 0 && stats.nearingRetirementCount === 0 && (
-                        <p className="text-xs text-muted-foreground">No new notifications.</p>
+                        <p>No new notifications.</p>
                     )}
                 </CardContent>
             </Card>
