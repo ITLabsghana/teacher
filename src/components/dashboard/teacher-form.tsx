@@ -227,28 +227,33 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: Teac
   }, [dob]);
 
   const handleGhanaCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const prefix = "GHA-";
-    let value = e.target.value;
+      const prefix = "GHA-";
+      let value = e.target.value;
 
-    if (!value.startsWith(prefix)) {
-        value = prefix;
-    }
-    
-    let numbers = value.substring(prefix.length).replace(/[^0-9]/g, '');
+      // Ensure the prefix is always there and non-editable
+      if (!value.startsWith(prefix)) {
+          value = prefix;
+      }
 
-    if (numbers.length > 10) {
-        numbers = numbers.slice(0, 10);
-    }
-    
-    let formatted = prefix;
-    if (numbers.length > 0) {
-        formatted += numbers.substring(0, 9);
-    }
-    if (numbers.length === 10) {
-        formatted += '-' + numbers.substring(9);
-    }
+      // Extract numbers only from the part after the prefix
+      let numbers = value.substring(prefix.length).replace(/[^0-9]/g, '');
 
-    setValue('ghanaCardNo', formatted);
+      // Limit to 10 digits
+      if (numbers.length > 10) {
+          numbers = numbers.slice(0, 10);
+      }
+
+      let formatted = prefix;
+      if (numbers.length > 0) {
+          // Add the first 9 digits
+          formatted += numbers.substring(0, 9);
+      }
+      if (numbers.length > 9) {
+          // Add the hyphen and the 10th digit
+          formatted += '-' + numbers.substring(9);
+      }
+
+      setValue('ghanaCardNo', formatted);
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
