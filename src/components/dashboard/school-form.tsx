@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -9,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useDataContext } from '@/context/data-context';
+import { useToast } from '@/hooks/use-toast';
 
 const schoolSchema = z.object({
     name: z.string().min(3, "School name is too short"),
@@ -29,6 +32,8 @@ export function SchoolForm({
     onSchoolAdded,
     onCancelEdit
 }: SchoolFormProps) {
+  const { addSchool, updateSchool } = useDataContext();
+  const { toast } = useToast();
   const { register, handleSubmit, reset, formState: { errors } } = useForm<SchoolFormData>({
     resolver: zodResolver(schoolSchema),
   });
@@ -41,16 +46,22 @@ export function SchoolForm({
     }
   }, [editingSchool, reset]);
 
-  const onSubmit = (data: SchoolFormData) => {
-    if (editingSchool) {
-      setSchools(prev => prev.map(s => s.id === editingSchool.id ? { ...s, ...data } : s));
-    } else {
-      setSchools(prev => [...prev, { ...data, id: crypto.randomUUID(), enrollment: {} }]);
-    }
-    
-    reset({ name: '' });
-    if (onSchoolAdded) {
-      onSchoolAdded();
+  const onSubmit = async (data: SchoolFormData) => {
+    try {
+      if (editingSchool) {
+        await updateSchool({ ...editingSchool, ...data });
+        toast({ title: 'Success', description: 'School updated successfully.' });
+      } else {
+        await addSchool({ ...data, enrollment: {} });
+        toast({ title: 'Success', description: 'New school added.' });
+      }
+      
+      reset({ name: '' });
+      if (onSchoolAdded) {
+        onSchoolAdded();
+      }
+    } catch (err: any) {
+        toast({ variant: 'destructive', title: 'Error', description: err.message });
     }
   };
   
