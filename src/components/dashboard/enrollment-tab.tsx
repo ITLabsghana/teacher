@@ -293,5 +293,3 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
     </Card>
   );
 }
-
-    
