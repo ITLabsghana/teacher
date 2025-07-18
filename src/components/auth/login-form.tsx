@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { School, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { LayoutDashboard, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase, getUserByUsername } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function LoginForm() {
   const [identifier, setIdentifier] = useState('');
@@ -16,17 +17,17 @@ export default function LoginForm() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setIsLoading(true);
 
-    let emailToAuth = identifier;
+    try {
+      let emailToAuth = identifier;
 
-    // If identifier doesn't look like an email, assume it's a username
-    if (!identifier.includes('@')) {
-      try {
+      if (!identifier.includes('@')) {
         const user = await getUserByUsername(identifier);
         if (user) {
           emailToAuth = user.email;
@@ -35,31 +36,29 @@ export default function LoginForm() {
           setIsLoading(false);
           return;
         }
-      } catch (e) {
-        setError("An error occurred. Please try again.");
-        setIsLoading(false);
-        return;
       }
-    }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: emailToAuth,
-      password,
-    });
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: emailToAuth,
+        password,
+      });
 
-    if (signInError) {
-      setError("Invalid username or password.");
+      if (signInError) {
+        setError("Invalid username or password.");
+      }
+      // The DataContext auth listener will handle redirection on successful login
+    } catch (e: any) {
+      setError(e.message || "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-    // No longer need to manually push, the DataContext auth listener will handle it.
-    
-    setIsLoading(false);
   };
 
   return (
     <Card className="w-full max-w-md shadow-2xl">
       <CardHeader className="text-center">
         <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
-            <School className="h-8 w-8" />
+            <LayoutDashboard className="h-8 w-8" />
         </div>
         <CardTitle className="font-headline text-3xl">Teacher Management System</CardTitle>
         <CardDescription>Login</CardDescription>
