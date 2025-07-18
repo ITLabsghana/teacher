@@ -9,11 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { PenSquare, Save, PlusCircle, Trash2 } from 'lucide-react';
+import { PenSquare, Save, Trash2 } from 'lucide-react';
 import { useDataContext } from '@/context/data-context';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { CLASS_LEVELS, sortClassLevels } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface EnrollmentTabProps {
   schools: School[];
@@ -23,6 +25,13 @@ interface EnrollmentTabProps {
 
 type EnrollmentData = { [className: string]: { boys: number; girls: number } };
 
+const CLASS_SECTIONS = {
+    KG: ['KG 1', 'KG 2'],
+    Basic: ['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6'],
+    JHS: ['JHS 1', 'JHS 2', 'JHS 3'],
+    SHS: ['SHS 1', 'SHS 2', 'SHS 3'],
+};
+
 export default function EnrollmentTab({ schools, selectedSchoolId: initialSchoolId, onSave }: EnrollmentTabProps) {
   const params = useParams();
   const { toast } = useToast();
@@ -30,7 +39,6 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
 
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(initialSchoolId ?? null);
   const [enrollmentData, setEnrollmentData] = useState<EnrollmentData>({});
-  const [classToAdd, setClassToAdd] = useState('');
 
   const isDetailPage = !!params.id;
 
@@ -51,10 +59,6 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
 
   const sortedClassLevels = useMemo(() => sortClassLevels(Object.keys(enrollmentData)), [enrollmentData]);
 
-  const availableClassesToAdd = useMemo(() => {
-    return CLASS_LEVELS.filter(level => !enrollmentData[level]);
-  }, [enrollmentData]);
-
   const totals = sortedClassLevels.reduce((acc, level) => {
     acc.boys += Number(enrollmentData[level]?.boys) || 0;
     acc.girls += Number(enrollmentData[level]?.girls) || 0;
@@ -72,17 +76,21 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
     }));
   };
   
-  const handleAddNewClass = () => {
-    if (!classToAdd) {
-        toast({ variant: "destructive", title: "Error", description: "Please select a class to add." });
-        return;
+  const handleAddSection = (section: keyof typeof CLASS_SECTIONS) => {
+    const classesToAdd = CLASS_SECTIONS[section];
+    const newEnrollmentData = { ...enrollmentData };
+    let added = false;
+    classesToAdd.forEach(level => {
+        if (!newEnrollmentData[level]) {
+            newEnrollmentData[level] = { boys: 0, girls: 0 };
+            added = true;
+        }
+    });
+    if (added) {
+      setEnrollmentData(newEnrollmentData);
+    } else {
+      toast({ variant: 'default', title: 'Already Added', description: `All ${section} classes are already in the list.` });
     }
-    if (enrollmentData[classToAdd] !== undefined) {
-        toast({ variant: "destructive", title: "Error", description: "This class already exists." });
-        return;
-    }
-    setEnrollmentData(prev => ({ ...prev, [classToAdd]: { boys: 0, girls: 0 } }));
-    setClassToAdd('');
   };
   
   const handleRemoveClass = (className: string) => {
@@ -93,7 +101,7 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
       });
   };
 
-  const handleSave = async () => {
+  const handleSave = async (dataToSave: EnrollmentData) => {
     if (!selectedSchoolId) {
         toast({ variant: "destructive", title: "Error", description: "Please select a school before saving." });
         return;
@@ -106,7 +114,7 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
     }
     
     try {
-        const updatedSchool = { ...schoolToUpdate, enrollment: enrollmentData };
+        const updatedSchool = { ...schoolToUpdate, enrollment: dataToSave };
         await updateSchool(updatedSchool);
         
         toast({ title: "Success!", description: "Enrollment data has been saved successfully." });
@@ -121,6 +129,15 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
             description: e.message || "Failed to save enrollment data.",
         });
     }
+  };
+
+  const handleClearEnrollment = async () => {
+    setEnrollmentData({});
+    await handleSave({}); // Save the empty object to the database
+  };
+
+  const checkSectionExists = (section: keyof typeof CLASS_SECTIONS) => {
+    return CLASS_SECTIONS[section].every(level => enrollmentData[level]);
   };
 
   const content = (
@@ -140,23 +157,14 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
         )}
         {selectedSchoolId ? (
           <div className="space-y-4">
-            <div className="flex gap-2 items-end">
-                <div className="flex-grow">
-                    <Label htmlFor="new-class-name">New Class Name</Label>
-                    <Select value={classToAdd} onValueChange={setClassToAdd}>
-                        <SelectTrigger id="new-class-name">
-                            <SelectValue placeholder="Select a class to add..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableClassesToAdd.map(level => (
-                                <SelectItem key={level} value={level}>{level}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+             <div className="p-4 border rounded-lg space-y-4">
+                <p className="text-sm font-medium">Add Class Sections</p>
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleAddSection('KG')} disabled={checkSectionExists('KG')}>Add KG Section</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleAddSection('Basic')} disabled={checkSectionExists('Basic')}>Add Basic Section</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleAddSection('JHS')} disabled={checkSectionExists('JHS')}>Add JHS Section</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleAddSection('SHS')} disabled={checkSectionExists('SHS')}>Add SHS Section</Button>
                 </div>
-                <Button onClick={handleAddNewClass} variant="outline" disabled={!classToAdd}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Class
-                </Button>
             </div>
 
             <Table>
@@ -207,7 +215,7 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
                 }) : (
                     <TableRow>
                         <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                            No classes added yet. Use the dropdown above to add a class.
+                            No classes added yet. Use the buttons above to add class sections.
                         </TableCell>
                     </TableRow>
                 )}
@@ -216,16 +224,40 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
                     <TableFooter>
                         <TableRow>
                             <TableCell colSpan={5} className="p-0">
-                                <div className="flex justify-between w-full items-center bg-muted p-4 mt-4 rounded-b-lg">
-                                    <div className="flex gap-8 font-bold">
+                                <div className="flex flex-wrap justify-between w-full items-center bg-muted p-4 mt-4 rounded-b-lg gap-4">
+                                    <div className="flex flex-wrap gap-x-8 gap-y-2 font-bold">
                                         <span>Total Boys: {totals.boys}</span>
                                         <span>Total Girls: {totals.girls}</span>
                                         <span>Grand Total: {totals.boys + totals.girls}</span>
                                     </div>
-                                    <Button onClick={handleSave}>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Save Enrollment Data
-                                    </Button>
+                                    <div className="flex gap-2">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Clear All
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will permanently clear all enrollment data for this school. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={handleClearEnrollment} className="bg-destructive hover:bg-destructive/90">
+                                                        Yes, Clear Enrollment
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+
+                                        <Button onClick={() => handleSave(enrollmentData)}>
+                                            <Save className="mr-2 h-4 w-4" />
+                                            Save Enrollment
+                                        </Button>
+                                    </div>
                                 </div>
                             </TableCell>
                         </TableRow>
