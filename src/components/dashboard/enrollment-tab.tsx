@@ -13,7 +13,7 @@ import { PenSquare, Save, Trash2 } from 'lucide-react';
 import { useDataContext } from '@/context/data-context';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { CLASS_LEVELS, sortClassLevels } from '@/lib/utils';
+import { sortClassLevels } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
@@ -293,3 +293,5 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
     </Card>
   );
 }
+
+    
