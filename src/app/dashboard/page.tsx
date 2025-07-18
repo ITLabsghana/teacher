@@ -5,7 +5,7 @@ import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { useDataContext } from '@/context/data-context';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, format } from 'date-fns';
+import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, format, differenceInDays, isToday } from 'date-fns';
 import { useMemo } from 'react';
 
 function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[], leaveRequests: LeaveRequest[], schools: School[] }) {
@@ -26,10 +26,15 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     end: addDays(new Date(), 7)
                 });
             })
-            .map(req => ({
-                teacherName: getTeacherName(req.teacherId),
-                returnDate: req.returnDate,
-            }));
+            .map(req => {
+                const returnDateObj = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
+                return {
+                    teacherName: getTeacherName(req.teacherId),
+                    returnDate: returnDateObj,
+                    daysToReturn: differenceInDays(returnDateObj, new Date()),
+                    isReturningToday: isToday(returnDateObj),
+                };
+            });
 
         const nearingRetirementDetails = teachers
             .filter(teacher => {
@@ -145,10 +150,15 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                         Notifications
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[80px] overflow-y-auto space-y-2 text-xs text-muted-foreground">
+                <CardContent className="h-[80px] overflow-y-auto space-y-2 text-sm text-muted-foreground">
                     {stats.leavesEndingSoonDetails.length > 0 && stats.leavesEndingSoonDetails.map((leave, index) => (
                         <p key={`leave-${index}`}>
-                            - <strong>{leave.teacherName}</strong> returns from leave on {format(leave.returnDate, 'MMM d, yyyy')}.
+                            - <strong>{leave.teacherName}</strong> returns from leave 
+                            {leave.isReturningToday ? (
+                                <span className="font-bold text-primary"> today</span>
+                            ) : (
+                                ` in ${leave.daysToReturn + 1} day(s)`
+                            )}.
                         </p>
                     ))}
                     {stats.nearingRetirementDetails.length > 0 && stats.nearingRetirementDetails.map((retiree, index) => (
