@@ -228,29 +228,24 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: Teac
 
   const handleGhanaCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const prefix = "GHA-";
-      let value = e.target.value;
-
-      // Ensure the prefix is always there and non-editable
-      if (!value.startsWith(prefix)) {
-          value = prefix;
-      }
-
-      // Extract numbers only from the part after the prefix
-      let numbers = value.substring(prefix.length).replace(/[^0-9]/g, '');
-
-      // Limit to 10 digits
-      if (numbers.length > 10) {
-          numbers = numbers.slice(0, 10);
-      }
+      const value = e.target.value;
+      
+      // Sanitize the input by removing the prefix and any non-numeric characters
+      const numbers = value.substring(prefix.length).replace(/[^0-9]/g, "");
 
       let formatted = prefix;
       if (numbers.length > 0) {
-          // Add the first 9 digits
+          // Add the first part (up to 9 digits)
           formatted += numbers.substring(0, 9);
       }
-      if (numbers.length > 9) {
-          // Add the hyphen and the 10th digit
-          formatted += '-' + numbers.substring(9);
+      if (numbers.length >= 9) {
+          // Add the hyphen and the final digit if it exists
+          formatted += '-' + numbers.substring(9, 10);
+      }
+      
+      // Ensure the prefix is always there, even if the user tries to delete it
+      if (!formatted.startsWith(prefix)) {
+          formatted = prefix;
       }
 
       setValue('ghanaCardNo', formatted);
@@ -369,7 +364,25 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: Teac
                     <h3 className="text-lg font-medium">Contact & Identification</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         <div><Label>Registered No.</Label><Input {...register('registeredNo')} /></div>
-                        <div><Label>Ghana Card No.</Label><Controller control={control} name="ghanaCardNo" render={({ field }) => ( <Input {...field} placeholder="GHA-XXXXXXXXX-X" onChange={(e) => { handleGhanaCardChange(e); field.onChange(e); }} /> )}/></div>
+                        <div>
+                          <Label>Ghana Card No.</Label>
+                          <Controller 
+                            control={control} 
+                            name="ghanaCardNo" 
+                            defaultValue="GHA-"
+                            render={({ field }) => ( 
+                              <Input 
+                                {...field} 
+                                placeholder="GHA-XXXXXXXXX-X" 
+                                onChange={(e) => {
+                                  handleGhanaCardChange(e);
+                                  field.onChange(e.target.value);
+                                }}
+                                maxLength={14}
+                              /> 
+                            )}
+                          />
+                        </div>
                         <div><Label>SSNIT No.</Label><Input {...register('ssnitNo')} /></div>
                         <div><Label>TIN No.</Label><Input {...register('tinNo')} /></div>
                         <div><Label>Phone No.</Label><Input {...register('phoneNo')} /></div>
