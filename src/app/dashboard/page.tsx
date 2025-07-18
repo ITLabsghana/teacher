@@ -5,7 +5,7 @@ import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { useDataContext } from '@/context/data-context';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, format, differenceInDays, isToday } from 'date-fns';
+import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday } from 'date-fns';
 import { useMemo } from 'react';
 
 function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[], leaveRequests: LeaveRequest[], schools: School[] }) {
@@ -21,7 +21,6 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
             .filter(req => {
                 if (req.status !== 'Approved' || !req.returnDate) return false;
                 const returnDate = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
-                // Show notifications for teachers returning in the next 10 days
                 return isWithinInterval(returnDate, {
                     start: new Date(),
                     end: addDays(new Date(), 10)
@@ -42,7 +41,6 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                 if (!teacher.dateOfBirth) return false;
                 const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
                 const retirementDate = addYears(dob, 60);
-                // Show notifications for teachers retiring in the next 12 months (1 year)
                 const nextYear = addYears(new Date(), 1);
                 return retirementDate > new Date() && retirementDate <= nextYear;
             })
@@ -145,16 +143,16 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                     <p className="text-xs text-muted-foreground">In the next year</p>
                 </CardContent>
             </Card>
-             <Card className="col-span-full lg:col-span-2">
+             <Card className="col-span-full">
                 <CardHeader>
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Bell className="h-4 w-4" />
+                    <CardTitle className="flex items-center gap-2">
+                        <Bell className="h-5 w-5" />
                         Notifications
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[80px] overflow-y-auto space-y-2 text-muted-foreground">
+                <CardContent className="h-[120px] overflow-y-auto space-y-2 text-muted-foreground">
                     {stats.leavesEndingSoonDetails.length > 0 && stats.leavesEndingSoonDetails.map((leave, index) => (
-                        <p key={`leave-${index}`}>
+                        <p key={`leave-${index}`} className="text-foreground">
                             - <strong>{leave.teacherName}</strong> returns from leave 
                             {leave.isReturningToday ? (
                                 <span className="font-bold text-primary"> today</span>
@@ -164,7 +162,7 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
                         </p>
                     ))}
                     {stats.nearingRetirementDetails.length > 0 && stats.nearingRetirementDetails.map((retiree, index) => (
-                         <p key={`retire-${index}`}>
+                         <p key={`retire-${index}`} className="text-foreground">
                             - <strong>{retiree.name}</strong> is due for retirement {retiree.timeToRetirement}.
                         </p>
                     ))}
