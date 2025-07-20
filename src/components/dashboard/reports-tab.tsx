@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,10 +13,17 @@ import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { School, Teacher, LeaveRequest, User } from '@/lib/types';
+import type { School, Teacher, LeaveRequest, User } from '@/lib/types';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Document, Packer, Paragraph, TextRun, Table as DocxTable, TableRow, TableCell, WidthType } from 'docx';
+import { saveAs } from 'file-saver';
+
 
 type ReportFormat = 'csv' | 'pdf' | 'docx';
 type BackupFormat = 'json' | 'csv' | 'sql';
+
+type ReportHeader = { key: string; label: string };
 
 export default function ReportsTab() {
   const {
@@ -34,19 +41,13 @@ export default function ReportsTab() {
 
   const CONFIRMATION_TEXT = 'DELETE ALL DATA';
 
+  // --- CSV Generation ---
   const downloadCSV = (csvContent: string, fileName: string) => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    saveAs(blob, fileName);
   };
   
-  const arrayToCSV = (data: any[], headers: { key: string, label: string }[]): string => {
+  const arrayToCSV = (data: any[], headers: ReportHeader[]): string => {
     const headerRow = headers.map(h => h.label).join(',');
     const bodyRows = data.map(row => {
         return headers.map(header => {
@@ -61,122 +62,139 @@ export default function ReportsTab() {
     return [headerRow, ...bodyRows].join('\n');
   };
 
+  // --- PDF Generation ---
+  const generatePdf = (data: any[], headers: ReportHeader[], title: string, fileName: string) => {
+    const doc = new jsPDF();
+    doc.text(title, 14, 16);
+    autoTable(doc, {
+        head: [headers.map(h => h.label)],
+        body: data.map(row => headers.map(h => {
+            const value = row[h.key] ?? '';
+            return value instanceof Date ? value.toLocaleDateString() : value;
+        })),
+        startY: 20,
+    });
+    doc.save(fileName);
+  };
+
+  // --- DOCX Generation ---
+  const generateDocx = (data: any[], headers: ReportHeader[], title: string, fileName: string) => {
+      const tableRows = [
+        new TableRow({
+            children: headers.map(h => new TableCell({ children: [new Paragraph({ text: h.label, style: 'strong' })], width: { size: 4500, type: WidthType.DXA } })),
+        }),
+        ...data.map(row => new TableRow({
+            children: headers.map(h => {
+                const value = row[h.key] ?? '';
+                const text = value instanceof Date ? value.toLocaleDateString() : String(value);
+                return new TableCell({ children: [new Paragraph(text)] });
+            })
+        }))
+      ];
+      
+      const table = new DocxTable({
+          rows: tableRows,
+          width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
+          },
+      });
+
+      const doc = new Document({
+        styles: {
+            paragraphStyles: [
+                { id: "strong", name: "Strong", run: { bold: true } },
+                { id: "heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 28, bold: true } },
+            ]
+        },
+        sections: [{
+            children: [
+                new Paragraph({ text: title, style: "heading1", spacing: { after: 200 } }),
+                table
+            ],
+        }],
+      });
+
+      Packer.toBlob(doc).then(blob => {
+        saveAs(blob, fileName);
+      });
+  };
+
   const handleGenerateReport = () => {
     if (!reportType) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Please select a report type.',
-        });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select a report type.' });
         return;
     }
 
-    if (reportFormat !== 'csv') {
-        toast({
-            title: 'Feature Not Implemented',
-            description: `Generating ${reportFormat.toUpperCase()} reports is not yet available. Please choose CSV.`,
-        });
-        return;
-    }
-
-    let csvContent = '';
-    let fileName = `${reportType}-${new Date().toISOString().split('T')[0]}.csv`;
+    let data: any[] = [];
+    let headers: ReportHeader[] = [];
+    let title = '';
     const getSchoolName = (schoolId?: string) => schools.find(s => s.id === schoolId)?.name || 'N/A';
     
     switch (reportType) {
-        case 'teacher-list': {
-            const headers = [
-                { key: 'staffId', label: 'Staff ID' },
-                { key: 'firstName', label: 'First Name' },
-                { key: 'lastName', label: 'Last Name' },
-                { key: 'email', label: 'Email' },
-                { key: 'phoneNo', label: 'Phone No.' },
-                { key: 'gender', label: 'Gender' },
-                { key: 'rank', label: 'Rank' },
-                { key: 'job', label: 'Job' },
-                { key: 'currentSchool', label: 'Current School' },
+        case 'teacher-list':
+            title = 'Teacher List';
+            headers = [
+                { key: 'staffId', label: 'Staff ID' }, { key: 'firstName', label: 'First Name' }, { key: 'lastName', label: 'Last Name' },
+                { key: 'email', label: 'Email' }, { key: 'phoneNo', label: 'Phone No.' }, { key: 'gender', label: 'Gender' },
+                { key: 'rank', label: 'Rank' }, { key: 'job', label: 'Job' }, { key: 'currentSchool', label: 'Current School' },
                 { key: 'firstAppointmentDate', label: 'First Appointment Date' },
             ];
-            const data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId) }));
-            csvContent = arrayToCSV(data, headers);
+            data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId) }));
             break;
-        }
-
-        case 'school-enrollment': {
-            const data: any[] = [];
+        case 'school-enrollment':
+            title = 'School Enrollment Summary';
+            headers = [
+                { key: 'schoolName', label: 'School Name' }, { key: 'classLevel', label: 'Class' }, { key: 'boys', label: 'Boys' },
+                { key: 'girls', label: 'Girls' }, { key: 'total', label: 'Total Students' },
+            ];
             schools.forEach(school => {
                 if (school.enrollment && Object.keys(school.enrollment).length > 0) {
                     Object.entries(school.enrollment).forEach(([classLevel, { boys, girls }]) => {
-                        data.push({
-                            schoolName: school.name,
-                            classLevel,
-                            boys,
-                            girls,
-                            total: (boys || 0) + (girls || 0)
-                        });
+                        data.push({ schoolName: school.name, classLevel, boys, girls, total: (boys || 0) + (girls || 0) });
                     });
                 } else {
                     data.push({ schoolName: school.name, classLevel: 'N/A', boys: 0, girls: 0, total: 0 });
                 }
             });
-            const headers = [
-                { key: 'schoolName', label: 'School Name' },
-                { key: 'classLevel', label: 'Class' },
-                { key: 'boys', label: 'Boys' },
-                { key: 'girls', label: 'Girls' },
-                { key: 'total', label: 'Total Students' },
-            ];
-            csvContent = arrayToCSV(data, headers);
             break;
-        }
-
-        case 'leave-summary': {
-            const getTeacherName = (teacherId: string) => {
-                const teacher = teachers.find(t => t.id === teacherId);
-                return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'N/A';
-            };
-            const data = leaveRequests.map(req => ({
-                teacherName: getTeacherName(req.teacherId),
-                leaveType: req.leaveType,
-                startDate: req.startDate,
-                returnDate: req.returnDate,
-                status: req.status
+        case 'leave-summary':
+            title = 'Leave Summary';
+            headers = [
+                { key: 'teacherName', label: 'Teacher Name' }, { key: 'leaveType', label: 'Leave Type' },
+                { key: 'startDate', label: 'Start Date' }, { key: 'returnDate', label: 'Return Date' }, { key: 'status', label: 'Status' },
+            ];
+            data = leaveRequests.map(req => ({
+                teacherName: getTeacherName(req.teacherId), ...req
             }));
-            const headers = [
-                { key: 'teacherName', label: 'Teacher Name' },
-                { key: 'leaveType', label: 'Leave Type' },
-                { key: 'startDate', label: 'Start Date' },
-                { key: 'returnDate', label: 'Return Date' },
-                { key: 'status', label: 'Status' },
-            ];
-            csvContent = arrayToCSV(data, headers);
             break;
-        }
-
-        case 'general-report': {
-            const totalStudents = schools.reduce((sum, school) => {
-                const schoolTotal = Object.values(school.enrollment || {}).reduce((acc, curr) => acc + (curr.boys || 0) + (curr.girls || 0), 0);
-                return sum + schoolTotal;
-            }, 0);
-            const data = [
-                { metric: 'Total Teachers', value: teachers.length },
-                { metric: 'Total Schools', value: schools.length },
-                { metric: 'Total Students', value: totalStudents },
-                { metric: 'Total Leave Requests', value: leaveRequests.length },
+        case 'general-report':
+            title = 'General Institution Report';
+            const totalStudents = schools.reduce((sum, school) => sum + Object.values(school.enrollment || {}).reduce((acc, curr) => acc + (curr.boys || 0) + (curr.girls || 0), 0), 0);
+            headers = [{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }];
+            data = [
+                { metric: 'Total Teachers', value: teachers.length }, { metric: 'Total Schools', value: schools.length },
+                { metric: 'Total Students', value: totalStudents }, { metric: 'Total Leave Requests', value: leaveRequests.length },
                 { metric: 'Approved Leave Requests', value: leaveRequests.filter(r => r.status === 'Approved').length },
             ];
-            const headers = [{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }];
-            csvContent = arrayToCSV(data, headers);
             break;
-        }
-
         default:
             toast({ variant: 'destructive', title: 'Error', description: 'Unknown report type.' });
             return;
     }
 
-    downloadCSV(csvContent, fileName);
-    toast({ title: 'Report Generated', description: `${reportType} has been successfully exported as a CSV file.` });
+    const fileName = `${reportType}-${new Date().toISOString().split('T')[0]}.${reportFormat}`;
+
+    if (reportFormat === 'csv') {
+        const csvContent = arrayToCSV(data, headers);
+        downloadCSV(csvContent, fileName);
+    } else if (reportFormat === 'pdf') {
+        generatePdf(data, headers, title, fileName);
+    } else if (reportFormat === 'docx') {
+        generateDocx(data, headers, title, fileName);
+    }
+
+    toast({ title: 'Report Generated', description: `${title} has been successfully exported as a ${reportFormat.toUpperCase()} file.` });
   };
 
 
@@ -197,14 +215,7 @@ export default function ReportsTab() {
       exportDate: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `teacher-management-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    saveAs(blob, `teacher-management-backup-${new Date().toISOString().split('T')[0]}.json`);
     toast({ title: "Export Successful", description: "All data has been exported as JSON." });
   };
 
@@ -218,7 +229,7 @@ export default function ReportsTab() {
         title: "Feature Not Implemented",
         description: `Please use a JSON file for import.`,
       });
-      event.target.value = ''; // Reset file input
+      event.target.value = '';
       return;
     }
 
@@ -250,7 +261,7 @@ export default function ReportsTab() {
       }
     };
     reader.readAsText(file);
-    event.target.value = ''; // Reset file input
+    event.target.value = '';
   };
 
   const handleClearAllData = () => {
