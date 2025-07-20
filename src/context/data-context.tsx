@@ -19,6 +19,7 @@ interface DataContextProps {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
   isLoading: boolean;
+  logout: () => Promise<void>;
   
   // Exposed CRUD functions
   addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
@@ -61,13 +62,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const clearLocalData = () => {
+  const clearLocalData = useCallback(() => {
     setCurrentUser(null);
     setTeachers([]);
     setSchools([]);
     setLeaveRequests([]);
     setUsers([]);
-  };
+  }, []);
 
   useEffect(() => {
     // Proactively check session on mount
@@ -79,7 +80,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setCurrentUser(userProfile);
           await fetchData();
         } else {
-          // Profile doesn't exist, treat as logged out
           await supabase.auth.signOut();
           clearLocalData();
         }
@@ -94,6 +94,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN') {
           if (session) {
+            setIsLoading(true);
             const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
              if (userProfile) {
                 setCurrentUser(userProfile);
@@ -102,6 +103,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 await supabase.auth.signOut();
                 clearLocalData();
              }
+             setIsLoading(false);
           }
         } else if (event === 'SIGNED_OUT') {
           clearLocalData();
@@ -111,7 +113,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchData]);
+  }, [fetchData, clearLocalData]);
 
   // CRUD Implementations
   const handleAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
@@ -165,6 +167,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setUsers(await getUsers());
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    clearLocalData();
+  }
+
   const value = {
     teachers, setTeachers,
     schools, setSchools,
@@ -172,6 +179,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     users, setUsers,
     currentUser, setCurrentUser,
     isLoading,
+    logout: handleLogout,
     addTeacher: handleAddTeacher,
     updateTeacher: handleUpdateTeacher,
     deleteTeacher: handleDeleteTeacher,
