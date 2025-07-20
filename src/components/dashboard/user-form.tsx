@@ -11,18 +11,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDataContext } from '@/context/data-context';
+import { useToast } from '@/hooks/use-toast';
 
 const allUserRoles: User['role'][] = ['Admin', 'Supervisor', 'Viewer'];
 
 const userSchema = z.object({
   username: z.string().min(2, "Username is too short"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long").optional(),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
   role: z.enum(allUserRoles, { required_error: "Role is required" }),
 });
 
 // For editing, password is not required
-const editUserSchema = userSchema.omit({ password: true });
+const editUserSchema = userSchema.omit({ password: true }).extend({
+    password: z.string().optional()
+});
 
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -31,11 +35,13 @@ interface UserFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   editingUser: User | null;
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   currentUser: User | null;
 }
 
-export function UserForm({ isOpen, setIsOpen, editingUser, setUsers, currentUser }: UserFormProps) {
+export function UserForm({ isOpen, setIsOpen, editingUser, currentUser }: UserFormProps) {
+  const { addUser, updateUser } = useDataContext();
+  const { toast } = useToast();
+
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<UserFormData>({
     resolver: zodResolver(editingUser ? editUserSchema : userSchema),
   });
@@ -58,13 +64,20 @@ export function UserForm({ isOpen, setIsOpen, editingUser, setUsers, currentUser
     }
   }, [editingUser, isOpen, reset]);
 
-  const onSubmit = (data: UserFormData) => {
-    if (editingUser) {
-      setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...data } : u));
-    } else {
-      setUsers(prev => [...prev, { ...data, id: crypto.randomUUID() }]);
+  const onSubmit = async (data: UserFormData) => {
+    try {
+        if (editingUser) {
+            const { password, ...updateData } = data; // Exclude password from general update
+            await updateUser({ ...editingUser, ...updateData });
+            toast({ title: 'Success', description: 'User updated successfully.' });
+        } else {
+            await addUser(data);
+            toast({ title: 'Success', description: 'New user added.' });
+        }
+        setIsOpen(false);
+    } catch (err: any) {
+        toast({ variant: 'destructive', title: 'Error', description: err.message });
     }
-    setIsOpen(false);
   };
 
   return (

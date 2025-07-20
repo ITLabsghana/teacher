@@ -14,7 +14,7 @@ import { UserForm } from './user-form';
 import { ResetPasswordForm } from './reset-password-form';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useDataContext } from '@/context/data-context';
-
+import { useToast } from '@/hooks/use-toast';
 
 interface UsersTabProps {
   users: User[];
@@ -26,7 +26,8 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
   const [isResetPasswordFormOpen, setIsResetPasswordFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
-  const { currentUser } = useDataContext();
+  const { currentUser, deleteUser } = useDataContext();
+  const { toast } = useToast();
 
   const handleAdd = () => {
     setEditingUser(null);
@@ -43,8 +44,13 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
     setIsResetPasswordFormOpen(true);
   }
 
-  const handleDelete = (userId: string) => {
-    setUsers(users.filter(u => u.id !== userId));
+  const handleDelete = async (userId: string) => {
+    try {
+      await deleteUser(userId);
+      toast({ title: 'Success', description: 'User deleted successfully.' });
+    } catch(err: any) {
+      toast({ variant: 'destructive', title: 'Error', description: err.message });
+    }
   };
   
   const getInitials = (name: string) => {
@@ -162,14 +168,12 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
         editingUser={editingUser}
-        setUsers={setUsers}
         currentUser={currentUser}
       />
       <ResetPasswordForm
         isOpen={isResetPasswordFormOpen}
         setIsOpen={setIsResetPasswordFormOpen}
         user={userToResetPassword}
-        setUsers={setUsers}
       />
     </>
   );
