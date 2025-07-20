@@ -46,7 +46,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const fetchData = useCallback(async () => {
-    setIsLoading(true);
     try {
       const [teachersData, schoolsData, leaveRequestsData, usersData] = await Promise.all([
         getTeachers(),
@@ -60,45 +59,59 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setUsers(usersData);
     } catch (error) {
       console.error("Failed to fetch initial data:", error);
-    } finally {
-        setIsLoading(false);
     }
   }, []);
 
+  const clearLocalData = () => {
+    setCurrentUser(null);
+    setTeachers([]);
+    setSchools([]);
+    setLeaveRequests([]);
+    setUsers([]);
+  };
+
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const authUser = session?.user ?? null;
-      if (authUser) {
-        if (!currentUser) { // Only fetch profile if not already set
-            const { data: userProfile, error } = await supabase
-              .from('users')
-              .select('*')
-              .eq('auth_id', authUser.id)
-              .single();
-            
-            if (error && error.code !== 'PGRST116') {
-              console.error('Error fetching user profile:', error);
-              setCurrentUser(null);
-            } else if (userProfile) {
-                const wasNotLoggedIn = !currentUser;
-                setCurrentUser(userProfile);
-                await fetchData();
-                if(wasNotLoggedIn) {
-                    router.replace('/dashboard');
-                }
-            } else {
-                setCurrentUser(null);
-            }
+    // Proactively check session on mount
+    const initializeSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
+        if (userProfile) {
+          setCurrentUser(userProfile);
+          await fetchData();
+        } else {
+          // Profile doesn't exist, treat as logged out
+          await supabase.auth.signOut();
+          clearLocalData();
         }
       } else {
-        setCurrentUser(null);
-        setTeachers([]);
-        setSchools([]);
-        setLeaveRequests([]);
-        setUsers([]);
-        router.replace('/');
+        clearLocalData();
       }
-      if (isLoading) setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initializeSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        setIsLoading(true);
+        if (event === 'SIGNED_IN') {
+          if (session) {
+            const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
+             if (userProfile) {
+                setCurrentUser(userProfile);
+                await fetchData();
+                router.replace('/dashboard');
+             } else {
+                await supabase.auth.signOut();
+                clearLocalData();
+                router.replace('/');
+             }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          clearLocalData();
+          router.replace('/');
+        }
+        setIsLoading(false);
     });
 
     return () => {
