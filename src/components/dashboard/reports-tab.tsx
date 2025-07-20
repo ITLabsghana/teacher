@@ -26,11 +26,11 @@ export default function ReportsTab() {
   const { toast } = useToast();
 
   const [reportType, setReportType] = useState('');
-  const [reportFormat, setReportFormat = useState<ReportFormat>('csv');
-  const [exportFormat, setExportFormat = useState<BackupFormat>('json');
-  const [importFormat, setImportFormat = useState<BackupFormat>('json');
-  const [importError, setImportError = useState('');
-  const [clearDataConfirmation, setClearDataConfirmation = useState('');
+  const [reportFormat, setReportFormat] = useState<ReportFormat>('csv');
+  const [exportFormat, setExportFormat] = useState<BackupFormat>('json');
+  const [importFormat, setImportFormat] = useState<BackupFormat>('json');
+  const [importError, setImportError] = useState('');
+  const [clearDataConfirmation, setClearDataConfirmation] = useState('');
 
   const CONFIRMATION_TEXT = 'DELETE ALL DATA';
 
@@ -418,5 +418,3 @@ export default function ReportsTab() {
     </div>
   );
 }
-
-    
