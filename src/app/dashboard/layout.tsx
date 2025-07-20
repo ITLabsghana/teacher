@@ -72,7 +72,7 @@ function InnerLayout({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     await logout();
-    // The useEffect above will handle the redirection once currentUser becomes null.
+    router.replace('/');
   };
 
   if (isLoading || !currentUser) {

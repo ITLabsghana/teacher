@@ -73,6 +73,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Proactively check session on mount
     const initializeSession = async () => {
+      setIsLoading(true); // Set loading true at the start
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
@@ -80,13 +81,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setCurrentUser(userProfile);
           await fetchData();
         } else {
+          // This case is important, user is auth'd but no profile. Sign out.
           await supabase.auth.signOut();
           clearLocalData();
         }
       } else {
         clearLocalData();
       }
-      setIsLoading(false);
+      setIsLoading(false); // Set loading false at the end
     };
 
     initializeSession();
@@ -169,6 +171,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    // Immediately clear local state to prevent race conditions with the auth listener
     clearLocalData();
   }
 
