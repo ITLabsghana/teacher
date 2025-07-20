@@ -3,7 +3,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Teacher, School, LeaveRequest, User } from '@/lib/types';
-import { supabase, getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, addSchool as dbAddSchool, updateSchool as dbUpdateSchool, deleteSchool as dbDeleteSchool, addLeaveRequest as dbAddLeaveRequest, updateLeaveRequest as dbUpdateLeaveRequest, createUser as dbCreateUser, updateUser as dbUpdateUser, deleteUser as dbDeleteUser } from '@/lib/supabase';
+import { supabase, getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, addSchool as dbAddSchool, updateSchool as dbUpdateSchool, deleteSchool as dbDeleteSchool, addLeaveRequest as dbAddLeaveRequest, updateLeaveRequest as dbUpdateLeaveRequest } from '@/lib/supabase';
+import { createUserAction, updateUserAction, deleteUserAction } from '@/app/actions/user-actions';
 
 interface DataContextProps {
   teachers: Teacher[];
@@ -141,17 +142,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   
   const handleAddUser = async (user: Omit<User, 'id'>) => {
-      await dbCreateUser(user);
+      await createUserAction(user);
       setUsers(await getUsers());
   };
 
   const handleUpdateUser = async (user: User) => {
-      await dbUpdateUser(user);
+      await updateUserAction(user);
       setUsers(await getUsers());
   };
   
   const handleDeleteUser = async (id: string) => {
-      await dbDeleteUser(id);
+      await deleteUserAction(id);
       setUsers(await getUsers());
   };
 
