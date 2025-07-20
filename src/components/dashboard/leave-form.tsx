@@ -13,7 +13,7 @@ import { DatePickerSelect } from '@/components/dashboard/teacher-form';
 import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 
-const leaveTypes: LeaveRequest['leaveType'][] = ['Sick', 'Maternity', 'Paternity', 'Casual', 'Other'];
+const leaveTypes: LeaveRequest['leaveType'][] = ['Study Leave (with pay)', 'Study Leave (without pay)', 'Sick', 'Maternity', 'Paternity', 'Casual', 'Other'];
 
 const leaveSchema = z.object({
   teacherId: z.string().min(1, "Teacher is required"),

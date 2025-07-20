@@ -142,4 +142,4 @@ The main landing page after login, providing a high-level summary of important i
 - **Danger Zone**: A feature to clear all application data, preserving only Admin and Supervisor accounts.
 
 ---
-*This README was generated to provide a clear and comprehensive overview of the Teacher Management System.*
+Made with ❤️ by ITLabs Ghana, Contact 0248362847
