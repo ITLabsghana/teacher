@@ -72,6 +72,8 @@ function InnerLayout({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     await logout();
+    // The DataContext's auth listener will handle state change,
+    // and the useEffect above will handle the redirect.
   };
 
   if (isLoading || !currentUser) {
