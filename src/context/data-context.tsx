@@ -43,7 +43,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   const fetchData = useCallback(async () => {
     try {
@@ -93,32 +92,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     initializeSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        setIsLoading(true);
         if (event === 'SIGNED_IN') {
           if (session) {
             const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
              if (userProfile) {
                 setCurrentUser(userProfile);
                 await fetchData();
-                router.replace('/dashboard');
              } else {
                 await supabase.auth.signOut();
                 clearLocalData();
-                router.replace('/');
              }
           }
         } else if (event === 'SIGNED_OUT') {
           clearLocalData();
-          router.replace('/');
         }
-        setIsLoading(false);
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   // CRUD Implementations
   const handleAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
