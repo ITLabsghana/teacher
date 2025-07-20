@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Teacher, School, LeaveRequest, User } from '@/lib/types';
-import { supabase, getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, addSchool as dbAddSchool, updateSchool as dbUpdateSchool, deleteSchool as dbDeleteSchool, addLeaveRequest as dbAddLeaveRequest, updateLeaveRequest as dbUpdateLeaveRequest, addUser as dbAddUser, updateUser as dbUpdateUser, deleteUser as dbDeleteUser } from '@/lib/supabase';
+import { supabase, getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, addSchool as dbAddSchool, updateSchool as dbUpdateSchool, deleteSchool as dbDeleteSchool, addLeaveRequest as dbAddLeaveRequest, updateLeaveRequest as dbUpdateLeaveRequest, createUser as dbCreateUser, updateUser as dbUpdateUser, deleteUser as dbDeleteUser } from '@/lib/supabase';
 
 interface DataContextProps {
   teachers: Teacher[];
@@ -48,8 +48,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setTeachers([]);
     setSchools([]);
     setLeaveRequests([]);
-    // Do not clear all users, only non-admins if that's a requirement elsewhere.
-    // For logout, clearing the current user is most important.
+    setUsers([]);
     setCurrentUser(null);
   }, []);
 
@@ -78,23 +77,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (session) {
         const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
         setCurrentUser(userProfile);
-        if (userProfile) {
-            await fetchData();
-        }
       }
       setIsLoading(false);
 
-      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_OUT') {
+      const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        if (_event === 'SIGNED_OUT') {
             clearLocalData();
-        } else if (event === 'SIGNED_IN' && session) {
-            setIsLoading(true);
+        } else if (_event === 'SIGNED_IN' && session) {
             const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
             setCurrentUser(userProfile);
-            if (userProfile) {
-               await fetchData();
-            }
-            setIsLoading(false);
         }
       });
 
@@ -104,8 +95,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
 
     getSessionAndListen();
-  }, [fetchData, clearLocalData]);
+  }, [clearLocalData]);
 
+  useEffect(() => {
+    if (currentUser && !isLoading) {
+      fetchData();
+    }
+  }, [currentUser, isLoading, fetchData]);
 
   // CRUD Implementations
   const handleAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
@@ -145,7 +141,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   
   const handleAddUser = async (user: Omit<User, 'id'>) => {
-      await dbAddUser(user);
+      await dbCreateUser(user);
       setUsers(await getUsers());
   };
 
