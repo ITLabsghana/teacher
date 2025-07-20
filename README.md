@@ -72,12 +72,124 @@ The project follows a standard Next.js App Router structure:
 ### Supabase Setup
 
 1.  **Create a Supabase Project**: Go to [supabase.com](https://supabase.com) and create a new project.
-2.  **Database Schema**: You will need to create the following tables in your Supabase SQL Editor to match the application's data structure:
-    - `teachers`
-    - `schools`
-    - `leave_requests`
-    - `users`
-    The specific schemas can be inferred from `src/lib/types.ts`. Your `users` table should have a `FOREIGN KEY` relationship with `auth.users` on an `auth_id` column.
+2.  **Database Schema**: Go to the `SQL Editor` in your Supabase dashboard and run the following script to create all the necessary tables and policies.
+
+    ```sql
+    -- Custom Enum Types for Roles and Leave Status
+    CREATE TYPE user_role AS ENUM ('Admin', 'Supervisor', 'Viewer');
+    CREATE TYPE leave_status AS ENUM ('Pending', 'Approved', 'Rejected');
+    CREATE TYPE leave_type_enum AS ENUM ('Study Leave (with pay)', 'Study Leave (without pay)', 'Sick', 'Maternity', 'Paternity', 'Casual', 'Other');
+
+    -- TEACHERS TABLE
+    CREATE TABLE public.teachers (
+        id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+        staff_id text NOT NULL,
+        first_name text NOT NULL,
+        last_name text NOT NULL,
+        date_of_birth date,
+        gender text,
+        registered_no text,
+        ghana_card_no text,
+        ssnit_no text,
+        tin_no text,
+        phone_no text,
+        home_town text,
+        email text,
+        address text,
+        academic_qualification text,
+        professional_qualification text,
+        other_professional_qualification text,
+        rank text,
+        job text,
+        subjects text,
+        leadership_position text,
+        other_leadership_position text,
+        area_of_specialization text,
+        last_promotion_date date,
+        previous_school text,
+        school_id uuid,
+        date_posted_to_current_school date,
+        licensure_no text,
+        first_appointment_date date,
+        date_confirmed date,
+        teacher_union text,
+        photo text,
+        bank_name text,
+        bank_branch text,
+        account_number text,
+        salary_scale text,
+        documents jsonb
+    );
+    ALTER TABLE public.teachers ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY "Allow authenticated users to manage teachers" ON public.teachers FOR ALL TO authenticated USING (true);
+
+
+    -- SCHOOLS TABLE
+    CREATE TABLE public.schools (
+        id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+        name text NOT NULL,
+        enrollment jsonb
+    );
+    ALTER TABLE public.schools ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY "Allow authenticated users to manage schools" ON public.schools FOR ALL TO authenticated USING (true);
+
+    -- LEAVE REQUESTS TABLE
+    CREATE TABLE public.leave_requests (
+        id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+        teacher_id uuid NOT NULL,
+        leave_type leave_type_enum NOT NULL,
+        start_date date NOT NULL,
+        return_date date NOT NULL,
+        status leave_status NOT NULL DEFAULT 'Pending'::leave_status
+    );
+    ALTER TABLE public.leave_requests ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY "Allow authenticated users to manage leave requests" ON public.leave_requests FOR ALL TO authenticated USING (true);
+    ALTER TABLE public.leave_requests ADD CONSTRAINT leave_requests_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.teachers(id) ON DELETE CASCADE;
+
+
+    -- USERS TABLE
+    CREATE TABLE public.users (
+        id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+        auth_id uuid UNIQUE,
+        username text NOT NULL,
+        email text NOT NULL,
+        "role" user_role NOT NULL DEFAULT 'Viewer'::user_role,
+        CONSTRAINT users_auth_id_fkey FOREIGN KEY (auth_id) REFERENCES auth.users(id) ON DELETE CASCADE
+    );
+    ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY "Allow users to view their own profile" ON public.users FOR SELECT TO authenticated USING (auth.uid() = auth_id);
+    CREATE POLICY "Allow admin/supervisor to manage users" ON public.users FOR ALL TO authenticated USING (
+      (get_my_claim('user_role'::text)) = '"Admin"'::jsonb OR
+      (get_my_claim('user_role'::text)) = '"Supervisor"'::jsonb
+    );
+
+    -- Function to get custom user claims (role)
+    create or replace function get_my_claim(claim text)
+    returns jsonb
+    language sql
+    stable
+    as $$
+      select nullif(current_setting('request.jwt.claims', true), '')::jsonb -> claim
+    $$;
+
+    -- Function to get role for a given user
+    create or replace function get_role(user_id uuid)
+    returns text
+    language plpgsql
+    security definer
+    set search_path = public
+    as $$
+    declare
+      user_role text;
+    begin
+      select role into user_role from users where auth_id = user_id;
+      return user_role;
+    end;
+    $$;
+    ```
+    
+    > **Note:** This schema enables Row Level Security (RLS) for all tables, ensuring users can only access data they are permitted to. This is a crucial security practice for any multi-user application.
+
 3.  **Environment Variables**: Create a `.env.local` file in the root of the project and add your Supabase credentials:
     ```
     NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
@@ -85,7 +197,17 @@ The project follows a standard Next.js App Router structure:
     SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
     ```
     - `ANON_KEY` is the public key, safe to be exposed in the browser.
-    - `SERVICE_ROLE_KEY` is a secret key with full admin privileges and must **never** be exposed to the browser. It is used exclusively in Server Actions.
+    - `SERVICE_ROLE_KEY` is a secret key with full admin privileges and must **never** be exposed to the browser. It is used exclusively in Server Actions. You can find this key in your Supabase project settings under `API` -> `Project API Keys`.
+
+4.  **Create Initial Admin User**: After running the schema script, you need to create your first user directly in Supabase.
+    - Go to `Authentication` -> `Users` and click `Add User`.
+    - After the user is created in `auth.users`, go to your `public.users` table (via the `Table Editor`).
+    - Add a new row:
+        - `auth_id`: The ID of the user you just created in `auth.users`.
+        - `username`: A username for the user.
+        - `email`: The same email as the user.
+        - `role`: Set this to `Admin`.
+    - You can now log in with this user.
 
 ### Running the Application
 
