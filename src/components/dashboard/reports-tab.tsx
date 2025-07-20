@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { School, Teacher, LeaveRequest, User } from '@/lib/types';
 
-type ReportFormat = 'pdf' | 'docx' | 'csv';
+type ReportFormat = 'csv' | 'pdf' | 'docx';
 type BackupFormat = 'json' | 'csv' | 'sql';
 
 export default function ReportsTab() {
@@ -26,13 +26,159 @@ export default function ReportsTab() {
   const { toast } = useToast();
 
   const [reportType, setReportType] = useState('');
-  const [reportFormat, setReportFormat] = useState<ReportFormat>('pdf');
-  const [exportFormat, setExportFormat] = useState<BackupFormat>('json');
-  const [importFormat, setImportFormat] = useState<BackupFormat>('json');
-  const [importError, setImportError] = useState('');
-  const [clearDataConfirmation, setClearDataConfirmation] = useState('');
+  const [reportFormat, setReportFormat = useState<ReportFormat>('csv');
+  const [exportFormat, setExportFormat = useState<BackupFormat>('json');
+  const [importFormat, setImportFormat = useState<BackupFormat>('json');
+  const [importError, setImportError = useState('');
+  const [clearDataConfirmation, setClearDataConfirmation = useState('');
 
   const CONFIRMATION_TEXT = 'DELETE ALL DATA';
+
+  const downloadCSV = (csvContent: string, fileName: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  
+  const arrayToCSV = (data: any[], headers: { key: string, label: string }[]): string => {
+    const headerRow = headers.map(h => h.label).join(',');
+    const bodyRows = data.map(row => {
+        return headers.map(header => {
+            let value = row[header.key] ?? '';
+            if (value instanceof Date) {
+              value = value.toLocaleDateString();
+            }
+            const stringValue = String(value).replace(/"/g, '""');
+            return `"${stringValue}"`;
+        }).join(',');
+    });
+    return [headerRow, ...bodyRows].join('\n');
+  };
+
+  const handleGenerateReport = () => {
+    if (!reportType) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Please select a report type.',
+        });
+        return;
+    }
+
+    if (reportFormat !== 'csv') {
+        toast({
+            title: 'Feature Not Implemented',
+            description: `Generating ${reportFormat.toUpperCase()} reports is not yet available. Please choose CSV.`,
+        });
+        return;
+    }
+
+    let csvContent = '';
+    let fileName = `${reportType}-${new Date().toISOString().split('T')[0]}.csv`;
+    const getSchoolName = (schoolId?: string) => schools.find(s => s.id === schoolId)?.name || 'N/A';
+    
+    switch (reportType) {
+        case 'teacher-list': {
+            const headers = [
+                { key: 'staffId', label: 'Staff ID' },
+                { key: 'firstName', label: 'First Name' },
+                { key: 'lastName', label: 'Last Name' },
+                { key: 'email', label: 'Email' },
+                { key: 'phoneNo', label: 'Phone No.' },
+                { key: 'gender', label: 'Gender' },
+                { key: 'rank', label: 'Rank' },
+                { key: 'job', label: 'Job' },
+                { key: 'currentSchool', label: 'Current School' },
+                { key: 'firstAppointmentDate', label: 'First Appointment Date' },
+            ];
+            const data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId) }));
+            csvContent = arrayToCSV(data, headers);
+            break;
+        }
+
+        case 'school-enrollment': {
+            const data: any[] = [];
+            schools.forEach(school => {
+                if (school.enrollment && Object.keys(school.enrollment).length > 0) {
+                    Object.entries(school.enrollment).forEach(([classLevel, { boys, girls }]) => {
+                        data.push({
+                            schoolName: school.name,
+                            classLevel,
+                            boys,
+                            girls,
+                            total: (boys || 0) + (girls || 0)
+                        });
+                    });
+                } else {
+                    data.push({ schoolName: school.name, classLevel: 'N/A', boys: 0, girls: 0, total: 0 });
+                }
+            });
+            const headers = [
+                { key: 'schoolName', label: 'School Name' },
+                { key: 'classLevel', label: 'Class' },
+                { key: 'boys', label: 'Boys' },
+                { key: 'girls', label: 'Girls' },
+                { key: 'total', label: 'Total Students' },
+            ];
+            csvContent = arrayToCSV(data, headers);
+            break;
+        }
+
+        case 'leave-summary': {
+            const getTeacherName = (teacherId: string) => {
+                const teacher = teachers.find(t => t.id === teacherId);
+                return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'N/A';
+            };
+            const data = leaveRequests.map(req => ({
+                teacherName: getTeacherName(req.teacherId),
+                leaveType: req.leaveType,
+                startDate: req.startDate,
+                returnDate: req.returnDate,
+                status: req.status
+            }));
+            const headers = [
+                { key: 'teacherName', label: 'Teacher Name' },
+                { key: 'leaveType', label: 'Leave Type' },
+                { key: 'startDate', label: 'Start Date' },
+                { key: 'returnDate', label: 'Return Date' },
+                { key: 'status', label: 'Status' },
+            ];
+            csvContent = arrayToCSV(data, headers);
+            break;
+        }
+
+        case 'general-report': {
+            const totalStudents = schools.reduce((sum, school) => {
+                const schoolTotal = Object.values(school.enrollment || {}).reduce((acc, curr) => acc + (curr.boys || 0) + (curr.girls || 0), 0);
+                return sum + schoolTotal;
+            }, 0);
+            const data = [
+                { metric: 'Total Teachers', value: teachers.length },
+                { metric: 'Total Schools', value: schools.length },
+                { metric: 'Total Students', value: totalStudents },
+                { metric: 'Total Leave Requests', value: leaveRequests.length },
+                { metric: 'Approved Leave Requests', value: leaveRequests.filter(r => r.status === 'Approved').length },
+            ];
+            const headers = [{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }];
+            csvContent = arrayToCSV(data, headers);
+            break;
+        }
+
+        default:
+            toast({ variant: 'destructive', title: 'Error', description: 'Unknown report type.' });
+            return;
+    }
+
+    downloadCSV(csvContent, fileName);
+    toast({ title: 'Report Generated', description: `${reportType} has been successfully exported as a CSV file.` });
+  };
+
 
   const handleExport = () => {
     if (exportFormat !== 'json') {
@@ -107,21 +253,6 @@ export default function ReportsTab() {
     event.target.value = ''; // Reset file input
   };
 
-  const handleGenerateReport = () => {
-    if (!reportType) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Please select a report type.',
-        });
-        return;
-    }
-    toast({
-        title: 'Report Generation',
-        description: `Generating ${reportType} report as ${reportFormat}. (This is a placeholder action)`,
-    });
-  };
-
   const handleClearAllData = () => {
     setTeachers([]);
     setSchools([]);
@@ -164,9 +295,9 @@ export default function ReportsTab() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="csv">CSV (Excel)</SelectItem>
                   <SelectItem value="pdf">PDF</SelectItem>
                   <SelectItem value="docx">DOCX (Word)</SelectItem>
-                  <SelectItem value="csv">CSV (Excel)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -287,3 +418,5 @@ export default function ReportsTab() {
     </div>
   );
 }
+
+    
