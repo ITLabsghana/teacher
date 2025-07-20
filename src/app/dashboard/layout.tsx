@@ -72,7 +72,6 @@ function InnerLayout({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/');
   };
 
   if (isLoading || !currentUser) {

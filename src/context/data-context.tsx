@@ -71,9 +71,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Proactively check session on mount
     const initializeSession = async () => {
-      setIsLoading(true); // Set loading true at the start
+      setIsLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
@@ -81,35 +80,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setCurrentUser(userProfile);
           await fetchData();
         } else {
-          // This case is important, user is auth'd but no profile. Sign out.
           await supabase.auth.signOut();
           clearLocalData();
         }
       } else {
         clearLocalData();
       }
-      setIsLoading(false); // Set loading false at the end
+      setIsLoading(false);
     };
 
     initializeSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN') {
-          if (session) {
-            setIsLoading(true);
+        setIsLoading(true);
+        if (event === 'SIGNED_IN' && session) {
             const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
              if (userProfile) {
                 setCurrentUser(userProfile);
                 await fetchData();
              } else {
-                await supabase.auth.signOut();
+                await supabase.auth.signOut(); // Failsafe
                 clearLocalData();
              }
-             setIsLoading(false);
-          }
         } else if (event === 'SIGNED_OUT') {
           clearLocalData();
         }
+        setIsLoading(false);
     });
 
     return () => {
@@ -171,8 +167,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    // Immediately clear local state to prevent race conditions with the auth listener
-    clearLocalData();
   }
 
   const value = {
