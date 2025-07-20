@@ -41,9 +41,8 @@ export default function ReportsTab() {
 
   const CONFIRMATION_TEXT = 'DELETE ALL DATA';
 
-  // --- CSV Generation ---
-  const downloadCSV = (csvContent: string, fileName: string) => {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const downloadFile = (content: string, fileName: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
     saveAs(blob, fileName);
   };
   
@@ -52,8 +51,12 @@ export default function ReportsTab() {
     const bodyRows = data.map(row => {
         return headers.map(header => {
             let value = row[header.key] ?? '';
-            if (value instanceof Date) {
-              value = value.toLocaleDateString();
+            // Handle nested objects like 'enrollment' or 'documents' by JSON stringifying them
+            if (typeof value === 'object' && value !== null) {
+              value = JSON.stringify(value);
+            }
+             if (value instanceof Date) {
+              value = value.toISOString();
             }
             const stringValue = String(value).replace(/"/g, '""');
             return `"${stringValue}"`;
@@ -62,14 +65,34 @@ export default function ReportsTab() {
     return [headerRow, ...bodyRows].join('\n');
   };
 
-  // --- PDF Generation ---
+  const generateSqlInserts = (tableName: string, data: any[]): string => {
+    if (data.length === 0) return '';
+    const columns = Object.keys(data[0]).join(', ');
+    
+    const escapeSqlValue = (value: any): string => {
+      if (value === null || typeof value === 'undefined') return 'NULL';
+      if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+      if (typeof value === 'object') return `'${JSON.stringify(value).replace(/'/g, "''")}'`;
+      return `'${String(value).replace(/'/g, "''")}'`;
+    };
+
+    const values = data.map(row => 
+      `(${Object.values(row).map(escapeSqlValue).join(', ')})`
+    ).join(',\n');
+    
+    return `INSERT INTO ${tableName} (${columns}) VALUES\n${values};\n\n`;
+  };
+
   const generatePdf = (data: any[], headers: ReportHeader[], title: string, fileName: string) => {
     const doc = new jsPDF();
     doc.text(title, 14, 16);
     autoTable(doc, {
         head: [headers.map(h => h.label)],
         body: data.map(row => headers.map(h => {
-            const value = row[h.key] ?? '';
+            let value = row[h.key] ?? '';
+             if (typeof value === 'object' && value !== null) {
+              value = JSON.stringify(value, null, 2);
+            }
             return value instanceof Date ? value.toLocaleDateString() : value;
         })),
         startY: 20,
@@ -77,7 +100,6 @@ export default function ReportsTab() {
     doc.save(fileName);
   };
 
-  // --- DOCX Generation ---
   const generateDocx = (data: any[], headers: ReportHeader[], title: string, fileName: string) => {
       const tableRows = [
         new TableRow({
@@ -85,7 +107,10 @@ export default function ReportsTab() {
         }),
         ...data.map(row => new TableRow({
             children: headers.map(h => {
-                const value = row[h.key] ?? '';
+                let value = row[h.key] ?? '';
+                if (typeof value === 'object' && value !== null) {
+                  value = JSON.stringify(value, null, 2);
+                }
                 const text = value instanceof Date ? value.toLocaleDateString() : String(value);
                 return new TableCell({ children: [new Paragraph(text)] });
             })
@@ -191,7 +216,7 @@ export default function ReportsTab() {
 
     if (reportFormat === 'csv') {
         const csvContent = arrayToCSV(data, headers);
-        downloadCSV(csvContent, fileName);
+        downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
     } else if (reportFormat === 'pdf') {
         generatePdf(data, headers, title, fileName);
     } else if (reportFormat === 'docx') {
@@ -203,24 +228,33 @@ export default function ReportsTab() {
 
 
   const handleExport = () => {
-    if (exportFormat !== 'json') {
-      toast({
-        title: "Feature Not Implemented",
-        description: `${exportFormat.toUpperCase()} export is not yet available. Please use JSON.`,
-      });
-      return;
-    }
+    const timestamp = new Date().toISOString().split('T')[0];
 
-    const allData = {
-      teachers,
-      schools,
-      leaveRequests,
-      users,
-      exportDate: new Date().toISOString()
-    };
-    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-    saveAs(blob, `teacher-management-backup-${new Date().toISOString().split('T')[0]}.json`);
-    toast({ title: "Export Successful", description: "All data has been exported as JSON." });
+    if (exportFormat === 'json') {
+      const allData = { teachers, schools, leaveRequests, users, exportDate: new Date().toISOString() };
+      downloadFile(JSON.stringify(allData, null, 2), `tms-backup-${timestamp}.json`, 'application/json');
+      toast({ title: "Export Successful", description: "All data has been exported as JSON." });
+
+    } else if (exportFormat === 'csv') {
+      const dataSets = { teachers, schools, leaveRequests, users };
+      Object.entries(dataSets).forEach(([name, data]) => {
+        if (data.length > 0) {
+          const headers = Object.keys(data[0]).map(key => ({ key, label: key }));
+          const csvContent = arrayToCSV(data, headers);
+          downloadFile(csvContent, `${name}-${timestamp}.csv`, 'text/csv;charset=utf-8;');
+        }
+      });
+      toast({ title: "Export Successful", description: `Exported ${Object.keys(dataSets).length} tables to separate CSV files.` });
+
+    } else if (exportFormat === 'sql') {
+      let sqlContent = `-- TMS Backup - ${new Date().toISOString()}\n\n`;
+      sqlContent += generateSqlInserts('teachers', teachers);
+      sqlContent += generateSqlInserts('schools', schools);
+      sqlContent += generateSqlInserts('leave_requests', leaveRequests);
+      sqlContent += generateSqlInserts('users', users.map(({password, ...user}) => user)); // Exclude password from user export
+      downloadFile(sqlContent, `tms-backup-${timestamp}.sql`, 'application/sql');
+      toast({ title: "Export Successful", description: "SQL backup file has been generated." });
+    }
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -339,7 +373,7 @@ export default function ReportsTab() {
                         <SelectTrigger id="export-format"><SelectValue /></SelectTrigger>
                         <SelectContent>
                         <SelectItem value="json">JSON</SelectItem>
-                        <SelectItem value="csv">CSV (Excel)</SelectItem>
+                        <SelectItem value="csv">CSV (Multiple Files)</SelectItem>
                         <SelectItem value="sql">SQL</SelectItem>
                         </SelectContent>
                     </Select>
@@ -354,12 +388,10 @@ export default function ReportsTab() {
              <div className="flex items-end gap-2">
                 <div className="flex-1">
                     <Label htmlFor="import-format">Format</Label>
-                    <Select value={importFormat} onValueChange={(v) => setImportFormat(v as BackupFormat)}>
+                    <Select value={importFormat} onValueChange={(v) => setImportFormat(v as BackupFormat)} disabled>
                         <SelectTrigger id="import-format"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="json">JSON</SelectItem>
-                            <SelectItem value="csv">CSV (Excel)</SelectItem>
-                            <SelectItem value="sql">SQL</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -367,7 +399,7 @@ export default function ReportsTab() {
                     <label htmlFor="import-file" className="cursor-pointer">
                         <Upload className="mr-2 h-4 w-4" />
                         Choose File
-                        <Input id="import-file" type="file" accept=".json,.csv,.sql" className="hidden" onChange={handleImport} />
+                        <Input id="import-file" type="file" accept=".json" className="hidden" onChange={handleImport} />
                     </label>
                 </Button>
             </div>
@@ -377,6 +409,7 @@ export default function ReportsTab() {
                     <AlertDescription>{importError}</AlertDescription>
                 </Alert>
             )}
+            <p className="text-xs text-muted-foreground pt-2">Note: Currently, only JSON import is supported.</p>
           </div>
         </CardContent>
       </Card>
