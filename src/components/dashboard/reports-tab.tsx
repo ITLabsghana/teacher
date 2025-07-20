@@ -264,10 +264,10 @@ export default function ReportsTab() {
     if (importFormat !== 'json') {
       toast({
         variant: 'destructive',
-        title: "Feature Not Implemented",
-        description: `Please use a JSON file for import.`,
+        title: "Unsupported Format",
+        description: `Currently, only JSON backup files can be imported.`,
       });
-      event.target.value = '';
+      event.target.value = ''; // Reset file input
       return;
     }
 
@@ -299,7 +299,7 @@ export default function ReportsTab() {
       }
     };
     reader.readAsText(file);
-    event.target.value = '';
+    event.target.value = ''; // Reset file input to allow re-uploading the same file
   };
 
   const handleClearAllData = () => {
@@ -466,3 +466,5 @@ export default function ReportsTab() {
     </div>
   );
 }
+
+    
