@@ -8,6 +8,7 @@ import { School, User as TeacherIcon, CalendarOff, LayoutDashboard, Users, LogOu
 import { DataProvider, useDataContext } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { supabase } from '@/lib/supabase';
 
 function NavLink({ href, icon, label, onClick }: { href: string; icon: ReactNode; label: string, onClick?: () => void }) {
     const pathname = usePathname();
@@ -61,7 +62,7 @@ function MainNav({ onLogout, currentUser, onLinkClick }: { onLogout: () => void;
 
 function InnerLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { currentUser, isLoading, logout } = useDataContext();
+  const { currentUser, isLoading } = useDataContext();
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
   useEffect(() => {
@@ -71,9 +72,8 @@ function InnerLayout({ children }: { children: ReactNode }) {
   }, [currentUser, isLoading, router]);
 
   const handleLogout = async () => {
-    await logout();
-    // The DataContext's auth listener will handle state change,
-    // and the useEffect above will handle the redirect.
+    await supabase.auth.signOut();
+    router.replace('/');
   };
 
   if (isLoading || !currentUser) {

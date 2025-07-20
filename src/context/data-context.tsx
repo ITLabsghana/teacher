@@ -17,7 +17,6 @@ interface DataContextProps {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
   isLoading: boolean;
-  logout: () => Promise<void>;
   
   // Exposed CRUD functions
   addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
@@ -69,34 +68,42 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const getSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
+    setIsLoading(true);
+    const getSessionAndListen = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
+        setCurrentUser(userProfile);
+        await fetchData();
+      } else {
+        clearLocalData();
+      }
+      setIsLoading(false);
+
+      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        setIsLoading(true);
+        if (event === 'SIGNED_OUT') {
+            clearLocalData();
+        } else if (event === 'SIGNED_IN' && session) {
             const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
             setCurrentUser(userProfile);
             await fetchData();
         }
         setIsLoading(false);
-    };
-    
-    getSession();
+      });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-            clearLocalData();
-        } else if (event === 'SIGNED_IN' && session) {
-            setIsLoading(true);
-            const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
-            setCurrentUser(userProfile);
-            await fetchData();
-            setIsLoading(false);
-        }
-    });
+      return () => {
+          authListener.subscription.unsubscribe();
+      };
+    };
+
+    const unsubscribePromise = getSessionAndListen();
 
     return () => {
-        authListener.subscription.unsubscribe();
+      unsubscribePromise.then(unsubscribe => unsubscribe?.());
     };
-}, [fetchData, clearLocalData]);
+  }, [fetchData, clearLocalData]);
 
 
   // CRUD Implementations
@@ -151,10 +158,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setUsers(await getUsers());
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  }
-
   const value = {
     teachers, setTeachers,
     schools, setSchools,
@@ -162,7 +165,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     users, setUsers,
     currentUser, setCurrentUser,
     isLoading,
-    logout: handleLogout,
     addTeacher: handleAddTeacher,
     updateTeacher: handleUpdateTeacher,
     deleteTeacher: handleDeleteTeacher,
