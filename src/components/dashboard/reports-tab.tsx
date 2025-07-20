@@ -127,17 +127,10 @@ export default function ReportsTab() {
     setSchools([]);
     setLeaveRequests([]);
 
-    const adminUser = users.find(u => u.username === 'Prof' && u.role === 'Admin');
-    const adminUserBlueprint: User = {
-        id: crypto.randomUUID(),
-        username: 'Prof',
-        email: 'admin@example.com',
-        password: 'Incre@com0248',
-        role: 'Admin',
-    };
-    setUsers(adminUser ? [adminUser] : [adminUserBlueprint]);
+    const preservedUsers = users.filter(u => u.role === 'Admin' || u.role === 'Supervisor');
+    setUsers(preservedUsers);
 
-    toast({ title: "All Data Cleared", description: "The application data has been reset." });
+    toast({ title: "All Data Cleared", description: "The application data has been reset, preserving Admin and Supervisor accounts." });
     setClearDataConfirmation('');
   };
 
@@ -253,7 +246,7 @@ export default function ReportsTab() {
             <div className="flex justify-between items-center p-4 border border-destructive/20 rounded-lg bg-destructive/5">
                 <div>
                     <h4 className="font-semibold">Clear All Application Data</h4>
-                    <p className="text-sm text-muted-foreground">Permanently delete all teachers, schools, leave requests, and non-admin users.</p>
+                    <p className="text-sm text-muted-foreground">Permanently delete all teachers, schools, leave requests, and non-admin/supervisor users.</p>
                 </div>
                 <AlertDialog onOpenChange={() => setClearDataConfirmation('')}>
                     <AlertDialogTrigger asChild>
@@ -266,7 +259,7 @@ export default function ReportsTab() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete all data in the application except for the default admin user. To confirm, please type <strong className="text-destructive-foreground">{CONFIRMATION_TEXT}</strong> below.
+                                This action cannot be undone. This will permanently delete all data in the application except for Admin and Supervisor users. To confirm, please type <strong className="text-destructive-foreground">{CONFIRMATION_TEXT}</strong> below.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <Input
