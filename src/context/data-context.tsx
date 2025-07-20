@@ -61,52 +61,42 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearLocalData = useCallback(() => {
-    setCurrentUser(null);
     setTeachers([]);
     setSchools([]);
     setLeaveRequests([]);
     setUsers([]);
+    setCurrentUser(null);
   }, []);
 
   useEffect(() => {
-    // Set loading to true initially
-    setIsLoading(true);
-
-    // Get the initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
-        if(userProfile){
-          setCurrentUser(userProfile);
-          await fetchData();
-        }
-      }
-      setIsLoading(false);
-    });
-
-    // Set up the auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        clearLocalData();
-        // No need to set loading here, as the UI will react to currentUser being null
-      } else if (event === 'SIGNED_IN' && session) {
-        setIsLoading(true);
-        const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
-        if (userProfile) {
-          setCurrentUser(userProfile);
-          await fetchData();
-        } else {
-            // Failsafe in case profile doesn't exist
-            await supabase.auth.signOut(); 
+    const getSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
+            setCurrentUser(userProfile);
+            await fetchData();
         }
         setIsLoading(false);
-      }
+    };
+    
+    getSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+            clearLocalData();
+        } else if (event === 'SIGNED_IN' && session) {
+            setIsLoading(true);
+            const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
+            setCurrentUser(userProfile);
+            await fetchData();
+            setIsLoading(false);
+        }
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+        authListener.subscription.unsubscribe();
     };
-  }, [fetchData, clearLocalData]);
+}, [fetchData, clearLocalData]);
 
 
   // CRUD Implementations
