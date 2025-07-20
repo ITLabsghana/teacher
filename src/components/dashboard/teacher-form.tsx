@@ -142,10 +142,11 @@ interface TeacherFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   editingTeacher: Teacher | null;
+  setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>;
   schools: School[];
 }
 
-export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: TeacherFormProps) {
+export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, schools }: TeacherFormProps) {
   const { addTeacher, updateTeacher } = useDataContext();
   const { toast } = useToast();
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<TeacherFormData>({
@@ -228,27 +229,23 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: Teac
 
   const handleGhanaCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const prefix = "GHA-";
-      const value = e.target.value;
-      
-      // Sanitize the input by removing the prefix and any non-numeric characters
-      const numbers = value.substring(prefix.length).replace(/[^0-9]/g, "");
+      let value = e.target.value;
 
-      let formatted = prefix;
-      if (numbers.length > 0) {
-          // Add the first part (up to 9 digits)
-          formatted += numbers.substring(0, 9);
+      // Get only the numbers from the input, ignoring the prefix and any other non-digit characters
+      const digits = value.replace(/[^0-9]/g, "");
+
+      // Limit to 10 digits
+      const truncatedDigits = digits.substring(0, 10);
+      
+      let formattedValue = prefix;
+      if (truncatedDigits.length > 0) {
+        formattedValue += truncatedDigits.substring(0, 9);
       }
-      if (numbers.length >= 9) {
-          // Add the hyphen and the final digit if it exists
-          formatted += '-' + numbers.substring(9, 10);
+      if (truncatedDigits.length > 9) {
+        formattedValue += '-' + truncatedDigits.substring(9);
       }
       
-      // Ensure the prefix is always there, even if the user tries to delete it
-      if (!formatted.startsWith(prefix)) {
-          formatted = prefix;
-      }
-
-      setValue('ghanaCardNo', formatted);
+      setValue('ghanaCardNo', formattedValue);
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -374,10 +371,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools }: Teac
                               <Input 
                                 {...field} 
                                 placeholder="GHA-XXXXXXXXX-X" 
-                                onChange={(e) => {
-                                  handleGhanaCardChange(e);
-                                  field.onChange(e.target.value);
-                                }}
+                                onChange={handleGhanaCardChange}
                                 maxLength={14}
                               /> 
                             )}
