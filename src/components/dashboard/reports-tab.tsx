@@ -130,6 +130,10 @@ export default function ReportsTab() {
     let headers: ReportHeader[] = [];
     let title = '';
     const getSchoolName = (schoolId?: string) => schools.find(s => s.id === schoolId)?.name || 'N/A';
+    const getTeacherName = (teacherId: string) => {
+        const teacher = teachers.find(t => t.id === teacherId);
+        return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'N/A';
+    };
     
     switch (reportType) {
         case 'teacher-list':
