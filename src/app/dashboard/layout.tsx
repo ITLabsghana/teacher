@@ -72,8 +72,8 @@ function InnerLayout({ children }: { children: ReactNode }) {
   }, [currentUser, isLoading, router]);
 
   const handleLogout = async () => {
+    // The onAuthStateChange listener in DataContext will handle state clearing and redirection.
     await supabase.auth.signOut();
-    router.push('/');
   };
 
   if (isLoading || !currentUser) {
