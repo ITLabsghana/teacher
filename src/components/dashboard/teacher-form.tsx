@@ -292,9 +292,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
           await updateTeacher({ ...editingTeacher, ...data });
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
-          // Explicitly cast to Omit<Teacher, 'id'> to satisfy the function signature
-          const newTeacherData: Omit<Teacher, 'id'> = data;
-          await addTeacher(newTeacherData);
+          await addTeacher(data);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
         setIsOpen(false);
