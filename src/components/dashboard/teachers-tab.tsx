@@ -27,7 +27,7 @@ export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
-  const { isLoading, deleteTeacher: deleteTeacherFromDb } = useDataContext();
+  const { isLoading, deleteTeacher, addTeacher, updateTeacher } = useDataContext();
 
   const handleAdd = () => {
     setEditingTeacher(null);
@@ -40,7 +40,7 @@ export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
   };
 
   const handleDelete = (teacherId: string) => {
-    deleteTeacherFromDb(teacherId);
+    deleteTeacher(teacherId);
   };
 
   const getSchoolName = useCallback((schoolId?: string) => {
@@ -197,6 +197,8 @@ export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
         setIsOpen={setIsFormOpen}
         editingTeacher={editingTeacher}
         schools={schools}
+        addTeacher={addTeacher}
+        updateTeacher={updateTeacher}
       />
     </Card>
   );

@@ -17,7 +17,6 @@ import { differenceInYears } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
-import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -142,12 +141,12 @@ interface TeacherFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   editingTeacher: Teacher | null;
-  setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>;
   schools: School[];
+  addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
+  updateTeacher: (teacher: Teacher) => Promise<void>;
 }
 
-export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, schools }: TeacherFormProps) {
-  const { addTeacher, updateTeacher } = useDataContext();
+export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTeacher, updateTeacher }: TeacherFormProps) {
   const { toast } = useToast();
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<TeacherFormData>({
     resolver: zodResolver(teacherSchema),

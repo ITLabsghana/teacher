@@ -27,7 +27,7 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
 export default function TeacherDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const { teachers, schools, deleteTeacher } = useDataContext();
+    const { teachers, schools, deleteTeacher, addTeacher, updateTeacher } = useDataContext();
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     const teacherId = params.id as string;
@@ -181,6 +181,8 @@ export default function TeacherDetailPage() {
                 setIsOpen={setIsFormOpen}
                 editingTeacher={teacher}
                 schools={schools}
+                addTeacher={addTeacher}
+                updateTeacher={updateTeacher}
             />
         </div>
     );
