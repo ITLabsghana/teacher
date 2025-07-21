@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/input';
 
 interface TeachersTabProps {
   teachers: Teacher[];
-  setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>;
   schools: School[];
 }
 

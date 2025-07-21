@@ -7,11 +7,11 @@ import { Suspense } from 'react';
 
 
 export default function TeachersPage() {
-    const { teachers, setTeachers, schools } = useDataContext();
+    const { teachers, schools } = useDataContext();
 
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <TeachersTab teachers={teachers} setTeachers={setTeachers} schools={schools} />
+            <TeachersTab teachers={teachers} schools={schools} />
         </Suspense>
     );
 }

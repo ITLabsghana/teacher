@@ -27,7 +27,7 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
 export default function TeacherDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const { teachers, schools, setTeachers } = useDataContext();
+    const { teachers, schools, deleteTeacher } = useDataContext();
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     const teacherId = params.id as string;
@@ -47,7 +47,7 @@ export default function TeacherDetailPage() {
     };
 
     const handleDelete = () => {
-        setTeachers(prev => prev.filter(t => t.id !== teacherId));
+        deleteTeacher(teacherId);
         router.push('/dashboard/teachers');
     };
 
@@ -180,7 +180,6 @@ export default function TeacherDetailPage() {
                 isOpen={isFormOpen}
                 setIsOpen={setIsFormOpen}
                 editingTeacher={teacher}
-                setTeachers={setTeachers}
                 schools={schools}
             />
         </div>
