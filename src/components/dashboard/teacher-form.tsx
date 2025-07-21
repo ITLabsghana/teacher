@@ -100,7 +100,7 @@ const teacherSchema = z.object({
   areaOfSpecialization: z.string().optional(),
   lastPromotionDate: z.date().optional(),
   previousSchool: z.string().optional(),
-  schoolId: z.string().optional(),
+  schoolId: z.string().nullable().optional(),
   datePostedToCurrentSchool: z.date().optional(),
   licensureNo: z.string().optional(),
   firstAppointmentDate: z.date().optional(),
@@ -288,11 +288,16 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
 
   const onSubmit = async (data: TeacherFormData) => {
     try {
+        const dataToSubmit = {
+            ...data,
+            schoolId: data.schoolId === '' ? null : data.schoolId,
+        };
+
         if (editingTeacher) {
-          await updateTeacher({ ...editingTeacher, ...data });
+          await updateTeacher({ ...editingTeacher, ...dataToSubmit });
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
-          await addTeacher(data);
+          await addTeacher(dataToSubmit);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
         setIsOpen(false);
@@ -397,7 +402,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, setTeachers, sc
                         <div><Label>Area Of Specialization</Label><Input {...register('areaOfSpecialization')} /></div>
                         {renderDatePicker('lastPromotionDate', 'Last Promotion Date')}
                         <div><Label>Previous School</Label><Input {...register('previousSchool')} /></div>
-                        <div><Label>Current School</Label><Controller control={control} name="schoolId" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select a school" /></SelectTrigger><SelectContent>{schools.map(school => <SelectItem key={school.id} value={school.id}>{school.name}</SelectItem>)}</SelectContent></Select>)} /><p className="text-destructive text-xs mt-1">{errors.schoolId?.message}</p></div>
+                        <div><Label>Current School</Label><Controller control={control} name="schoolId" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger><SelectValue placeholder="Select a school" /></SelectTrigger><SelectContent>{schools.map(school => <SelectItem key={school.id} value={school.id}>{school.name}</SelectItem>)}</SelectContent></Select>)} /><p className="text-destructive text-xs mt-1">{errors.schoolId?.message}</p></div>
                         {renderDatePicker('datePostedToCurrentSchool', 'Date Posted To Current School')}
                         <div><Label>Licensure No.</Label><Input {...register('licensureNo')} /></div>
                         {renderDatePicker('firstAppointmentDate', 'First Appointment Date')}
