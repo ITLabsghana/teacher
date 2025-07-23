@@ -107,11 +107,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // CRUD Implementations
   const handleAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
       await dbAddTeacher(teacher);
-      setTeachers(await getTeachers());
+      const updatedTeachers = await getTeachers();
+      setTeachers(updatedTeachers);
   };
   const handleUpdateTeacher = async (teacher: Teacher) => {
       await dbUpdateTeacher(teacher);
-      setTeachers(await getTeachers());
+      const updatedTeachers = await getTeachers();
+      setTeachers(updatedTeachers);
   };
   const handleDeleteTeacher = async (id: string) => {
       await dbDeleteTeacher(id);
