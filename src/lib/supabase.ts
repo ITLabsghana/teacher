@@ -39,13 +39,21 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 }
 
 export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher> => {
-    const { data, error } = await supabase.from('teachers').insert([teacher]).select();
+    const teacherData = {
+        ...teacher,
+        documents: teacher.documents ? JSON.stringify(teacher.documents) : null,
+    };
+    const { data, error } = await supabase.from('teachers').insert([teacherData]).select();
     if (error) throw error;
     return data[0];
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
-    const { data, error } = await supabase.from('teachers').update(teacher).eq('id', teacher.id).select();
+    const teacherData = {
+        ...teacher,
+        documents: teacher.documents ? JSON.stringify(teacher.documents) : null,
+    };
+    const { data, error } = await supabase.from('teachers').update(teacherData).eq('id', teacher.id).select();
     if (error) throw error;
     return data[0];
 };
