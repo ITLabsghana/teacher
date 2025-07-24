@@ -223,7 +223,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
         documents: [],
       });
     }
-  }, [editingTeacher, isOpen, reset]);
+  }, [editingTeacher, reset]);
   
   useEffect(() => {
     if (dob) {
