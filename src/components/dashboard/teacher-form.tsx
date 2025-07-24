@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 
 
 // Date Picker Component using 3 Selects
-export const DatePickerSelect = ({ value, onChange, fromYear = 1950, toYear = new Date().getFullYear() }: { value?: Date, onChange: (date?: Date) => void, fromYear?: number, toYear?: number }) => {
+export const DatePickerSelect = ({ value, onChange, fromYear = 1950, toYear = new Date().getFullYear(), hasError }: { value?: Date, onChange: (date?: Date) => void, fromYear?: number, toYear?: number, hasError?: boolean }) => {
     const [day, setDay] = useState<string>(value ? String(value.getDate()) : '');
     const [month, setMonth] = useState<string>(value ? String(value.getMonth()) : '');
     const [year, setYear] = useState<string>(value ? String(value.getFullYear()) : '');
@@ -52,7 +52,7 @@ export const DatePickerSelect = ({ value, onChange, fromYear = 1950, toYear = ne
     const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => String(toYear - i));
 
     return (
-        <div className="flex gap-2">
+        <div className={cn("flex gap-2", hasError ? "rounded-md ring-2 ring-offset-2 ring-destructive" : "")}>
             <Select value={day} onValueChange={d => { setDay(d); handleDateChange(d, month, year); }}>
                 <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
                 <SelectContent><ScrollArea className="h-48">{days.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</ScrollArea></SelectContent>
@@ -97,13 +97,13 @@ const teacherSchema = z.object({
   leadershipPosition: z.string().optional(),
   otherLeadershipPosition: z.string().optional(),
   areaOfSpecialization: z.string().optional(),
-  lastPromotionDate: z.date().optional(),
+  lastPromotionDate: z.date().nullable().optional(),
   previousSchool: z.string().optional(),
   schoolId: z.string().nullable().optional(),
-  datePostedToCurrentSchool: z.date().optional(),
+  datePostedToCurrentSchool: z.date().nullable().optional(),
   licensureNo: z.string().optional(),
-  firstAppointmentDate: z.date().optional(),
-  dateConfirmed: z.date().optional(),
+  firstAppointmentDate: z.date().nullable().optional(),
+  dateConfirmed: z.date().nullable().optional(),
   teacherUnion: z.string().optional(),
 
   // Bank and Salary Information
@@ -150,6 +150,12 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
   const { toast } = useToast();
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<TeacherFormData>({
     resolver: zodResolver(teacherSchema),
+    defaultValues: {
+      documents: [],
+      photo: '',
+      schoolId: null,
+      ghanaCardNo: 'GHA-',
+    }
   });
   
   const [age, setAge] = useState<number | null>(null);
@@ -168,11 +174,12 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
       const defaultValues: Partial<TeacherFormData> = {
         ...editingTeacher,
         dateOfBirth: editingTeacher.dateOfBirth ? new Date(editingTeacher.dateOfBirth) : undefined,
-        lastPromotionDate: editingTeacher.lastPromotionDate ? new Date(editingTeacher.lastPromotionDate) : undefined,
-        datePostedToCurrentSchool: editingTeacher.datePostedToCurrentSchool ? new Date(editingTeacher.datePostedToCurrentSchool) : undefined,
-        firstAppointmentDate: editingTeacher.firstAppointmentDate ? new Date(editingTeacher.firstAppointmentDate) : undefined,
-        dateConfirmed: editingTeacher.dateConfirmed ? new Date(editingTeacher.dateConfirmed) : undefined,
+        lastPromotionDate: editingTeacher.lastPromotionDate ? new Date(editingTeacher.lastPromotionDate) : null,
+        datePostedToCurrentSchool: editingTeacher.datePostedToCurrentSchool ? new Date(editingTeacher.datePostedToCurrentSchool) : null,
+        firstAppointmentDate: editingTeacher.firstAppointmentDate ? new Date(editingTeacher.firstAppointmentDate) : null,
+        dateConfirmed: editingTeacher.dateConfirmed ? new Date(editingTeacher.dateConfirmed) : null,
         documents: editingTeacher.documents || [],
+        schoolId: editingTeacher.schoolId || null,
       };
       
       reset(defaultValues);
@@ -201,13 +208,13 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
         leadershipPosition: '',
         otherLeadershipPosition: '',
         areaOfSpecialization: '',
-        lastPromotionDate: undefined,
+        lastPromotionDate: null,
         previousSchool: '',
-        schoolId: '',
-        datePostedToCurrentSchool: undefined,
+        schoolId: null,
+        datePostedToCurrentSchool: null,
         licensureNo: '',
-        firstAppointmentDate: undefined,
-        dateConfirmed: undefined,
+        firstAppointmentDate: null,
+        dateConfirmed: null,
         teacherUnion: '',
         bankName: '',
         bankBranch: '',
@@ -315,6 +322,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
                 <DatePickerSelect
                     value={field.value as Date | undefined}
                     onChange={field.onChange}
+                    hasError={!!errors[name]}
                 />
             )}
         />
@@ -350,12 +358,12 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
                             </div>
                         </div>
                         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div><Label>Staff ID</Label><Input {...register('staffId')} /><p className="text-destructive text-xs mt-1">{errors.staffId?.message}</p></div>
-                            <div><Label>First Name</Label><Input {...register('firstName')} /><p className="text-destructive text-xs mt-1">{errors.firstName?.message}</p></div>
-                            <div><Label>Surname & Other Names</Label><Input {...register('lastName')} /><p className="text-destructive text-xs mt-1">{errors.lastName?.message}</p></div>
+                            <div><Label>Staff ID</Label><Input {...register('staffId')} className={cn(errors.staffId && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.staffId?.message}</p></div>
+                            <div><Label>First Name</Label><Input {...register('firstName')} className={cn(errors.firstName && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.firstName?.message}</p></div>
+                            <div><Label>Surname & Other Names</Label><Input {...register('lastName')} className={cn(errors.lastName && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.lastName?.message}</p></div>
                             {renderDatePicker('dateOfBirth', 'Date of Birth')}
                              <div><Label>Age</Label><Input value={age !== null ? age : ''} readOnly className="bg-muted" /></div>
-                            <div><Label>Gender</Label><Controller control={control} name="gender" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select Gender" /></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent></Select> )} /><p className="text-destructive text-xs mt-1">{errors.gender?.message}</p></div>
+                            <div><Label>Gender</Label><Controller control={control} name="gender" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(errors.gender && "border-destructive")}><SelectValue placeholder="Select Gender" /></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent></Select> )} /><p className="text-destructive text-xs mt-1">{errors.gender?.message}</p></div>
                         </div>
                     </div>
 
@@ -383,7 +391,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
                         <div><Label>TIN No.</Label><Input {...register('tinNo')} /></div>
                         <div><Label>Phone No.</Label><Input {...register('phoneNo')} /></div>
                         <div><Label>Home Town</Label><Input {...register('homeTown')} /></div>
-                        <div><Label>E-Mail</Label><Input type="email" {...register('email')} /><p className="text-destructive text-xs mt-1">{errors.email?.message}</p></div>
+                        <div><Label>E-Mail</Label><Input type="email" {...register('email')} className={cn(errors.email && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.email?.message}</p></div>
                         <div className="sm:col-span-2"><Label>Address</Label><Input {...register('address')} /></div>
                     </div>
 
@@ -392,12 +400,12 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         <div><Label>Academic Qualification</Label><Controller control={control} name="academicQualification" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{academicQualifications.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent></Select> )}/></div>
                         <div><Label>Professional Qualification</Label><Controller control={control} name="professionalQualification" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{professionalQualificationsList.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent></Select> )}/></div>
-                        {professionalQualification === 'Other' && <div><Label>Specify Other</Label><Input {...register('otherProfessionalQualification')} /><p className="text-destructive text-xs mt-1">{errors.otherProfessionalQualification?.message}</p></div>}
+                        {professionalQualification === 'Other' && <div><Label>Specify Other</Label><Input {...register('otherProfessionalQualification')} className={cn(errors.otherProfessionalQualification && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.otherProfessionalQualification?.message}</p></div>}
                         <div><Label>Rank</Label><Controller control={control} name="rank" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{ranks.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select> )}/></div>
                         <div><Label>Job</Label><Controller control={control} name="job" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{jobs.map(j => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select> )}/></div>
-                        {job === 'Subject Teacher' && <div><Label>Subjects</Label><Input {...register('subjects')} /><p className="text-destructive text-xs mt-1">{errors.subjects?.message}</p></div>}
+                        {job === 'Subject Teacher' && <div><Label>Subjects</Label><Input {...register('subjects')} className={cn(errors.subjects && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.subjects?.message}</p></div>}
                         <div><Label>Leadership Position</Label><Controller control={control} name="leadershipPosition" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{leadershipPositionsList.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select> )}/></div>
-                        {leadershipPosition === 'Other' && <div><Label>Specify Other</Label><Input {...register('otherLeadershipPosition')} /><p className="text-destructive text-xs mt-1">{errors.otherLeadershipPosition?.message}</p></div>}
+                        {leadershipPosition === 'Other' && <div><Label>Specify Other</Label><Input {...register('otherLeadershipPosition')} className={cn(errors.otherLeadershipPosition && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.otherLeadershipPosition?.message}</p></div>}
                         <div><Label>Area Of Specialization</Label><Input {...register('areaOfSpecialization')} /></div>
                         {renderDatePicker('lastPromotionDate', 'Last Promotion Date')}
                         <div><Label>Previous School</Label><Input {...register('previousSchool')} /></div>
