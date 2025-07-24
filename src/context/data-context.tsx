@@ -117,7 +117,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   const handleDeleteTeacher = async (id: string) => {
       await dbDeleteTeacher(id);
-      setTeachers(await getTeachers());
+      setTeachers(prev => prev.filter(t => t.id !== id));
   };
 
   const handleAddSchool = async (school: Omit<School, 'id'>) => {

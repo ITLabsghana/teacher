@@ -23,7 +23,7 @@ export const getTeachers = async (): Promise<Teacher[]> => {
         }
         return {
             ...t,
-            documents,
+            documents: documents || [], // Ensure documents is always an array
             dateOfBirth: t.dateOfBirth ? new Date(t.dateOfBirth) : undefined, 
             firstAppointmentDate: t.firstAppointmentDate ? new Date(t.firstAppointmentDate) : undefined, 
             lastPromotionDate: t.lastPromotionDate ? new Date(t.lastPromotionDate) : undefined, 
@@ -62,21 +62,21 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher> => {
     const teacherData = {
         ...teacher,
-        documents: teacher.documents ? JSON.stringify(teacher.documents) : null,
+        documents: teacher.documents && teacher.documents.length > 0 ? JSON.stringify(teacher.documents) : null,
     };
-    const { data, error } = await supabase.from('teachers').insert([teacherData]).select();
+    const { data, error } = await supabase.from('teachers').insert([teacherData]).select().single();
     if (error) throw error;
-    return data[0];
+    return data;
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
     const teacherData = {
         ...teacher,
-        documents: teacher.documents ? JSON.stringify(teacher.documents) : null,
+        documents: teacher.documents && teacher.documents.length > 0 ? JSON.stringify(teacher.documents) : null,
     };
-    const { data, error } = await supabase.from('teachers').update(teacherData).eq('id', teacher.id).select();
+    const { data, error } = await supabase.from('teachers').update(teacherData).eq('id', teacher.id).select().single();
     if (error) throw error;
-    return data[0];
+    return data;
 };
 
 export const deleteTeacher = async (id: string): Promise<void> => {
@@ -85,15 +85,15 @@ export const deleteTeacher = async (id: string): Promise<void> => {
 };
 
 export const addSchool = async (school: Omit<School, 'id'>): Promise<School> => {
-    const { data, error } = await supabase.from('schools').insert([school]).select();
+    const { data, error } = await supabase.from('schools').insert([school]).select().single();
     if (error) throw error;
-    return data[0];
+    return data;
 };
 
 export const updateSchool = async (school: School): Promise<School> => {
-    const { data, error } = await supabase.from('schools').update(school).eq('id', school.id).select();
+    const { data, error } = await supabase.from('schools').update(school).eq('id', school.id).select().single();
     if (error) throw error;
-    return data[0];
+    return data;
 };
 
 export const deleteSchool = async (id: string): Promise<void> => {
@@ -103,13 +103,13 @@ export const deleteSchool = async (id: string): Promise<void> => {
 
 export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status'>): Promise<LeaveRequest> => {
     const newRequest = { ...request, status: 'Pending' };
-    const { data, error } = await supabase.from('leave_requests').insert([newRequest]).select();
+    const { data, error } = await supabase.from('leave_requests').insert([newRequest]).select().single();
     if (error) throw error;
-    return { ...data[0], startDate: new Date(data[0].startDate), returnDate: new Date(data[0].returnDate)};
+    return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
 };
 
 export const updateLeaveRequest = async (request: LeaveRequest): Promise<LeaveRequest> => {
-    const { data, error } = await supabase.from('leave_requests').update(request).eq('id', request.id).select();
+    const { data, error } = await supabase.from('leave_requests').update(request).eq('id', request.id).select().single();
     if (error) throw error;
-    return { ...data[0], startDate: new Date(data[0].startDate), returnDate: new Date(data[0].returnDate)};
+    return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
 };
