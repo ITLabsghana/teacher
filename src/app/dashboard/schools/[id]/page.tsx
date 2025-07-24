@@ -2,24 +2,34 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import { useDataContext } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import EnrollmentTab from '@/components/dashboard/enrollment-tab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { sortClassLevels } from '@/lib/utils';
+import type { School } from '@/lib/types';
+import { getSchoolById } from '@/lib/supabase';
 
 export default function SchoolDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const { schools } = useDataContext(); // No longer need setSchools here
     const [activeTab, setActiveTab] = useState('overview');
+    const [school, setSchool] = useState<School | null>(null);
 
     const schoolId = params.id as string;
-    const school = schools.find(s => s.id === schoolId);
+
+    useEffect(() => {
+        if (schoolId) {
+            getSchoolById(schoolId).then(data => {
+                if (data) {
+                    setSchool(data)
+                }
+            });
+        }
+    }, [schoolId]);
 
     const enrollmentData = useMemo(() => {
         const data = school?.enrollment || {};
@@ -46,8 +56,17 @@ export default function SchoolDetailPage() {
         return { details, ...totals };
     }, [school]);
 
+    const handleEnrollmentSave = async () => {
+        setActiveTab('overview');
+        if (schoolId) {
+             const updatedSchool = await getSchoolById(schoolId);
+             if (updatedSchool) setSchool(updatedSchool);
+        }
+    }
+
+
     if (!school) {
-        return <div className="text-center py-10">School not found.</div>;
+        return <div className="text-center py-10">Loading school details...</div>;
     }
 
     return (
@@ -111,9 +130,9 @@ export default function SchoolDetailPage() {
                         </TabsContent>
                         <TabsContent value="manage">
                             <EnrollmentTab 
-                                schools={schools} 
+                                schools={[school]}
                                 selectedSchoolId={schoolId} 
-                                onSave={() => setActiveTab('overview')} 
+                                onSave={handleEnrollmentSave} 
                             />
                         </TabsContent>
                     </Tabs>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Teacher, School } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -13,16 +13,38 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { differenceInYears } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { useDataContext } from '@/context/data-context';
 import { Input } from '@/components/ui/input';
+import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeachersTab() {
-  const { teachers, schools, isLoading, deleteTeacher } = useDataContext();
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
+  const { toast } = useToast();
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [teacherData, schoolData] = await Promise.all([getTeachers(), getSchools()]);
+      setTeachers(teacherData);
+      setSchools(schoolData);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast({ variant: 'destructive', title: "Error", description: "Failed to load data." });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAdd = () => {
     setEditingTeacher(null);
@@ -33,9 +55,20 @@ export default function TeachersTab() {
     setEditingTeacher(teacher);
     setIsFormOpen(true);
   };
+  
+  const handleFormSave = () => {
+    setIsFormOpen(false);
+    fetchData();
+  }
 
-  const handleDelete = (teacherId: string) => {
-    deleteTeacher(teacherId);
+  const handleDelete = async (teacherId: string) => {
+    try {
+      await dbDeleteTeacher(teacherId);
+      setTeachers(prev => prev.filter(t => t.id !== teacherId));
+      toast({ title: 'Success', description: 'Teacher deleted successfully.' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
   };
 
   const getSchoolName = useCallback((schoolId?: string | null) => {
@@ -62,29 +95,6 @@ export default function TeachersTab() {
       ) || getSchoolName(teacher.schoolId).toLowerCase().includes(lowerCaseSearchTerm)
     );
   }, [teachers, searchTerm, getSchoolName]);
-
-  if (isLoading && !teachers.length) {
-    return (
-        <Card>
-            <CardHeader>
-                <div className="flex justify-between items-start">
-                    <div>
-                        <CardTitle>Teacher Management</CardTitle>
-                        <CardDescription>Add, edit, and manage teacher profiles.</CardDescription>
-                    </div>
-                     <div className="flex gap-2">
-                        <Button size="sm" disabled><PlusCircle className="mr-2 h-4 w-4" /> Add Teacher</Button>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <div className="h-96 flex items-center justify-center">
-                    <p className="text-muted-foreground">Loading teacher data...</p>
-                </div>
-            </CardContent>
-        </Card>
-    );
-  }
 
   return (
     <Card>
@@ -124,7 +134,20 @@ export default function TeachersTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
+              {isLoading ? (
+                  Array.from({length: 5}).map((_, i) => (
+                      <TableRow key={i}>
+                          <TableCell><Skeleton className="h-20 w-20 rounded-full" /></TableCell>
+                          <TableCell><div className="space-y-2"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-48" /></div></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                      </TableRow>
+                  ))
+              ) : filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
                 <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
                      <Avatar className="h-20 w-20">
@@ -186,6 +209,8 @@ export default function TeachersTab() {
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
         editingTeacher={editingTeacher}
+        onSave={handleFormSave}
+        schools={schools}
       />
     </Card>
   );

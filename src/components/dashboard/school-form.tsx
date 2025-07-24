@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
+import { addSchool, updateSchool } from '@/lib/supabase';
 
 const schoolSchema = z.object({
     name: z.string().min(3, "School name is too short"),
@@ -21,16 +21,15 @@ type SchoolFormData = z.infer<typeof schoolSchema>;
 
 interface SchoolFormProps {
   editingSchool?: School | null;
-  onSchoolAdded?: () => void;
+  onSchoolAction?: () => void;
   onCancelEdit?: () => void;
 }
 
 export function SchoolForm({ 
     editingSchool, 
-    onSchoolAdded,
+    onSchoolAction,
     onCancelEdit
 }: SchoolFormProps) {
-  const { addSchool, updateSchool } = useDataContext();
   const { toast } = useToast();
   const { register, handleSubmit, reset, formState: { errors } } = useForm<SchoolFormData>({
     resolver: zodResolver(schoolSchema),
@@ -55,8 +54,8 @@ export function SchoolForm({
       }
       
       reset({ name: '' });
-      if (onSchoolAdded) {
-        onSchoolAdded();
+      if (onSchoolAction) {
+        onSchoolAction();
       }
     } catch (err: any) {
         toast({ variant: 'destructive', title: 'Error', description: err.message });

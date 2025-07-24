@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerSelect } from '@/components/dashboard/teacher-form';
-import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
+import { addLeaveRequest as dbAddLeaveRequest } from '@/lib/supabase';
 
 const leaveTypes: LeaveRequest['leaveType'][] = ['Study Leave (with pay)', 'Study Leave (without pay)', 'Sick', 'Maternity', 'Paternity', 'Casual', 'Other'];
 
@@ -30,10 +30,10 @@ interface LeaveFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   teachers: Teacher[];
+  onSave: (newRequest: LeaveRequest) => void;
 }
 
-export function LeaveForm({ isOpen, setIsOpen, teachers }: LeaveFormProps) {
-  const { addLeaveRequest } = useDataContext();
+export function LeaveForm({ isOpen, setIsOpen, teachers, onSave }: LeaveFormProps) {
   const { toast } = useToast();
   const { handleSubmit, control, reset, formState: { errors } } = useForm<z.infer<typeof leaveSchema>>({
     resolver: zodResolver(leaveSchema),
@@ -41,9 +41,9 @@ export function LeaveForm({ isOpen, setIsOpen, teachers }: LeaveFormProps) {
 
   const onSubmit = async (data: z.infer<typeof leaveSchema>) => {
     try {
-        await addLeaveRequest(data);
+        const newRequest = await dbAddLeaveRequest(data);
         toast({ title: 'Success', description: 'Leave request submitted.' });
-        setIsOpen(false);
+        onSave(newRequest);
         reset();
     } catch(err: any) {
         toast({ variant: 'destructive', title: 'Error', description: err.message });

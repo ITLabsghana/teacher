@@ -2,13 +2,24 @@
 "use client";
 
 import type { Teacher, LeaveRequest, School } from '@/lib/types';
-import { useDataContext } from '@/context/data-context';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { getTeachers, getLeaveRequests, getSchools } from '@/lib/supabase';
+import { Skeleton } from '@/components/ui/skeleton';
 
-function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[], leaveRequests: LeaveRequest[], schools: School[] }) {
+function StatsCards({ 
+  teachers, 
+  leaveRequests, 
+  schools,
+  isLoading 
+}: { 
+  teachers: Teacher[], 
+  leaveRequests: LeaveRequest[], 
+  schools: School[],
+  isLoading: boolean
+}) {
     const stats = useMemo(() => {
         const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
 
@@ -75,6 +86,32 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
             nearingRetirementDetails,
         };
     }, [teachers, leaveRequests, schools]);
+
+    if (isLoading) {
+        return (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 7 }).map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <Skeleton className="h-4 w-24" />
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton className="h-8 w-12" />
+                        </CardContent>
+                    </Card>
+                ))}
+                 <Card className="col-span-full">
+                    <CardHeader>
+                        <Skeleton className="h-6 w-32" />
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -176,7 +213,31 @@ function StatsCards({ teachers, leaveRequests, schools }: { teachers: Teacher[],
 }
 
 export default function DashboardPage() {
-    const { teachers, leaveRequests, schools } = useDataContext();
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
+    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+    const [schools, setSchools] = useState<School[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            setIsLoading(true);
+            try {
+                const [teacherData, leaveData, schoolData] = await Promise.all([
+                    getTeachers(),
+                    getLeaveRequests(),
+                    getSchools()
+                ]);
+                setTeachers(teacherData);
+                setLeaveRequests(leaveData);
+                setSchools(schoolData);
+            } catch (error) {
+                console.error("Failed to fetch dashboard data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchDashboardData();
+    }, []);
 
     return (
         <>
@@ -184,7 +245,12 @@ export default function DashboardPage() {
                 <h1 className="text-4xl font-headline font-bold text-primary">TMS Dashboard</h1>
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
             </header>
-            <StatsCards teachers={teachers} leaveRequests={leaveRequests} schools={schools} />
+            <StatsCards 
+                teachers={teachers} 
+                leaveRequests={leaveRequests} 
+                schools={schools} 
+                isLoading={isLoading} 
+            />
         </>
     );
 }

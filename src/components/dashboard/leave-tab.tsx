@@ -10,26 +10,36 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { LeaveForm } from './leave-form';
 import { Badge } from '@/components/ui/badge';
-import { useDataContext } from '@/context/data-context';
+import { updateLeaveRequest as dbUpdateLeaveRequest } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface LeaveTabProps {
   leaveRequests: LeaveRequest[];
   teachers: Teacher[];
+  isLoading: boolean;
+  setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
 }
 
-export default function LeaveTab({ leaveRequests, teachers }: LeaveTabProps) {
+export default function LeaveTab({ leaveRequests, teachers, isLoading, setLeaveRequests }: LeaveTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const { updateLeaveRequest } = useDataContext();
+  const { toast } = useToast();
 
   const getTeacherName = (teacherId: string) => {
     const teacher = teachers.find(t => t.id === teacherId);
     return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'N/A';
   };
 
-  const handleUpdateStatus = (leaveId: string, status: LeaveRequest['status']) => {
+  const handleUpdateStatus = async (leaveId: string, status: LeaveRequest['status']) => {
     const request = leaveRequests.find(req => req.id === leaveId);
     if(request) {
-        updateLeaveRequest({ ...request, status });
+        try {
+            const updatedRequest = await dbUpdateLeaveRequest({ ...request, status });
+            setLeaveRequests(prev => prev.map(r => r.id === leaveId ? updatedRequest : r));
+            toast({ title: "Success", description: "Leave status updated." });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        }
     }
   };
   
@@ -40,6 +50,11 @@ export default function LeaveTab({ leaveRequests, teachers }: LeaveTabProps) {
         case 'Rejected': return 'destructive';
         default: return 'secondary';
     }
+  }
+
+  const handleFormSave = (newRequest: LeaveRequest) => {
+    setLeaveRequests(prev => [newRequest, ...prev]);
+    setIsFormOpen(false);
   }
 
   return (
@@ -68,7 +83,18 @@ export default function LeaveTab({ leaveRequests, teachers }: LeaveTabProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {leaveRequests.length > 0 ? leaveRequests.map(req => (
+            {isLoading ? (
+                Array.from({length: 5}).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                ))
+            ) : leaveRequests.length > 0 ? leaveRequests.map(req => (
               <TableRow key={req.id}>
                 <TableCell>{getTeacherName(req.teacherId)}</TableCell>
                 <TableCell>{req.leaveType}</TableCell>
@@ -114,6 +140,7 @@ export default function LeaveTab({ leaveRequests, teachers }: LeaveTabProps) {
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
         teachers={teachers}
+        onSave={handleFormSave}
       />
     </Card>
   );

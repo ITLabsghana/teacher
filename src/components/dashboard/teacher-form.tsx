@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import type { Teacher } from '@/lib/types';
+import type { Teacher, School } from '@/lib/types';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-import { useDataContext } from '@/context/data-context';
+import { addTeacher, updateTeacher } from '@/lib/supabase';
 
 
 // Date Picker Component using 3 Selects
@@ -142,11 +142,12 @@ interface TeacherFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   editingTeacher: Teacher | null;
+  onSave: () => void;
+  schools: School[];
 }
 
-export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormProps) {
+export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools }: TeacherFormProps) {
   const { toast } = useToast();
-  const { schools, addTeacher, updateTeacher } = useDataContext();
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<TeacherFormData>({
     resolver: zodResolver(teacherSchema),
   });
@@ -175,7 +176,6 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
     };
 
     if (editingTeacher) {
-        // Create a mutable copy to safely convert nulls to empty strings for the form
         const formValues: { [key: string]: any } = { ...editingTeacher };
         for (const key in formValues) {
             if (formValues[key] === null) {
@@ -248,16 +248,21 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
   };
 
   const onSubmit = async (data: TeacherFormData) => {
+    const sanitizedData = { ...data };
+    for (const key in sanitizedData) {
+        if (sanitizedData[key as keyof typeof sanitizedData] === undefined) {
+            sanitizedData[key as keyof typeof sanitizedData] = null;
+        }
+    }
     try {
         if (editingTeacher) {
-          const finalData = { ...editingTeacher, ...data };
-          await updateTeacher(finalData);
+          await updateTeacher({ ...editingTeacher, ...sanitizedData });
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
-          await addTeacher(data);
+          await addTeacher(sanitizedData);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
-        setIsOpen(false);
+        onSave();
     } catch(err: any) {
         toast({ variant: 'destructive', title: 'Error', description: err.message || "An unknown error occurred." });
     }
@@ -422,5 +427,3 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
     </Dialog>
   );
 }
-
-    

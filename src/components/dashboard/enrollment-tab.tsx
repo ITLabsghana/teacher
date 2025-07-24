@@ -10,17 +10,17 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { PenSquare, Save, Trash2 } from 'lucide-react';
-import { useDataContext } from '@/context/data-context';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { sortClassLevels } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-
+import { updateSchool as dbUpdateSchool } from '@/lib/supabase';
 
 interface EnrollmentTabProps {
   schools: School[];
   selectedSchoolId?: string | null;
   onSave?: () => void;
+  onDataChange?: () => void; // For parent page to refetch data
 }
 
 type EnrollmentData = { [className: string]: { boys: number; girls: number } };
@@ -32,10 +32,9 @@ const CLASS_SECTIONS = {
     SHS: ['SHS 1', 'SHS 2', 'SHS 3'],
 };
 
-export default function EnrollmentTab({ schools, selectedSchoolId: initialSchoolId, onSave }: EnrollmentTabProps) {
+export default function EnrollmentTab({ schools, selectedSchoolId: initialSchoolId, onSave, onDataChange }: EnrollmentTabProps) {
   const params = useParams();
   const { toast } = useToast();
-  const { updateSchool } = useDataContext();
 
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(initialSchoolId ?? null);
   const [enrollmentData, setEnrollmentData] = useState<EnrollmentData>({});
@@ -45,8 +44,11 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
   useEffect(() => {
     if (initialSchoolId) {
         setSelectedSchoolId(initialSchoolId);
+    } else if (schools.length > 0) {
+        // If not in detail page, default to first school
+        setSelectedSchoolId(schools[0].id);
     }
-  }, [initialSchoolId]);
+  }, [initialSchoolId, schools]);
 
   useEffect(() => {
     if (selectedSchoolId) {
@@ -115,13 +117,13 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
     
     try {
         const updatedSchool = { ...schoolToUpdate, enrollment: dataToSave };
-        await updateSchool(updatedSchool);
+        await dbUpdateSchool(updatedSchool);
         
         toast({ title: "Success!", description: "Enrollment data has been saved successfully." });
         
-        if (onSave) {
-            onSave();
-        }
+        if (onSave) onSave();
+        if (onDataChange) onDataChange();
+
     } catch(e: any) {
          toast({
             variant: "destructive",

@@ -2,7 +2,6 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import { useDataContext } from '@/context/data-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -10,9 +9,11 @@ import { ArrowLeft, Edit, Trash2, File as FileIcon } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { TeacherForm } from '@/components/dashboard/teacher-form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-
+import { getTeacherById, getSchools, deleteTeacher as dbDeleteTeacher } from '@/lib/supabase';
+import type { Teacher, School } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 function DetailItem({ label, value }: { label: string; value?: string | number | null }) {
     if (!value && value !== 0) return null;
@@ -27,15 +28,27 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
 export default function TeacherDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const { teachers, schools, deleteTeacher } = useDataContext();
+    const { toast } = useToast();
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [teacher, setTeacher] = useState<Teacher | null>(null);
+    const [schools, setSchools] = useState<School[]>([]);
 
     const teacherId = params.id as string;
-    const teacher = teachers.find(t => t.id === teacherId);
 
-    if (!teacher) {
-        return <div className="text-center py-10">Teacher not found.</div>;
+    const fetchTeacherData = async () => {
+        if (teacherId) {
+            const [teacherData, schoolData] = await Promise.all([
+                getTeacherById(teacherId),
+                getSchools()
+            ]);
+            if (teacherData) setTeacher(teacherData);
+            setSchools(schoolData);
+        }
     }
+
+    useEffect(() => {
+        fetchTeacherData();
+    }, [teacherId]);
 
     const getSchoolName = (schoolId?: string | null) => {
         if (!schoolId) return 'N/A';
@@ -46,10 +59,24 @@ export default function TeacherDetailPage() {
         return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
     };
 
-    const handleDelete = () => {
-        deleteTeacher(teacherId);
-        router.push('/dashboard/teachers');
+    const handleDelete = async () => {
+        try {
+            await dbDeleteTeacher(teacherId);
+            toast({ title: "Success", description: "Teacher profile deleted." });
+            router.push('/dashboard/teachers');
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        }
     };
+    
+    const handleFormSave = () => {
+        setIsFormOpen(false);
+        fetchTeacherData(); // Re-fetch data after save
+    }
+
+    if (!teacher) {
+        return <div className="text-center py-10">Loading teacher profile...</div>;
+    }
 
     return (
         <div className="space-y-6">
@@ -180,9 +207,9 @@ export default function TeacherDetailPage() {
                 isOpen={isFormOpen}
                 setIsOpen={setIsFormOpen}
                 editingTeacher={teacher}
+                onSave={handleFormSave}
+                schools={schools}
             />
         </div>
     );
 }
-
-    

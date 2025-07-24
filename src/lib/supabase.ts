@@ -25,11 +25,29 @@ export const getTeachers = async (): Promise<Teacher[]> => {
     return data.map(parseTeacherDates) || [];
 };
 
+export const getTeacherById = async (id: string): Promise<Teacher | null> => {
+    const { data, error } = await supabase.from('teachers').select('*').eq('id', id).single();
+    if (error) {
+        console.error("Error fetching teacher by id", error);
+        return null;
+    }
+    return parseTeacherDates(data);
+}
+
 export const getSchools = async (): Promise<School[]> => {
     const { data, error } = await supabase.from('schools').select('*').order('name');
     if (error) throw error;
     return data || [];
 };
+
+export const getSchoolById = async (id: string): Promise<School | null> => {
+    const { data, error } = await supabase.from('schools').select('*').eq('id', id).single();
+    if (error) {
+        console.error("Error fetching school by id", error);
+        return null;
+    }
+    return data;
+}
 
 export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
     const { data, error } = await supabase.from('leave_requests').select('*').order('startDate', { ascending: false });
@@ -54,14 +72,12 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
     const dbData: { [key: string]: any } = { ...teacher };
     
-    // Convert any undefined or empty string values for optional fields to null for DB compatibility
     Object.keys(dbData).forEach(key => {
         if (dbData[key] === undefined || dbData[key] === '') {
             dbData[key] = null;
         }
     });
 
-    // Stringify documents if it's an array
     if (Array.isArray(dbData.documents)) {
         dbData.documents = JSON.stringify(dbData.documents);
     } else if (dbData.documents === null) {
@@ -80,7 +96,6 @@ export const addTeacher = async (teacher: Partial<Omit<Teacher, 'id'>>): Promise
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
     const dbData = prepareTeacherForDb(teacher);
-    
     const { data, error } = await supabase.from('teachers').update(dbData).eq('id', teacher.id).select().single();
     
     if (error) {
@@ -124,5 +139,3 @@ export const updateLeaveRequest = async (request: LeaveRequest): Promise<LeaveRe
     if (error) throw error;
     return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
 };
-
-    

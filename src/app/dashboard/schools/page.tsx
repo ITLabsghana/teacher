@@ -1,28 +1,25 @@
 
 "use client";
 
-import { useDataContext } from '@/context/data-context';
 import { SchoolForm } from '@/components/dashboard/school-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { School } from '@/lib/types';
-import { useState, useMemo, Suspense, lazy } from 'react';
+import { useState, useMemo, Suspense, lazy, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MoreHorizontal, Edit, Trash2, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { deleteSchool, getSchools } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const EnrollmentTab = lazy(() => import('@/components/dashboard/enrollment-tab'));
 
-function SchoolListView({ schools }: { schools: School[] }) {
-    const router = useRouter();
+function SchoolListView({ schools, isLoading, onRowClick }: { schools: School[], isLoading: boolean, onRowClick: (id: string) => void }) {
     const [searchTerm, setSearchTerm] = useState('');
-
-    const handleRowClick = (schoolId: string) => {
-        router.push(`/dashboard/schools/${schoolId}`);
-    };
 
     const calculateTotals = (school: School) => {
         const enrollment = school.enrollment || {};
@@ -42,6 +39,23 @@ function SchoolListView({ schools }: { schools: School[] }) {
             school.name.toLowerCase().includes(lowercasedTerm)
         );
     }, [schools, searchTerm]);
+    
+    if (isLoading) {
+        return (
+             <div className="space-y-4">
+                {Array.from({length: 3}).map((_, i) => (
+                    <div key={i} className="p-4 bg-secondary rounded-lg">
+                        <Skeleton className="h-6 w-1/2 mb-4" />
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-4">
@@ -61,7 +75,7 @@ function SchoolListView({ schools }: { schools: School[] }) {
                     <div
                         key={school.id}
                         className="p-4 bg-secondary rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                        onClick={() => handleRowClick(school.id)}
+                        onClick={() => onRowClick(school.id)}
                     >
                         <h3 className="font-bold text-lg text-primary">{school.name}</h3>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
@@ -98,9 +112,9 @@ function SchoolListView({ schools }: { schools: School[] }) {
     );
 }
 
-function SchoolManagement({ schools, onSchoolAdded }: { schools: School[], onSchoolAdded: () => void }) {
+function SchoolManagement({ schools, onDataChange, setSchools }: { schools: School[], onDataChange: () => void, setSchools: React.Dispatch<React.SetStateAction<School[]>> }) {
     const [editingSchool, setEditingSchool] = useState<School | null>(null);
-    const { deleteSchool } = useDataContext();
+    const { toast } = useToast();
 
     const handleEdit = (school: School) => {
         setEditingSchool(school);
@@ -111,8 +125,14 @@ function SchoolManagement({ schools, onSchoolAdded }: { schools: School[], onSch
         setEditingSchool(null);
     }
 
-    const handleDelete = (schoolId: string) => {
-        deleteSchool(schoolId);
+    const handleDelete = async (schoolId: string) => {
+        try {
+            await deleteSchool(schoolId);
+            setSchools(prev => prev.filter(s => s.id !== schoolId));
+            toast({ title: "Success", description: "School deleted successfully." });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        }
     };
 
     return (
@@ -120,9 +140,9 @@ function SchoolManagement({ schools, onSchoolAdded }: { schools: School[], onSch
             <SchoolForm
                 editingSchool={editingSchool}
                 onCancelEdit={handleCancelEdit}
-                onSchoolAdded={() => {
+                onSchoolAction={() => {
                     setEditingSchool(null);
-                    onSchoolAdded();
+                    onDataChange();
                 }}
             />
 
@@ -179,8 +199,31 @@ function SchoolManagement({ schools, onSchoolAdded }: { schools: School[], onSch
 }
 
 export default function SchoolsPage() {
-  const { schools } = useDataContext();
+  const [schools, setSchools] = useState<School[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('view');
+  const router = useRouter();
+
+  const fetchSchoolData = async () => {
+      setIsLoading(true);
+      try {
+          const data = await getSchools();
+          setSchools(data);
+      } catch (error) {
+          console.error("Failed to fetch schools", error);
+      } finally {
+          setIsLoading(false);
+      }
+  }
+
+  useEffect(() => {
+    fetchSchoolData();
+  }, []);
+  
+  const handleRowClick = (schoolId: string) => {
+    router.push(`/dashboard/schools/${schoolId}`);
+  };
+
 
   return (
     <Card>
@@ -196,17 +239,18 @@ export default function SchoolsPage() {
                 <TabsTrigger value="add">Add/Edit School</TabsTrigger>
             </TabsList>
             <TabsContent value="view" className="mt-4">
-                <SchoolListView schools={schools} />
+                <SchoolListView schools={schools} isLoading={isLoading} onRowClick={handleRowClick} />
             </TabsContent>
             <TabsContent value="enrollment" className="mt-4">
                 <Suspense fallback={<div>Loading...</div>}>
-                    <EnrollmentTab schools={schools} />
+                    <EnrollmentTab schools={schools} onDataChange={fetchSchoolData} />
                 </Suspense>
             </TabsContent>
             <TabsContent value="add" className="mt-4">
                 <SchoolManagement
                     schools={schools}
-                    onSchoolAdded={() => { /* can add toast here if needed */ }}
+                    onDataChange={fetchSchoolData}
+                    setSchools={setSchools}
                 />
             </TabsContent>
         </Tabs>
