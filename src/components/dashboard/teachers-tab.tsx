@@ -117,8 +117,8 @@ export default function TeachersTab() {
                 <TableHead>Staff ID</TableHead>
                 <TableHead>Age</TableHead>
                 <TableHead>Current School</TableHead>
-                <TableHead>Job</TableHead>
-                <TableHead>Rank</TableHead>
+                <TableHead>Registered No.</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -126,10 +126,10 @@ export default function TeachersTab() {
               {filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
                 <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-16 w-16">
                           <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
-                          <AvatarFallback>{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
+                          <AvatarFallback className="text-xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
                       </Avatar>
                       <div>
                           <div className="font-medium">{teacher.firstName} {teacher.lastName}</div>
@@ -140,13 +140,8 @@ export default function TeachersTab() {
                   <TableCell>{teacher.staffId}</TableCell>
                   <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : 'N/A'}</TableCell>
                   <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
-                  <TableCell>
-                      {teacher.job === 'Subject Teacher' && teacher.subjects ?
-                          <Badge variant="secondary">{teacher.job}: {teacher.subjects}</Badge> :
-                          teacher.job ? <Badge variant="outline">{teacher.job}</Badge> : null
-                      }
-                  </TableCell>
-                  <TableCell>{teacher.rank}</TableCell>
+                  <TableCell>{teacher.registeredNo || 'N/A'}</TableCell>
+                  <TableCell>{teacher.phoneNo || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <AlertDialog>
                       <DropdownMenu>
@@ -196,3 +191,5 @@ export default function TeachersTab() {
     </Card>
   );
 }
+
+    
