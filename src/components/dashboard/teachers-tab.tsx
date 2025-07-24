@@ -89,11 +89,18 @@ export default function TeachersTab() {
     
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     
-    return teachers.filter(teacher => 
-      Object.values(teacher).some(value => 
-        String(value).toLowerCase().includes(lowerCaseSearchTerm)
-      ) || getSchoolName(teacher.schoolId).toLowerCase().includes(lowerCaseSearchTerm)
-    );
+    return teachers.filter(teacher => {
+      const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
+      const areaOfSpecialization = teacher.areaOfSpecialization?.toLowerCase() || '';
+      
+      return (
+        schoolName.includes(lowerCaseSearchTerm) ||
+        areaOfSpecialization.includes(lowerCaseSearchTerm) ||
+        Object.values(teacher).some(value => 
+          String(value).toLowerCase().includes(lowerCaseSearchTerm)
+        )
+      );
+    });
   }, [teachers, searchTerm, getSchoolName]);
 
   return (
@@ -111,7 +118,7 @@ export default function TeachersTab() {
         <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-                placeholder="Search by name, ID, school..."
+                placeholder="Search by name, ID, school, specialization..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 max-w-md"
