@@ -17,17 +17,12 @@ import { Badge } from '@/components/ui/badge';
 import { useDataContext } from '@/context/data-context';
 import { Input } from '@/components/ui/input';
 
-interface TeachersTabProps {
-  teachers: Teacher[];
-  schools: School[];
-}
-
-export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
+export default function TeachersTab() {
+  const { teachers, schools, isLoading, deleteTeacher } = useDataContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
-  const { isLoading, deleteTeacher, addTeacher, updateTeacher } = useDataContext();
 
   const handleAdd = () => {
     setEditingTeacher(null);
@@ -43,7 +38,7 @@ export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
     deleteTeacher(teacherId);
   };
 
-  const getSchoolName = useCallback((schoolId?: string) => {
+  const getSchoolName = useCallback((schoolId?: string | null) => {
     if (!schoolId) return 'N/A';
     return schools.find(s => s.id === schoolId)?.name || 'N/A';
   }, [schools]);
@@ -68,7 +63,7 @@ export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
     );
   }, [teachers, searchTerm, getSchoolName]);
 
-  if (isLoading) {
+  if (isLoading && !teachers.length) {
     return (
         <Card>
             <CardHeader>
@@ -197,9 +192,6 @@ export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
         editingTeacher={editingTeacher}
-        schools={schools}
-        addTeacher={addTeacher}
-        updateTeacher={updateTeacher}
       />
     </Card>
   );

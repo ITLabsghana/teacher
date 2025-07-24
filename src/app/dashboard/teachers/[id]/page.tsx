@@ -27,7 +27,7 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
 export default function TeacherDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const { teachers, schools, deleteTeacher, addTeacher, updateTeacher } = useDataContext();
+    const { teachers, schools, deleteTeacher } = useDataContext();
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     const teacherId = params.id as string;
@@ -37,7 +37,7 @@ export default function TeacherDetailPage() {
         return <div className="text-center py-10">Teacher not found.</div>;
     }
 
-    const getSchoolName = (schoolId?: string) => {
+    const getSchoolName = (schoolId?: string | null) => {
         if (!schoolId) return 'N/A';
         return schools.find(s => s.id === schoolId)?.name || 'N/A';
     };
@@ -180,9 +180,6 @@ export default function TeacherDetailPage() {
                 isOpen={isFormOpen}
                 setIsOpen={setIsFormOpen}
                 editingTeacher={teacher}
-                schools={schools}
-                addTeacher={addTeacher}
-                updateTeacher={updateTeacher}
             />
         </div>
     );

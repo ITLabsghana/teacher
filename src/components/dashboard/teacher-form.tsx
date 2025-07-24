@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import type { Teacher, School } from '@/lib/types';
+import type { Teacher } from '@/lib/types';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
+import { useDataContext } from '@/context/data-context';
 
 
 // Date Picker Component using 3 Selects
@@ -141,21 +142,13 @@ interface TeacherFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   editingTeacher: Teacher | null;
-  schools: School[];
-  addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
-  updateTeacher: (teacher: Teacher) => Promise<void>;
 }
 
-export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTeacher, updateTeacher }: TeacherFormProps) {
+export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormProps) {
   const { toast } = useToast();
+  const { schools, addTeacher, updateTeacher } = useDataContext();
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<TeacherFormData>({
     resolver: zodResolver(teacherSchema),
-    defaultValues: {
-      documents: [],
-      photo: '',
-      schoolId: null,
-      ghanaCardNo: 'GHA-',
-    }
   });
   
   const [age, setAge] = useState<number | null>(null);
@@ -170,58 +163,21 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
   const docFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const defaultValues: Partial<TeacherFormData> = {
+      staffId: '', firstName: '', lastName: '', dateOfBirth: undefined, gender: undefined,
+      registeredNo: '', ghanaCardNo: 'GHA-', ssnitNo: '', tinNo: '', phoneNo: '', homeTown: '',
+      email: '', address: '', photo: '', academicQualification: '', professionalQualification: '',
+      otherProfessionalQualification: '', rank: '', job: undefined, subjects: '', leadershipPosition: '',
+      otherLeadershipPosition: '', areaOfSpecialization: '', lastPromotionDate: null, previousSchool: '',
+      schoolId: null, datePostedToCurrentSchool: null, licensureNo: '', firstAppointmentDate: null,
+      dateConfirmed: null, teacherUnion: '', bankName: '', bankBranch: '', accountNumber: '',
+      salaryScale: '', documents: [],
+    };
+
     if (editingTeacher) {
-      const defaultValues: Partial<TeacherFormData> = {
-        ...editingTeacher,
-        dateOfBirth: editingTeacher.dateOfBirth ? new Date(editingTeacher.dateOfBirth) : undefined,
-        lastPromotionDate: editingTeacher.lastPromotionDate ? new Date(editingTeacher.lastPromotionDate) : null,
-        datePostedToCurrentSchool: editingTeacher.datePostedToCurrentSchool ? new Date(editingTeacher.datePostedToCurrentSchool) : null,
-        firstAppointmentDate: editingTeacher.firstAppointmentDate ? new Date(editingTeacher.firstAppointmentDate) : null,
-        dateConfirmed: editingTeacher.dateConfirmed ? new Date(editingTeacher.dateConfirmed) : null,
-        documents: editingTeacher.documents || [],
-        schoolId: editingTeacher.schoolId || null,
-      };
-      
-      reset(defaultValues);
+      reset({ ...editingTeacher });
     } else {
-      reset({
-        staffId: '',
-        firstName: '',
-        lastName: '',
-        dateOfBirth: undefined,
-        gender: undefined,
-        registeredNo: '',
-        ghanaCardNo: 'GHA-',
-        ssnitNo: '',
-        tinNo: '',
-        phoneNo: '',
-        homeTown: '',
-        email: '',
-        address: '',
-        photo: '',
-        academicQualification: '',
-        professionalQualification: '',
-        otherProfessionalQualification: '',
-        rank: '',
-        job: undefined,
-        subjects: '',
-        leadershipPosition: '',
-        otherLeadershipPosition: '',
-        areaOfSpecialization: '',
-        lastPromotionDate: null,
-        previousSchool: '',
-        schoolId: null,
-        datePostedToCurrentSchool: null,
-        licensureNo: '',
-        firstAppointmentDate: null,
-        dateConfirmed: null,
-        teacherUnion: '',
-        bankName: '',
-        bankBranch: '',
-        accountNumber: '',
-        salaryScale: '',
-        documents: [],
-      });
+      reset(defaultValues);
     }
   }, [editingTeacher, reset]);
   
@@ -236,11 +192,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
   const handleGhanaCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const prefix = "GHA-";
       let value = e.target.value;
-
-      // Get only the numbers from the input, ignoring the prefix and any other non-digit characters
       const digits = value.replace(/[^0-9]/g, "");
-
-      // Limit to 10 digits
       const truncatedDigits = digits.substring(0, 10);
       
       let formattedValue = prefix;
@@ -250,7 +202,6 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
       if (truncatedDigits.length > 9) {
         formattedValue += '-' + truncatedDigits.substring(9);
       }
-      
       setValue('ghanaCardNo', formattedValue);
   };
 
@@ -270,10 +221,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const newDocument = {
-          name: file.name,
-          url: reader.result as string,
-        };
+        const newDocument = { name: file.name, url: reader.result as string };
         setValue('documents', [...(documents || []), newDocument]);
       };
       reader.readAsDataURL(file);
@@ -304,7 +252,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
         }
         setIsOpen(false);
     } catch(err: any) {
-        toast({ variant: 'destructive', title: 'Error', description: err.message });
+        toast({ variant: 'destructive', title: 'Error', description: err.message || "An unknown error occurred." });
     }
   };
   
