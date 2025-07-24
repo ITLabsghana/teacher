@@ -294,17 +294,12 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
 
   const onSubmit = async (data: TeacherFormData) => {
     try {
-        const dataToSubmit = {
-            ...data,
-            schoolId: data.schoolId === '' ? null : data.schoolId,
-        };
-
         if (editingTeacher) {
-          const finalData = { ...dataToSubmit, id: editingTeacher.id };
+          const finalData = { ...editingTeacher, ...data };
           await updateTeacher(finalData);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
-          await addTeacher(dataToSubmit);
+          await addTeacher(data);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
         setIsOpen(false);
