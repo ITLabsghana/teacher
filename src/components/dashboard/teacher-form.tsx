@@ -76,48 +76,48 @@ const teacherSchema = z.object({
   staffId: z.string().min(1, "Staff ID is required"),
   firstName: z.string().min(2, "First name is too short"),
   lastName: z.string().min(2, "Surname is too short"),
-  dateOfBirth: z.date({ required_error: "Date of birth is required." }),
-  gender: z.enum(['Male', 'Female'], { required_error: "Gender is required" }),
-  registeredNo: z.string().optional(),
-  ghanaCardNo: z.string().optional(),
-  ssnitNo: z.string().optional(),
-  tinNo: z.string().optional(),
-  phoneNo: z.string().optional(),
-  homeTown: z.string().optional(),
-  email: z.string().email("Invalid email address").optional().or(z.literal('')),
-  address: z.string().optional(),
-  photo: z.string().optional(),
+  dateOfBirth: z.date({ required_error: "Date of birth is required." }).nullable(),
+  gender: z.enum(['Male', 'Female']).nullable(),
+  registeredNo: z.string().optional().nullable(),
+  ghanaCardNo: z.string().optional().nullable(),
+  ssnitNo: z.string().optional().nullable(),
+  tinNo: z.string().optional().nullable(),
+  phoneNo: z.string().optional().nullable(),
+  homeTown: z.string().optional().nullable(),
+  email: z.string().email("Invalid email address").optional().or(z.literal('')).nullable(),
+  address: z.string().optional().nullable(),
+  photo: z.string().optional().nullable(),
 
   // Academic and Work Information
-  academicQualification: z.string().optional(),
-  professionalQualification: z.string().optional(),
-  otherProfessionalQualification: z.string().optional(),
-  rank: z.string().optional(),
-  job: z.enum(['Head Teacher', 'Class Teacher', 'Subject Teacher']).optional(),
-  subjects: z.string().optional(),
-  leadershipPosition: z.string().optional(),
-  otherLeadershipPosition: z.string().optional(),
-  areaOfSpecialization: z.string().optional(),
+  academicQualification: z.string().optional().nullable(),
+  professionalQualification: z.string().optional().nullable(),
+  otherProfessionalQualification: z.string().optional().nullable(),
+  rank: z.string().optional().nullable(),
+  job: z.enum(['Head Teacher', 'Class Teacher', 'Subject Teacher']).optional().nullable(),
+  subjects: z.string().optional().nullable(),
+  leadershipPosition: z.string().optional().nullable(),
+  otherLeadershipPosition: z.string().optional().nullable(),
+  areaOfSpecialization: z.string().optional().nullable(),
   lastPromotionDate: z.date().nullable().optional(),
-  previousSchool: z.string().optional(),
+  previousSchool: z.string().optional().nullable(),
   schoolId: z.string().nullable().optional(),
   datePostedToCurrentSchool: z.date().nullable().optional(),
-  licensureNo: z.string().optional(),
+  licensureNo: z.string().optional().nullable(),
   firstAppointmentDate: z.date().nullable().optional(),
   dateConfirmed: z.date().nullable().optional(),
-  teacherUnion: z.string().optional(),
+  teacherUnion: z.string().optional().nullable(),
 
   // Bank and Salary Information
-  bankName: z.string().optional(),
-  bankBranch: z.string().optional(),
-  accountNumber: z.string().optional(),
-  salaryScale: z.string().optional(),
+  bankName: z.string().optional().nullable(),
+  bankBranch: z.string().optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  salaryScale: z.string().optional().nullable(),
 
   // Documents
   documents: z.array(z.object({
       name: z.string(),
       url: z.string()
-  })).optional(),
+  })).optional().nullable(),
 }).refine(data => !(data.professionalQualification === 'Other' && !data.otherProfessionalQualification), {
   message: "Please specify the qualification",
   path: ["otherProfessionalQualification"],
@@ -164,23 +164,30 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
 
   useEffect(() => {
     const defaultValues: Partial<TeacherFormData> = {
-      staffId: '', firstName: '', lastName: '', dateOfBirth: undefined, gender: undefined,
-      registeredNo: '', ghanaCardNo: 'GHA-', ssnitNo: '', tinNo: '', phoneNo: '', homeTown: '',
-      email: '', address: '', photo: '', academicQualification: '', professionalQualification: '',
-      otherProfessionalQualification: '', rank: '', job: undefined, subjects: '', leadershipPosition: '',
-      otherLeadershipPosition: '', areaOfSpecialization: '', lastPromotionDate: null, previousSchool: '',
-      schoolId: null, datePostedToCurrentSchool: null, licensureNo: '', firstAppointmentDate: null,
-      dateConfirmed: null, teacherUnion: '', bankName: '', bankBranch: '', accountNumber: '',
-      salaryScale: '', documents: [],
+        staffId: '', firstName: '', lastName: '', gender: null,
+        registeredNo: '', ghanaCardNo: 'GHA-', ssnitNo: '', tinNo: '', phoneNo: '', homeTown: '',
+        email: '', address: '', photo: '', academicQualification: '', professionalQualification: '',
+        otherProfessionalQualification: '', rank: '', job: null, subjects: '', leadershipPosition: '',
+        otherLeadershipPosition: '', areaOfSpecialization: '', previousSchool: '',
+        schoolId: null, licensureNo: '', teacherUnion: '', bankName: '', bankBranch: '', accountNumber: '',
+        salaryScale: '', documents: [], dateOfBirth: null, lastPromotionDate: null, datePostedToCurrentSchool: null,
+        firstAppointmentDate: null, dateConfirmed: null,
     };
 
     if (editingTeacher) {
-      reset(editingTeacher);
+        // Create a mutable copy to safely convert nulls to empty strings for the form
+        const formValues: { [key: string]: any } = { ...editingTeacher };
+        for (const key in formValues) {
+            if (formValues[key] === null) {
+                formValues[key] = '';
+            }
+        }
+        reset(formValues);
     } else {
-      reset(defaultValues);
+        reset(defaultValues);
     }
   }, [editingTeacher, reset]);
-  
+
   useEffect(() => {
     if (dob) {
       setAge(differenceInYears(new Date(), dob));
@@ -242,20 +249,12 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
 
   const onSubmit = async (data: TeacherFormData) => {
     try {
-        const sanitizedData = { ...data };
-        // Convert undefined optional fields to null for DB compatibility
-        (Object.keys(sanitizedData) as Array<keyof typeof sanitizedData>).forEach((key) => {
-            if (sanitizedData[key] === undefined) {
-                (sanitizedData as any)[key] = null;
-            }
-        });
-        
         if (editingTeacher) {
-          const finalData = { ...editingTeacher, ...sanitizedData };
+          const finalData = { ...editingTeacher, ...data };
           await updateTeacher(finalData);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
-          await addTeacher(sanitizedData);
+          await addTeacher(data);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
         setIsOpen(false);
@@ -315,7 +314,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
                             <div><Label>Surname & Other Names</Label><Input {...register('lastName')} className={cn(errors.lastName && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.lastName?.message}</p></div>
                             {renderDatePicker('dateOfBirth', 'Date of Birth')}
                              <div><Label>Age</Label><Input value={age !== null ? age : ''} readOnly className="bg-muted" /></div>
-                            <div><Label>Gender</Label><Controller control={control} name="gender" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={cn(errors.gender && "border-destructive")}><SelectValue placeholder="Select Gender" /></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent></Select> )} /><p className="text-destructive text-xs mt-1">{errors.gender?.message}</p></div>
+                            <div><Label>Gender</Label><Controller control={control} name="gender" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger className={cn(errors.gender && "border-destructive")}><SelectValue placeholder="Select Gender" /></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent></Select> )} /><p className="text-destructive text-xs mt-1">{errors.gender?.message}</p></div>
                         </div>
                     </div>
 
@@ -332,6 +331,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
                             render={({ field }) => ( 
                               <Input 
                                 {...field} 
+                                value={field.value ?? ""}
                                 placeholder="GHA-XXXXXXXXX-X" 
                                 onChange={handleGhanaCardChange}
                                 maxLength={14}
@@ -350,13 +350,13 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
                     <Separator />
                     <h3 className="text-lg font-medium">Academic and Work Information</h3>
                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div><Label>Academic Qualification</Label><Controller control={control} name="academicQualification" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{academicQualifications.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent></Select> )}/></div>
-                        <div><Label>Professional Qualification</Label><Controller control={control} name="professionalQualification" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{professionalQualificationsList.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent></Select> )}/></div>
+                        <div><Label>Academic Qualification</Label><Controller control={control} name="academicQualification" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{academicQualifications.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent></Select> )}/></div>
+                        <div><Label>Professional Qualification</Label><Controller control={control} name="professionalQualification" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{professionalQualificationsList.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent></Select> )}/></div>
                         {professionalQualification === 'Other' && <div><Label>Specify Other</Label><Input {...register('otherProfessionalQualification')} className={cn(errors.otherProfessionalQualification && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.otherProfessionalQualification?.message}</p></div>}
-                        <div><Label>Rank</Label><Controller control={control} name="rank" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{ranks.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select> )}/></div>
-                        <div><Label>Job</Label><Controller control={control} name="job" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{jobs.map(j => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select> )}/></div>
+                        <div><Label>Rank</Label><Controller control={control} name="rank" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{ranks.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select> )}/></div>
+                        <div><Label>Job</Label><Controller control={control} name="job" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{jobs.map(j => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent></Select> )}/></div>
                         {job === 'Subject Teacher' && <div><Label>Subjects</Label><Input {...register('subjects')} className={cn(errors.subjects && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.subjects?.message}</p></div>}
-                        <div><Label>Leadership Position</Label><Controller control={control} name="leadershipPosition" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{leadershipPositionsList.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select> )}/></div>
+                        <div><Label>Leadership Position</Label><Controller control={control} name="leadershipPosition" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{leadershipPositionsList.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select> )}/></div>
                         {leadershipPosition === 'Other' && <div><Label>Specify Other</Label><Input {...register('otherLeadershipPosition')} className={cn(errors.otherLeadershipPosition && "border-destructive")} /><p className="text-destructive text-xs mt-1">{errors.otherLeadershipPosition?.message}</p></div>}
                         <div><Label>Area Of Specialization</Label><Input {...register('areaOfSpecialization')} /></div>
                         {renderDatePicker('lastPromotionDate', 'Last Promotion Date')}
@@ -366,7 +366,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
                         <div><Label>Licensure No.</Label><Input {...register('licensureNo')} /></div>
                         {renderDatePicker('firstAppointmentDate', 'First Appointment Date')}
                         {renderDatePicker('dateConfirmed', 'Date Confirmed')}
-                        <div><Label>Teacher Union</Label><Controller control={control} name="teacherUnion" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{teacherUnions.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select> )}/></div>
+                        <div><Label>Teacher Union</Label><Controller control={control} name="teacherUnion" render={({ field }) => ( <Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{teacherUnions.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select> )}/></div>
                     </div>
 
                     <Separator />
@@ -422,3 +422,5 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
     </Dialog>
   );
 }
+
+    

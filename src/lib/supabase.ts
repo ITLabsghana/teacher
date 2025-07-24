@@ -22,7 +22,6 @@ const parseTeacherDates = (teacher: any): Teacher => ({
 export const getTeachers = async (): Promise<Teacher[]> => {
     const { data, error } = await supabase.from('teachers').select('*').order('firstName', { ascending: true });
     if (error) throw error;
-    // Safely parse documents and dates
     return data.map(parseTeacherDates) || [];
 };
 
@@ -55,9 +54,9 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
     const dbData: { [key: string]: any } = { ...teacher };
     
-    // Convert any undefined top-level fields to null for DB compatibility
+    // Convert any undefined or empty string values for optional fields to null for DB compatibility
     Object.keys(dbData).forEach(key => {
-        if (dbData[key] === undefined) {
+        if (dbData[key] === undefined || dbData[key] === '') {
             dbData[key] = null;
         }
     });
@@ -65,14 +64,14 @@ const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
     // Stringify documents if it's an array
     if (Array.isArray(dbData.documents)) {
         dbData.documents = JSON.stringify(dbData.documents);
-    } else if (dbData.documents === undefined || dbData.documents === null) {
+    } else if (dbData.documents === null) {
         dbData.documents = JSON.stringify([]);
     }
     
     return dbData;
 };
 
-export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher> => {
+export const addTeacher = async (teacher: Partial<Omit<Teacher, 'id'>>): Promise<Teacher> => {
     const teacherData = prepareTeacherForDb(teacher);
     const { data, error } = await supabase.from('teachers').insert([teacherData]).select().single();
     if (error) throw error;
@@ -125,3 +124,5 @@ export const updateLeaveRequest = async (request: LeaveRequest): Promise<LeaveRe
     if (error) throw error;
     return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
 };
+
+    
