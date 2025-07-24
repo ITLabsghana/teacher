@@ -193,6 +193,7 @@ export default function TeachersTab({ teachers, schools }: TeachersTabProps) {
         </div>
       </CardContent>
       <TeacherForm
+        key={editingTeacher ? editingTeacher.id : 'new'}
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
         editingTeacher={editingTeacher}
