@@ -7,21 +7,23 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const parseTeacherDates = (teacher: any): Teacher => ({
+    ...teacher,
+    documents: teacher.documents ? (typeof teacher.documents === 'string' ? JSON.parse(teacher.documents) : teacher.documents) : [],
+    dateOfBirth: teacher.dateOfBirth ? new Date(teacher.dateOfBirth) : undefined,
+    firstAppointmentDate: teacher.firstAppointmentDate ? new Date(teacher.firstAppointmentDate) : undefined,
+    lastPromotionDate: teacher.lastPromotionDate ? new Date(teacher.lastPromotionDate) : undefined,
+    datePostedToCurrentSchool: teacher.datePostedToCurrentSchool ? new Date(teacher.datePostedToCurrentSchool) : undefined,
+    dateConfirmed: teacher.dateConfirmed ? new Date(teacher.dateConfirmed) : undefined,
+});
+
 // --- Data Fetching ---
 
 export const getTeachers = async (): Promise<Teacher[]> => {
     const { data, error } = await supabase.from('teachers').select('*').order('firstName', { ascending: true });
     if (error) throw error;
     // Safely parse documents and dates
-    return data.map(t => ({
-        ...t,
-        documents: t.documents ? (typeof t.documents === 'string' ? JSON.parse(t.documents) : t.documents) : [],
-        dateOfBirth: t.dateOfBirth ? new Date(t.dateOfBirth) : undefined,
-        firstAppointmentDate: t.firstAppointmentDate ? new Date(t.firstAppointmentDate) : undefined,
-        lastPromotionDate: t.lastPromotionDate ? new Date(t.lastPromotionDate) : undefined,
-        datePostedToCurrentSchool: t.datePostedToCurrentSchool ? new Date(t.datePostedToCurrentSchool) : undefined,
-        dateConfirmed: t.dateConfirmed ? new Date(t.dateConfirmed) : undefined,
-    })) || [];
+    return data.map(parseTeacherDates) || [];
 };
 
 export const getSchools = async (): Promise<School[]> => {
@@ -51,13 +53,20 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 // --- Data Mutation ---
 
 const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
-    const dbData = { ...teacher };
+    const dbData: { [key: string]: any } = { ...teacher };
     
     // Ensure schoolId is null if it's an empty string or undefined
     if (dbData.schoolId === '' || dbData.schoolId === undefined) {
         dbData.schoolId = null;
     }
     
+    // Convert any undefined top-level fields to null for DB compatibility
+    Object.keys(dbData).forEach(key => {
+        if (dbData[key] === undefined) {
+            dbData[key] = null;
+        }
+    });
+
     // Stringify documents if it's an array
     if (Array.isArray(dbData.documents)) {
         dbData.documents = JSON.stringify(dbData.documents);
@@ -72,7 +81,7 @@ export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher>
     const teacherData = prepareTeacherForDb(teacher);
     const { data, error } = await supabase.from('teachers').insert([teacherData]).select().single();
     if (error) throw error;
-    return data;
+    return parseTeacherDates(data);
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
@@ -84,7 +93,7 @@ export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
         throw error;
     }
     
-    return data;
+    return parseTeacherDates(data);
 };
 
 export const deleteTeacher = async (id: string): Promise<void> => {

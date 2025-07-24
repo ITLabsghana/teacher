@@ -37,8 +37,16 @@ type Action =
   | { type: 'UPDATE_TEACHER'; payload: Teacher }
   | { type: 'DELETE_TEACHER'; payload: string }
   | { type: 'SET_SCHOOLS'; payload: School[] }
+  | { type: 'ADD_SCHOOL'; payload: School }
+  | { type: 'UPDATE_SCHOOL'; payload: School }
+  | { type: 'DELETE_SCHOOL'; payload: string }
   | { type: 'SET_LEAVE_REQUESTS'; payload: LeaveRequest[] }
+  | { type: 'ADD_LEAVE_REQUEST'; payload: LeaveRequest }
+  | { type: 'UPDATE_LEAVE_REQUEST'; payload: LeaveRequest }
   | { type: 'SET_USERS'; payload: User[] }
+  | { type: 'ADD_USER'; payload: User }
+  | { type: 'UPDATE_USER'; payload: User }
+  | { type: 'DELETE_USER'; payload: string }
   | { type: 'CLEAR_LOCAL_DATA' };
 
 function appReducer(state: AppState, action: Action): AppState {
@@ -59,10 +67,26 @@ function appReducer(state: AppState, action: Action): AppState {
       return { ...state, teachers: state.teachers.filter(t => t.id !== action.payload) };
     case 'SET_SCHOOLS':
         return { ...state, schools: action.payload };
+    case 'ADD_SCHOOL':
+        return { ...state, schools: [...state.schools, action.payload] };
+    case 'UPDATE_SCHOOL':
+        return { ...state, schools: state.schools.map(s => s.id === action.payload.id ? action.payload : s) };
+    case 'DELETE_SCHOOL':
+        return { ...state, schools: state.schools.filter(s => s.id !== action.payload) };
     case 'SET_LEAVE_REQUESTS':
         return { ...state, leaveRequests: action.payload };
+    case 'ADD_LEAVE_REQUEST':
+        return { ...state, leaveRequests: [action.payload, ...state.leaveRequests] };
+    case 'UPDATE_LEAVE_REQUEST':
+        return { ...state, leaveRequests: state.leaveRequests.map(l => l.id === action.payload.id ? action.payload : l) };
     case 'SET_USERS':
         return { ...state, users: action.payload };
+    case 'ADD_USER':
+        return { ...state, users: [...state.users, action.payload] };
+    case 'UPDATE_USER':
+        return { ...state, users: state.users.map(u => u.id === action.payload.id ? action.payload : u) };
+    case 'DELETE_USER':
+        return { ...state, users: state.users.filter(u => u.id !== action.payload) };
     case 'CLEAR_LOCAL_DATA':
       return { ...initialState, isLoading: false };
     default:
@@ -73,6 +97,10 @@ function appReducer(state: AppState, action: Action): AppState {
 // --- Context Definition ---
 
 interface DataContextProps extends AppState {
+  setTeachers: (teachers: Teacher[]) => void;
+  setSchools: (schools: School[]) => void;
+  setLeaveRequests: (leaveRequests: LeaveRequest[]) => void;
+  setUsers: (users: User[]) => void;
   addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
   updateTeacher: (teacher: Teacher) => Promise<void>;
   deleteTeacher: (id: string) => Promise<void>;
@@ -143,17 +171,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     fetchData();
   }, [state.currentUser, state.isDataLoaded]);
 
-  // CRUD Actions
+  // --- CRUD Actions ---
+
+  const setTeachers = (teachers: Teacher[]) => dispatch({ type: 'SET_TEACHERS', payload: teachers });
+  const setSchools = (schools: School[]) => dispatch({ type: 'SET_SCHOOLS', payload: schools });
+  const setLeaveRequests = (requests: LeaveRequest[]) => dispatch({ type: 'SET_LEAVE_REQUESTS', payload: requests });
+  const setUsers = (users: User[]) => dispatch({ type: 'SET_USERS', payload: users });
+
   const addTeacher = async (teacher: Omit<Teacher, 'id'>) => {
     const newTeacher = await dbAddTeacher(teacher);
-    const rehydratedTeacher = (await getTeachers()).find(t => t.id === newTeacher.id)!;
-    dispatch({ type: 'ADD_TEACHER', payload: rehydratedTeacher });
+    dispatch({ type: 'ADD_TEACHER', payload: newTeacher });
   };
   
   const updateTeacher = async (teacher: Teacher) => {
     const updatedTeacher = await dbUpdateTeacher(teacher);
-    const rehydratedTeacher = (await getTeachers()).find(t => t.id === updatedTeacher.id)!;
-    dispatch({ type: 'UPDATE_TEACHER', payload: rehydratedTeacher });
+    dispatch({ type: 'UPDATE_TEACHER', payload: updatedTeacher });
   };
   
   const deleteTeacher = async (id: string) => {
@@ -162,43 +194,43 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   
   const addSchool = async (school: Omit<School, 'id'>) => {
-    await dbAddSchool(school);
-    dispatch({ type: 'SET_SCHOOLS', payload: await getSchools() });
+    const newSchool = await dbAddSchool(school);
+    dispatch({ type: 'ADD_SCHOOL', payload: newSchool });
   };
 
   const updateSchool = async (school: School) => {
-    await dbUpdateSchool(school);
-    dispatch({ type: 'SET_SCHOOLS', payload: await getSchools() });
+    const updatedSchool = await dbUpdateSchool(school);
+    dispatch({ type: 'UPDATE_SCHOOL', payload: updatedSchool });
   };
 
   const deleteSchool = async (id: string) => {
     await dbDeleteSchool(id);
-    dispatch({ type: 'SET_SCHOOLS', payload: await getSchools() });
+    dispatch({ type: 'DELETE_SCHOOL', payload: id });
   };
 
   const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status'>) => {
-    await dbAddLeaveRequest(request);
-    dispatch({ type: 'SET_LEAVE_REQUESTS', payload: await getLeaveRequests() });
+    const newRequest = await dbAddLeaveRequest(request);
+    dispatch({ type: 'ADD_LEAVE_REQUEST', payload: newRequest });
   };
 
   const updateLeaveRequest = async (request: LeaveRequest) => {
-    await dbUpdateLeaveRequest(request);
-    dispatch({ type: 'SET_LEAVE_REQUESTS', payload: await getLeaveRequests() });
+    const updatedRequest = await dbUpdateLeaveRequest(request);
+    dispatch({ type: 'UPDATE_LEAVE_REQUEST', payload: updatedRequest });
   };
   
   const addUser = async (user: Omit<User, 'id'>) => {
-      await createUserAction(user);
-      dispatch({ type: 'SET_USERS', payload: await getUsers() });
+      const newUser = await createUserAction(user);
+      dispatch({ type: 'ADD_USER', payload: newUser });
   };
 
   const updateUser = async (user: User) => {
-      await updateUserAction(user);
-      dispatch({ type: 'SET_USERS', payload: await getUsers() });
+      const updatedUser = await updateUserAction(user);
+      dispatch({ type: 'UPDATE_USER', payload: updatedUser });
   };
   
   const deleteUser = async (id: string) => {
       await deleteUserAction(id);
-      dispatch({ type: 'SET_USERS', payload: await getUsers() });
+      dispatch({ type: 'DELETE_USER', payload: id });
   };
 
   const logout = async () => {
@@ -207,6 +239,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const value: DataContextProps = {
     ...state,
+    setTeachers, setSchools, setLeaveRequests, setUsers,
     addTeacher, updateTeacher, deleteTeacher,
     addSchool, updateSchool, deleteSchool,
     addLeaveRequest, updateLeaveRequest,
