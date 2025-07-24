@@ -66,9 +66,9 @@ function StatsCards({
         
         const enrollmentTotals = {
             total: { boys: 0, girls: 0 },
-            kg: { boys: 0, girls: 0 },
-            primary: { boys: 0, girls: 0 },
-            jhs: { boys: 0, girls: 0 },
+            kg: { boys: 0, girls: 0, total: 0 },
+            primary: { boys: 0, girls: 0, total: 0 },
+            jhs: { boys: 0, girls: 0, total: 0 },
         };
 
         schools.forEach(school => {
@@ -94,6 +94,9 @@ function StatsCards({
             }
         });
         
+        enrollmentTotals.kg.total = enrollmentTotals.kg.boys + enrollmentTotals.kg.girls;
+        enrollmentTotals.primary.total = enrollmentTotals.primary.boys + enrollmentTotals.primary.girls;
+        enrollmentTotals.jhs.total = enrollmentTotals.jhs.boys + enrollmentTotals.jhs.girls;
         const grandTotalStudents = enrollmentTotals.total.boys + enrollmentTotals.total.girls;
 
         return { 
@@ -215,6 +218,7 @@ function StatsCards({
                     <CardContent className="flex gap-4">
                         <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.boys}</p></div>
                         <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.girls}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.total}</p></div>
                     </CardContent>
                 </Card>
                 <Card className="col-span-1 md:col-span-3 lg:col-span-1">
@@ -222,6 +226,7 @@ function StatsCards({
                     <CardContent className="flex gap-4">
                         <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.boys}</p></div>
                         <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.girls}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.total}</p></div>
                     </CardContent>
                 </Card>
                 <Card className="col-span-1 md:col-span-3 lg:col-span-1">
@@ -229,6 +234,7 @@ function StatsCards({
                     <CardContent className="flex gap-4">
                         <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.boys}</p></div>
                         <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.girls}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.total}</p></div>
                     </CardContent>
                 </Card>
             </div>
