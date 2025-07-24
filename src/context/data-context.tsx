@@ -151,11 +151,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   
   const updateTeacher = async (teacher: Teacher) => {
-    console.log("LOG: [DataContext] updateTeacher called with:", teacher);
     const updatedTeacher = await dbUpdateTeacher(teacher);
     const rehydratedTeacher = (await getTeachers()).find(t => t.id === updatedTeacher.id)!;
     dispatch({ type: 'UPDATE_TEACHER', payload: rehydratedTeacher });
-    console.log("LOG: [DataContext] Teacher update complete.");
   };
   
   const deleteTeacher = async (id: string) => {
@@ -230,5 +228,3 @@ export function useDataContext() {
   }
   return context;
 }
-
-    

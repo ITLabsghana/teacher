@@ -76,18 +76,14 @@ export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher>
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
-    console.log("LOG: [Supabase] Preparing to update teacher with data:", teacher);
     const teacherData = prepareTeacherForDb(teacher);
-    console.log("LOG: [Supabase] Data prepared for DB:", teacherData);
     
     const { data, error } = await supabase.from('teachers').update(teacherData).eq('id', teacher.id).select().single();
     
     if (error) {
-        console.error("LOG: [Supabase] Error from Supabase on update:", error);
         throw error;
     }
     
-    console.log("LOG: [Supabase] Successfully updated. Response from DB:", data);
     return data;
 };
 
@@ -125,5 +121,3 @@ export const updateLeaveRequest = async (request: LeaveRequest): Promise<LeaveRe
     if (error) throw error;
     return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
 };
-
-    
