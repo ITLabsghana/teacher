@@ -241,15 +241,21 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
   };
 
   const onSubmit = async (data: TeacherFormData) => {
-    console.log('[TeacherForm] Form submitted. Data: ', data);
     try {
+        const sanitizedData = { ...data };
+        // Convert undefined optional fields to null for DB compatibility
+        (Object.keys(sanitizedData) as Array<keyof typeof sanitizedData>).forEach((key) => {
+            if (sanitizedData[key] === undefined) {
+                (sanitizedData as any)[key] = null;
+            }
+        });
+        
         if (editingTeacher) {
-          console.log('[TeacherForm] Editing existing teacher.');
-          const finalData = { ...editingTeacher, ...data };
+          const finalData = { ...editingTeacher, ...sanitizedData };
           await updateTeacher(finalData);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
-          await addTeacher(data);
+          await addTeacher(sanitizedData);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
         setIsOpen(false);

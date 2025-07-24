@@ -80,18 +80,14 @@ export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher>
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
-    console.log('[Supabase] Preparing to update teacher with data:', teacher);
     const dbData = prepareTeacherForDb(teacher);
-    console.log('[Supabase] Data prepared for DB:', dbData);
     
     const { data, error } = await supabase.from('teachers').update(dbData).eq('id', teacher.id).select().single();
     
     if (error) {
-        console.error('[Supabase] Error updating teacher:', error);
         throw error;
     }
     
-    console.log('[Supabase] Successfully updated. Response from DB:', data);
     return parseTeacherDates(data);
 };
 
