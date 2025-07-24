@@ -28,7 +28,10 @@ export const getTeachers = async (): Promise<Teacher[]> => {
 export const getTeacherById = async (id: string): Promise<Teacher | null> => {
     const { data, error } = await supabase.from('teachers').select('*').eq('id', id).single();
     if (error) {
-        console.error("Error fetching teacher by id", error);
+        // PGRST116: "single row not found" - this is expected, not an error.
+        if (error.code !== 'PGRST116') {
+            console.error("Error fetching teacher by id", error);
+        }
         return null;
     }
     return parseTeacherDates(data);
@@ -43,7 +46,9 @@ export const getSchools = async (): Promise<School[]> => {
 export const getSchoolById = async (id: string): Promise<School | null> => {
     const { data, error } = await supabase.from('schools').select('*').eq('id', id).single();
     if (error) {
-        console.error("Error fetching school by id", error);
+        if (error.code !== 'PGRST116') {
+          console.error("Error fetching school by id", error);
+        }
         return null;
     }
     return data;
@@ -72,8 +77,9 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
     const dbData: { [key: string]: any } = { ...teacher };
     
+    // Convert empty strings back to null for the database
     Object.keys(dbData).forEach(key => {
-        if (dbData[key] === undefined || dbData[key] === '') {
+        if (dbData[key] === '' || dbData[key] === undefined) {
             dbData[key] = null;
         }
     });
