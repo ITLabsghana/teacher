@@ -175,7 +175,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
     };
 
     if (editingTeacher) {
-      reset({ ...editingTeacher });
+      reset(editingTeacher);
     } else {
       reset(defaultValues);
     }
@@ -241,17 +241,21 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
   };
 
   const onSubmit = async (data: TeacherFormData) => {
+    console.log("LOG: [TeacherForm] Form submitted. Data:", data);
     try {
         if (editingTeacher) {
+          console.log("LOG: [TeacherForm] Editing existing teacher.");
           const finalData = { ...editingTeacher, ...data };
           await updateTeacher(finalData);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
+          console.log("LOG: [TeacherForm] Adding new teacher.");
           await addTeacher(data);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
         setIsOpen(false);
     } catch(err: any) {
+        console.error("LOG: [TeacherForm] Error during submission:", err);
         toast({ variant: 'destructive', title: 'Error', description: err.message || "An unknown error occurred." });
     }
   };
@@ -414,3 +418,5 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
     </Dialog>
   );
 }
+
+    

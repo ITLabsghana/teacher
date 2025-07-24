@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Teacher, School, LeaveRequest, User } from './types';
 
@@ -52,8 +53,8 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
     const dbData = { ...teacher };
     
-    // Ensure schoolId is null if it's an empty string
-    if (dbData.schoolId === '') {
+    // Ensure schoolId is null if it's an empty string or undefined
+    if (dbData.schoolId === '' || dbData.schoolId === undefined) {
         dbData.schoolId = null;
     }
     
@@ -75,9 +76,18 @@ export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher>
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
+    console.log("LOG: [Supabase] Preparing to update teacher with data:", teacher);
     const teacherData = prepareTeacherForDb(teacher);
+    console.log("LOG: [Supabase] Data prepared for DB:", teacherData);
+    
     const { data, error } = await supabase.from('teachers').update(teacherData).eq('id', teacher.id).select().single();
-    if (error) throw error;
+    
+    if (error) {
+        console.error("LOG: [Supabase] Error from Supabase on update:", error);
+        throw error;
+    }
+    
+    console.log("LOG: [Supabase] Successfully updated. Response from DB:", data);
     return data;
 };
 
@@ -115,3 +125,5 @@ export const updateLeaveRequest = async (request: LeaveRequest): Promise<LeaveRe
     if (error) throw error;
     return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
 };
+
+    
