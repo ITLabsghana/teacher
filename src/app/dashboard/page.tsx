@@ -63,18 +63,38 @@ function StatsCards({
                     timeToRetirement: formatDistanceToNow(retirementDate, { addSuffix: true }),
                  }
             });
+        
+        const enrollmentTotals = {
+            total: { boys: 0, girls: 0 },
+            kg: { boys: 0, girls: 0 },
+            primary: { boys: 0, girls: 0 },
+            jhs: { boys: 0, girls: 0 },
+        };
 
-        const enrollmentTotals = schools.reduce((acc, school) => {
+        schools.forEach(school => {
             if (school.enrollment) {
-                Object.values(school.enrollment).forEach(classData => {
-                    acc.boys += classData.boys || 0;
-                    acc.girls += classData.girls || 0;
+                Object.entries(school.enrollment).forEach(([classLevel, classData]) => {
+                    const boys = classData.boys || 0;
+                    const girls = classData.girls || 0;
+
+                    enrollmentTotals.total.boys += boys;
+                    enrollmentTotals.total.girls += girls;
+
+                    if (classLevel.startsWith('KG')) {
+                        enrollmentTotals.kg.boys += boys;
+                        enrollmentTotals.kg.girls += girls;
+                    } else if (classLevel.startsWith('Basic')) {
+                        enrollmentTotals.primary.boys += boys;
+                        enrollmentTotals.primary.girls += girls;
+                    } else if (classLevel.startsWith('JHS')) {
+                        enrollmentTotals.jhs.boys += boys;
+                        enrollmentTotals.jhs.girls += girls;
+                    }
                 });
             }
-            return acc;
-        }, { boys: 0, girls: 0 });
-
-        const grandTotalStudents = enrollmentTotals.boys + enrollmentTotals.girls;
+        });
+        
+        const grandTotalStudents = enrollmentTotals.total.boys + enrollmentTotals.total.girls;
 
         return { 
             onLeaveCount, 
@@ -90,7 +110,7 @@ function StatsCards({
     if (isLoading) {
         return (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {Array.from({ length: 7 }).map((_, i) => (
+                {Array.from({ length: 13 }).map((_, i) => (
                     <Card key={i}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <Skeleton className="h-4 w-24" />
@@ -135,33 +155,6 @@ function StatsCards({
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{stats.grandTotalStudents}</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Boys</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{stats.enrollmentTotals.boys}</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Girls</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{stats.enrollmentTotals.girls}</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Leaves Ending Soon</CardTitle>
                     <Bell className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -180,6 +173,66 @@ function StatsCards({
                     <p className="text-xs text-muted-foreground">In the next year</p>
                 </CardContent>
             </Card>
+            
+            <Card className="col-span-full border-b-4 border-primary">
+                <CardHeader>
+                    <CardTitle className="text-lg">Overall Enrollment</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.grandTotalStudents}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Boys</CardTitle>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.enrollmentTotals.total.boys}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Girls</CardTitle>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.enrollmentTotals.total.girls}</div>
+                        </CardContent>
+                    </Card>
+                </CardContent>
+            </Card>
+
+            <div className="md:col-span-2 lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="col-span-1 md:col-span-3 lg:col-span-1">
+                    <CardHeader><CardTitle className="text-md">KG Enrollment</CardTitle></CardHeader>
+                    <CardContent className="flex gap-4">
+                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.boys}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.girls}</p></div>
+                    </CardContent>
+                </Card>
+                <Card className="col-span-1 md:col-span-3 lg:col-span-1">
+                    <CardHeader><CardTitle className="text-md">Primary Enrollment</CardTitle></CardHeader>
+                    <CardContent className="flex gap-4">
+                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.boys}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.girls}</p></div>
+                    </CardContent>
+                </Card>
+                <Card className="col-span-1 md:col-span-3 lg:col-span-1">
+                    <CardHeader><CardTitle className="text-md">J.H.S Enrollment</CardTitle></CardHeader>
+                    <CardContent className="flex gap-4">
+                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.boys}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.girls}</p></div>
+                    </CardContent>
+                </Card>
+            </div>
+            
              <Card className="col-span-full">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
