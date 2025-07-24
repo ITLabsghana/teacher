@@ -241,9 +241,12 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher }: TeacherFormPr
   };
 
   const onSubmit = async (data: TeacherFormData) => {
+    console.log('[TeacherForm] Form submitted. Data: ', data);
     try {
         if (editingTeacher) {
-          await updateTeacher({ ...editingTeacher, ...data });
+          console.log('[TeacherForm] Editing existing teacher.');
+          const finalData = { ...editingTeacher, ...data };
+          await updateTeacher(finalData);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
           await addTeacher(data);

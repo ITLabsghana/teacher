@@ -184,8 +184,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   
   const updateTeacher = async (teacher: Teacher) => {
+    console.log('[DataContext] updateTeacher called with:', teacher);
     const updatedTeacher = await dbUpdateTeacher(teacher);
     dispatch({ type: 'UPDATE_TEACHER', payload: updatedTeacher });
+    console.log('[DataContext] Teacher update complete.');
   };
   
   const deleteTeacher = async (id: string) => {

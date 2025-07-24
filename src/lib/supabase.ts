@@ -55,11 +55,6 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
     const dbData: { [key: string]: any } = { ...teacher };
     
-    // Ensure schoolId is null if it's an empty string or undefined
-    if (dbData.schoolId === '' || dbData.schoolId === undefined) {
-        dbData.schoolId = null;
-    }
-    
     // Convert any undefined top-level fields to null for DB compatibility
     Object.keys(dbData).forEach(key => {
         if (dbData[key] === undefined) {
@@ -85,14 +80,18 @@ export const addTeacher = async (teacher: Omit<Teacher, 'id'>): Promise<Teacher>
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
-    const teacherData = prepareTeacherForDb(teacher);
+    console.log('[Supabase] Preparing to update teacher with data:', teacher);
+    const dbData = prepareTeacherForDb(teacher);
+    console.log('[Supabase] Data prepared for DB:', dbData);
     
-    const { data, error } = await supabase.from('teachers').update(teacherData).eq('id', teacher.id).select().single();
+    const { data, error } = await supabase.from('teachers').update(dbData).eq('id', teacher.id).select().single();
     
     if (error) {
+        console.error('[Supabase] Error updating teacher:', error);
         throw error;
     }
     
+    console.log('[Supabase] Successfully updated. Response from DB:', data);
     return parseTeacherDates(data);
 };
 
