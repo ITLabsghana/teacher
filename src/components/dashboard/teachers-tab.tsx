@@ -113,6 +113,7 @@ export default function TeachersTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Picture</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Staff ID</TableHead>
                 <TableHead>Age</TableHead>
@@ -126,16 +127,14 @@ export default function TeachersTab() {
               {filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
                 <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-16 w-16">
+                     <Avatar className="h-20 w-20">
                           <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
-                          <AvatarFallback className="text-xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
+                          <AvatarFallback className="text-2xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
                       </Avatar>
-                      <div>
-                          <div className="font-medium">{teacher.firstName} {teacher.lastName}</div>
-                          <div className="text-sm text-muted-foreground">{teacher.email}</div>
-                      </div>
-                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{teacher.firstName} {teacher.lastName}</div>
+                    <div className="text-sm text-muted-foreground">{teacher.email}</div>
                   </TableCell>
                   <TableCell>{teacher.staffId}</TableCell>
                   <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : 'N/A'}</TableCell>
@@ -173,7 +172,7 @@ export default function TeachersTab() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     {searchTerm ? 'No teachers found matching your search.' : 'No teachers have been added yet.'}
                   </TableCell>
                 </TableRow>
@@ -191,5 +190,3 @@ export default function TeachersTab() {
     </Card>
   );
 }
-
-    

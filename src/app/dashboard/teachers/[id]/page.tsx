@@ -89,9 +89,9 @@ export default function TeacherDetailPage() {
             <Card>
                 <CardHeader>
                     <div className="flex items-center gap-6">
-                        <Avatar className="h-32 w-32">
+                        <Avatar className="h-40 w-40">
                             <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
-                            <AvatarFallback className="text-4xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
+                            <AvatarFallback className="text-5xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
                         </Avatar>
                         <div>
                             <CardTitle className="text-4xl">{teacher.firstName} {teacher.lastName}</CardTitle>
