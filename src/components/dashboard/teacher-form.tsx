@@ -300,7 +300,8 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, schools, addTea
         };
 
         if (editingTeacher) {
-          await updateTeacher({ ...editingTeacher, ...dataToSubmit });
+          const finalData = { ...dataToSubmit, id: editingTeacher.id };
+          await updateTeacher(finalData);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
           await addTeacher(dataToSubmit);
