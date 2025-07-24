@@ -9,7 +9,28 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export const getTeachers = async (): Promise<Teacher[]> => {
     const { data, error } = await supabase.from('teachers').select('*');
     if (error) throw error;
-    return data.map(t => ({...t, dateOfBirth: t.dateOfBirth ? new Date(t.dateOfBirth) : undefined, firstAppointmentDate: t.firstAppointmentDate ? new Date(t.firstAppointmentDate) : undefined, lastPromotionDate: t.lastPromotionDate ? new Date(t.lastPromotionDate) : undefined, datePostedToCurrentSchool: t.datePostedToCurrentSchool ? new Date(t.datePostedToCurrentSchool) : undefined, dateConfirmed: t.dateConfirmed ? new Date(t.dateConfirmed) : undefined })) || [];
+    return data.map(t => {
+        let documents = t.documents;
+        // The 'documents' field is stored as JSONB but can be returned as a string.
+        // We need to parse it back into an array for the application to use.
+        if (typeof documents === 'string') {
+            try {
+                documents = JSON.parse(documents);
+            } catch (e) {
+                console.error("Failed to parse documents JSON:", e);
+                documents = []; // Default to empty array on parsing error
+            }
+        }
+        return {
+            ...t,
+            documents,
+            dateOfBirth: t.dateOfBirth ? new Date(t.dateOfBirth) : undefined, 
+            firstAppointmentDate: t.firstAppointmentDate ? new Date(t.firstAppointmentDate) : undefined, 
+            lastPromotionDate: t.lastPromotionDate ? new Date(t.lastPromotionDate) : undefined, 
+            datePostedToCurrentSchool: t.datePostedToCurrentSchool ? new Date(t.datePostedToCurrentSchool) : undefined, 
+            dateConfirmed: t.dateConfirmed ? new Date(t.dateConfirmed) : undefined 
+        };
+    }) || [];
 };
 
 export const getSchools = async (): Promise<School[]> => {
