@@ -15,6 +15,7 @@ import { getTeacherById, getSchools, deleteTeacher as dbDeleteTeacher, getLeaveR
 import type { Teacher, School, LeaveRequest } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function DetailItem({ label, value }: { label: string; value?: string | number | null }) {
     if (!value && value !== 0) return null;
@@ -26,6 +27,40 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
     );
 }
 
+function ProfileSkeleton() {
+    return (
+        <div className="space-y-6">
+             <div className="flex justify-between items-center">
+                <Skeleton className="h-10 w-36" />
+                <div className="flex gap-2">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-24" />
+                </div>
+            </div>
+            <Card>
+                <CardHeader>
+                    <div className="flex items-start gap-6">
+                        <Skeleton className="h-40 w-40 rounded-full" />
+                        <div className="space-y-2">
+                             <Skeleton className="h-10 w-64" />
+                             <Skeleton className="h-6 w-48" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Separator className="my-4" />
+                    <div className="space-y-4">
+                        <Skeleton className="h-8 w-48" />
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {Array.from({length: 18}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
 export default function TeacherDetailPage() {
     const router = useRouter();
     const params = useParams();
@@ -34,11 +69,18 @@ export default function TeacherDetailPage() {
     const [teacher, setTeacher] = useState<Teacher | null>(null);
     const [schools, setSchools] = useState<School[]>([]);
     const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const teacherId = params.id as string;
 
     const fetchTeacherData = async () => {
-        if (teacherId) {
+        if (!teacherId) {
+            setIsLoading(false);
+            return;
+        };
+        
+        setIsLoading(true);
+        try {
             const [teacherData, schoolData, leaveData] = await Promise.all([
                 getTeacherById(teacherId),
                 getSchools(),
@@ -47,6 +89,12 @@ export default function TeacherDetailPage() {
             if (teacherData) setTeacher(teacherData);
             setSchools(schoolData);
             setLeaveRequests(leaveData);
+        } catch (error) {
+            console.error("Failed to fetch teacher details", error);
+            setTeacher(null); // Ensure teacher is null on error
+            toast({ variant: 'destructive', title: 'Error', description: "Could not load teacher profile." });
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -91,8 +139,21 @@ export default function TeacherDetailPage() {
         fetchTeacherData(); // Re-fetch all data after save
     }
 
+    if (isLoading) {
+        return <ProfileSkeleton />;
+    }
+
     if (!teacher) {
-        return <div className="text-center py-10">Loading teacher profile...</div>;
+        return (
+             <div className="text-center py-10">
+                <p className="text-lg font-semibold">Teacher not found</p>
+                <p className="text-muted-foreground">The profile you are looking for does not exist or could not be loaded.</p>
+                <Button variant="outline" onClick={() => router.back()} className="mt-4">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Teachers
+                </Button>
+            </div>
+        );
     }
 
     const subheader = [teacher.job, teacher.areaOfSpecialization].filter(Boolean).join(' | ');
