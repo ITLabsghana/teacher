@@ -184,6 +184,7 @@ export default function TeacherDetailPage() {
                         {teacher.job === 'Subject Teacher' && <DetailItem label="Subjects" value={teacher.subjects} />}
                         <DetailItem label="Leadership Position" value={teacher.leadershipPosition === 'Other' ? teacher.otherLeadershipPosition : teacher.leadershipPosition} />
                         <DetailItem label="Current School" value={getSchoolName(teacher.schoolId)} />
+                        <DetailItem label="Years in Current School" value={teacher.datePostedToCurrentSchool ? differenceInYears(new Date(), new Date(teacher.datePostedToCurrentSchool)) : null} />
                         <DetailItem label="Previous School" value={teacher.previousSchool} />
                         <DetailItem label="First Appointment Date" value={teacher.firstAppointmentDate ? format(new Date(teacher.firstAppointmentDate), 'PPP') : null} />
                         <DetailItem label="Date Confirmed" value={teacher.dateConfirmed ? format(new Date(teacher.dateConfirmed), 'PPP') : null} />
