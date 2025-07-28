@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useDataContext } from '@/context/data-context';
 import UsersTab from '@/components/dashboard/users-tab';
 import { useState, useEffect } from 'react';
 import type { User } from '@/lib/types';
@@ -31,5 +30,5 @@ export default function UsersPage() {
     return <div>Loading...</div>;
   }
 
-  return <UsersTab users={users} setUsers={setUsers} />;
+  return <UsersTab users={users} />;
 }

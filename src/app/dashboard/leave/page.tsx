@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useDataContext } from '@/context/data-context';
 import LeaveTab from '@/components/dashboard/leave-tab';
 import { useEffect, useState } from 'react';
 import type { LeaveRequest, Teacher } from '@/lib/types';

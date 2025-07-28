@@ -4,6 +4,7 @@
 import { createContext, useContext, useEffect, ReactNode, useReducer, useCallback } from 'react';
 import type { User } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
+import { createUserAction, deleteUserAction, updateUserAction } from '@/app/actions/user-actions';
 
 // --- State and Reducer ---
 
@@ -40,6 +41,9 @@ function appReducer(state: AppState, action: Action): AppState {
 interface DataContextProps extends AppState {
   logout: () => Promise<void>;
   clearLocalData: () => void;
+  addUser: (user: Omit<User, 'id'>) => Promise<User>;
+  updateUser: (user: User) => Promise<User>;
+  deleteUser: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextProps | undefined>(undefined);
@@ -69,7 +73,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (_event === 'SIGNED_OUT') {
           clearLocalData();
-        } else if ((_event === 'SIGNED_IN' || _event === 'USER_UPDATED') && session) {
+        } else if ((_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED' || _event === 'USER_UPDATED') && session) {
           const { data: userProfile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
           dispatch({ type: 'SET_CURRENT_USER', payload: userProfile });
         }
@@ -87,7 +91,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const value: DataContextProps = {
     ...state,
     logout,
-    clearLocalData
+    clearLocalData,
+    addUser: createUserAction,
+    updateUser: updateUserAction,
+    deleteUser: deleteUserAction,
   };
 
   return (

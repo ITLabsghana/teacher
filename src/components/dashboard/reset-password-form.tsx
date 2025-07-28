@@ -9,8 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
+import { updateUserAction } from '@/app/actions/user-actions';
 
 const passwordSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters long"),
@@ -25,7 +25,6 @@ interface ResetPasswordFormProps {
 }
 
 export function ResetPasswordForm({ isOpen, setIsOpen, user }: ResetPasswordFormProps) {
-  const { updateUser } = useDataContext();
   const { toast } = useToast();
   const { register, handleSubmit, reset, formState: { errors } } = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
@@ -34,7 +33,7 @@ export function ResetPasswordForm({ isOpen, setIsOpen, user }: ResetPasswordForm
   const onSubmit = async (data: PasswordFormData) => {
     if (user) {
         try {
-            await updateUser({ ...user, password: data.password });
+            await updateUserAction({ ...user, password: data.password });
             toast({ title: 'Success', description: 'Password has been reset successfully.' });
             setIsOpen(false);
             reset();

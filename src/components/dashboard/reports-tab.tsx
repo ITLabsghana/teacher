@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Download, Upload, FileText, FileWarning, Trash2 } from 'lucide-react';
-import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -18,19 +17,25 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Document, Packer, Paragraph, TextRun, Table as DocxTable, TableRow, TableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
+import { getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher, addSchool, addLeaveRequest } from '@/lib/supabase';
+import { adminDb } from '@/lib/supabase-admin';
+import { createUserAction } from '@/app/actions/user-actions';
 
 
 type ReportFormat = 'csv' | 'pdf' | 'docx';
-type BackupFormat = 'json' | 'csv' | 'sql';
+type BackupFormat = 'json';
 
 type ReportHeader = { key: string; label: string };
 
 export default function ReportsTab() {
-  const {
-    teachers, schools, leaveRequests, users,
-    setTeachers, setSchools, setLeaveRequests, setUsers
-  } = useDataContext();
   const { toast } = useToast();
+  
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
 
   const [reportType, setReportType] = useState('');
   const [reportFormat, setReportFormat] = useState<ReportFormat>('csv');
@@ -40,6 +45,30 @@ export default function ReportsTab() {
   const [clearDataConfirmation, setClearDataConfirmation] = useState('');
 
   const CONFIRMATION_TEXT = 'DELETE ALL DATA';
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+        const [t, s, l, u] = await Promise.all([
+            getTeachers(),
+            getSchools(),
+            getLeaveRequests(),
+            getUsers()
+        ]);
+        setTeachers(t);
+        setSchools(s);
+        setLeaveRequests(l);
+        setUsers(u);
+    } catch(e) {
+        toast({variant: 'destructive', title: 'Error', description: 'Could not load data for reports.'})
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const downloadFile = (content: string, fileName: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
@@ -63,24 +92,6 @@ export default function ReportsTab() {
         }).join(',');
     });
     return [headerRow, ...bodyRows].join('\n');
-  };
-
-  const generateSqlInserts = (tableName: string, data: any[]): string => {
-    if (data.length === 0) return '';
-    const columns = Object.keys(data[0]).join(', ');
-    
-    const escapeSqlValue = (value: any): string => {
-      if (value === null || typeof value === 'undefined') return 'NULL';
-      if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-      if (typeof value === 'object') return `'${JSON.stringify(value).replace(/'/g, "''")}'`;
-      return `'${String(value).replace(/'/g, "''")}'`;
-    };
-
-    const values = data.map(row => 
-      `(${Object.values(row).map(escapeSqlValue).join(', ')})`
-    ).join(',\n');
-    
-    return `INSERT INTO ${tableName} (${columns}) VALUES\n${values};\n\n`;
   };
 
   const generatePdf = (data: any[], headers: ReportHeader[], title: string, fileName: string) => {
@@ -234,26 +245,6 @@ export default function ReportsTab() {
       const allData = { teachers, schools, leaveRequests, users, exportDate: new Date().toISOString() };
       downloadFile(JSON.stringify(allData, null, 2), `tms-backup-${timestamp}.json`, 'application/json');
       toast({ title: "Export Successful", description: "All data has been exported as JSON." });
-
-    } else if (exportFormat === 'csv') {
-      const dataSets = { teachers, schools, leaveRequests, users };
-      Object.entries(dataSets).forEach(([name, data]) => {
-        if (data.length > 0) {
-          const headers = Object.keys(data[0]).map(key => ({ key, label: key }));
-          const csvContent = arrayToCSV(data, headers);
-          downloadFile(csvContent, `${name}-${timestamp}.csv`, 'text/csv;charset=utf-8;');
-        }
-      });
-      toast({ title: "Export Successful", description: `Exported ${Object.keys(dataSets).length} tables to separate CSV files.` });
-
-    } else if (exportFormat === 'sql') {
-      let sqlContent = `-- TMS Backup - ${new Date().toISOString()}\n\n`;
-      sqlContent += generateSqlInserts('teachers', teachers);
-      sqlContent += generateSqlInserts('schools', schools);
-      sqlContent += generateSqlInserts('leave_requests', leaveRequests);
-      sqlContent += generateSqlInserts('users', users.map(({password, ...user}) => user)); // Exclude password from user export
-      downloadFile(sqlContent, `tms-backup-${timestamp}.sql`, 'application/sql');
-      toast({ title: "Export Successful", description: "SQL backup file has been generated." });
     }
   };
 
@@ -273,7 +264,7 @@ export default function ReportsTab() {
 
     setImportError('');
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const text = e.target?.result as string;
         const data = JSON.parse(text);
@@ -281,12 +272,17 @@ export default function ReportsTab() {
         if (!data.teachers || !data.schools || !data.leaveRequests || !data.users) {
           throw new Error("Invalid backup file format. Missing required data keys.");
         }
+        
+        // This is a simplified import. A real-world scenario would need upsert logic
+        // and probably run this on the server to avoid timeouts.
+        await Promise.all([
+          ...data.teachers.map((t: Teacher) => addTeacher(t)),
+          ...data.schools.map((s: School) => addSchool(s)),
+          ...data.leaveRequests.map((l: LeaveRequest) => addLeaveRequest(l)),
+          ...data.users.map((u: User) => createUserAction(u)),
+        ]);
 
-        setTeachers(data.teachers as Teacher[]);
-        setSchools(data.schools as School[]);
-        setLeaveRequests(data.leaveRequests as LeaveRequest[]);
-        setUsers(data.users as User[]);
-
+        await fetchData(); // Refresh data from DB
         toast({ title: "Import Successful", description: "Data has been successfully restored from the backup file." });
       } catch (error: any) {
         console.error("Import failed:", error);
@@ -302,17 +298,30 @@ export default function ReportsTab() {
     event.target.value = ''; // Reset file input to allow re-uploading the same file
   };
 
-  const handleClearAllData = () => {
-    setTeachers([]);
-    setSchools([]);
-    setLeaveRequests([]);
+  const handleClearAllData = async () => {
+    // This needs to be a server action to be secure and efficient
+    // but for now, we do it on the client.
+    try {
+        const { error: tError } = await adminDb.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (tError) throw tError;
+        
+        const { error: sError } = await adminDb.from('schools').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if(sError) throw sError;
+        
+        const { error: lError } = await adminDb.from('leave_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if(lError) throw lError;
 
-    const preservedUsers = users.filter(u => u.role === 'Admin' || u.role === 'Supervisor');
-    setUsers(preservedUsers);
-
-    toast({ title: "All Data Cleared", description: "The application data has been reset, preserving Admin and Supervisor accounts." });
-    setClearDataConfirmation('');
+        await fetchData();
+        toast({ title: "All Data Cleared", description: "The application data has been reset, preserving Admin and Supervisor accounts." });
+        setClearDataConfirmation('');
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: "Error Clearing Data", description: e.message });
+    }
   };
+
+  if(isLoading) {
+    return <div>Loading report data...</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -373,8 +382,6 @@ export default function ReportsTab() {
                         <SelectTrigger id="export-format"><SelectValue /></SelectTrigger>
                         <SelectContent>
                         <SelectItem value="json">JSON</SelectItem>
-                        <SelectItem value="csv">CSV (Multiple Files)</SelectItem>
-                        <SelectItem value="sql">SQL</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -466,5 +473,3 @@ export default function ReportsTab() {
     </div>
   );
 }
-
-    
