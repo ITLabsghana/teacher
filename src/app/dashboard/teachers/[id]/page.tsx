@@ -6,14 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Trash2, File as FileIcon } from 'lucide-react';
-import { format, differenceInYears } from 'date-fns';
+import { format, differenceInYears, isWithinInterval, parseISO } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { TeacherForm } from '@/components/dashboard/teacher-form';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { getTeacherById, getSchools, deleteTeacher as dbDeleteTeacher } from '@/lib/supabase';
-import type { Teacher, School } from '@/lib/types';
+import { getTeacherById, getSchools, deleteTeacher as dbDeleteTeacher, getLeaveRequests } from '@/lib/supabase';
+import type { Teacher, School, LeaveRequest } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 function DetailItem({ label, value }: { label: string; value?: string | number | null }) {
     if (!value && value !== 0) return null;
@@ -32,23 +33,39 @@ export default function TeacherDetailPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [teacher, setTeacher] = useState<Teacher | null>(null);
     const [schools, setSchools] = useState<School[]>([]);
+    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
 
     const teacherId = params.id as string;
 
     const fetchTeacherData = async () => {
         if (teacherId) {
-            const [teacherData, schoolData] = await Promise.all([
+            const [teacherData, schoolData, leaveData] = await Promise.all([
                 getTeacherById(teacherId),
-                getSchools()
+                getSchools(),
+                getLeaveRequests()
             ]);
             if (teacherData) setTeacher(teacherData);
             setSchools(schoolData);
+            setLeaveRequests(leaveData);
         }
     }
 
     useEffect(() => {
         fetchTeacherData();
     }, [teacherId]);
+    
+    const isOnLeave = useMemo(() => {
+        if (!teacher) return false;
+        const now = new Date();
+        return leaveRequests.some(req => 
+            req.teacherId === teacher.id &&
+            req.status === 'Approved' &&
+            isWithinInterval(now, { 
+                start: typeof req.startDate === 'string' ? parseISO(req.startDate) : req.startDate, 
+                end: typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate
+            })
+        );
+    }, [teacher, leaveRequests]);
 
     const getSchoolName = (schoolId?: string | null) => {
         if (!schoolId) return 'N/A';
@@ -71,7 +88,7 @@ export default function TeacherDetailPage() {
     
     const handleFormSave = () => {
         setIsFormOpen(false);
-        fetchTeacherData(); // Re-fetch data after save
+        fetchTeacherData(); // Re-fetch all data after save
     }
 
     if (!teacher) {
@@ -117,23 +134,36 @@ export default function TeacherDetailPage() {
 
             <Card>
                 <CardHeader>
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-start gap-6">
                         <Avatar className="h-40 w-40">
                             <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
                             <AvatarFallback className="text-5xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <CardTitle className="text-4xl">{teacher.firstName} {teacher.lastName}</CardTitle>
+                            <div className="flex items-center gap-4">
+                                <CardTitle className="text-4xl">{teacher.firstName} {teacher.lastName}</CardTitle>
+                                {isOnLeave && <Badge className="bg-destructive text-destructive-foreground">On Leave</Badge>}
+                            </div>
                              <CardDescription className="text-lg">{subheader}</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <Separator className="my-4" />
-                    
-                    <h3 className="text-xl font-semibold mb-4">Personal Information</h3>
+
+                    <h3 className="text-xl font-semibold mb-4">Identification</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
                         <DetailItem label="Staff ID" value={teacher.staffId} />
+                        <DetailItem label="Registered No." value={teacher.registeredNo} />
+                        <DetailItem label="Ghana Card No." value={teacher.ghanaCardNo} />
+                        <DetailItem label="SSNIT No." value={teacher.ssnitNo} />
+                        <DetailItem label="TIN No." value={teacher.tinNo} />
+                        <DetailItem label="Licensure No." value={teacher.licensureNo} />
+                    </div>
+                    
+                    <Separator className="my-4" />
+                    <h3 className="text-xl font-semibold mb-4">Personal Information</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
                         <DetailItem label="Date of Birth" value={teacher.dateOfBirth ? format(new Date(teacher.dateOfBirth), 'PPP') : null} />
                         <DetailItem label="Age" value={teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : null} />
                         <DetailItem label="Gender" value={teacher.gender} />
@@ -141,16 +171,6 @@ export default function TeacherDetailPage() {
                         <DetailItem label="Phone No." value={teacher.phoneNo} />
                         <DetailItem label="Address" value={teacher.address} />
                         <DetailItem label="Home Town" value={teacher.homeTown} />
-                    </div>
-
-                    <Separator className="my-4" />
-                    <h3 className="text-xl font-semibold mb-4">Identification</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-                        <DetailItem label="Registered No." value={teacher.registeredNo} />
-                        <DetailItem label="Ghana Card No." value={teacher.ghanaCardNo} />
-                        <DetailItem label="SSNIT No." value={teacher.ssnitNo} />
-                        <DetailItem label="TIN No." value={teacher.tinNo} />
-                        <DetailItem label="Licensure No." value={teacher.licensureNo} />
                     </div>
 
                     <Separator className="my-4" />
