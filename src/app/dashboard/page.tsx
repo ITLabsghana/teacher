@@ -99,6 +99,9 @@ function StatsCards({
         enrollmentTotals.jhs.total = enrollmentTotals.jhs.boys + enrollmentTotals.jhs.girls;
         const grandTotalStudents = enrollmentTotals.total.boys + enrollmentTotals.total.girls;
 
+        const maleTeachers = teachers.filter(t => t.gender === 'Male').length;
+        const femaleTeachers = teachers.filter(t => t.gender === 'Female').length;
+
         return { 
             onLeaveCount, 
             leavesEndingSoon: leavesEndingSoonDetails.length, 
@@ -107,6 +110,8 @@ function StatsCards({
             grandTotalStudents,
             leavesEndingSoonDetails,
             nearingRetirementDetails,
+            maleTeachers,
+            femaleTeachers,
         };
     }, [teachers, leaveRequests, schools]);
 
@@ -145,6 +150,24 @@ function StatsCards({
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{teachers.length}</div>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Male Teachers</CardTitle>
+                    <User className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{stats.maleTeachers}</div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Female Teachers</CardTitle>
+                    <User className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{stats.femaleTeachers}</div>
                 </CardContent>
             </Card>
             <Card>
