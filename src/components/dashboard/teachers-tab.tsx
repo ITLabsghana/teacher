@@ -11,7 +11,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { differenceInYears } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher } from '@/lib/supabase';
@@ -133,7 +132,7 @@ export default function TeachersTab() {
                 <TableHead>Picture</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Staff ID</TableHead>
-                <TableHead>Age</TableHead>
+                <TableHead>Professional Qualification</TableHead>
                 <TableHead>Current School</TableHead>
                 <TableHead>Registered No.</TableHead>
                 <TableHead>Contact</TableHead>
@@ -147,7 +146,7 @@ export default function TeachersTab() {
                           <TableCell><Skeleton className="h-20 w-20 rounded-full" /></TableCell>
                           <TableCell><div className="space-y-2"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-48" /></div></TableCell>
                           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-28" /></TableCell>
@@ -164,10 +163,10 @@ export default function TeachersTab() {
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{teacher.firstName} {teacher.lastName}</div>
-                    <div className="text-sm text-muted-foreground">{teacher.email}</div>
+                    <div className="text-sm text-muted-foreground">{teacher.areaOfSpecialization || 'N/A'}</div>
                   </TableCell>
                   <TableCell>{teacher.staffId}</TableCell>
-                  <TableCell>{teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : 'N/A'}</TableCell>
+                  <TableCell>{teacher.professionalQualification || 'N/A'}</TableCell>
                   <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
                   <TableCell>{teacher.registeredNo || 'N/A'}</TableCell>
                   <TableCell>{teacher.phoneNo || 'N/A'}</TableCell>
