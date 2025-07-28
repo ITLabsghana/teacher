@@ -78,6 +78,8 @@ export default function TeacherDetailPage() {
         return <div className="text-center py-10">Loading teacher profile...</div>;
     }
 
+    const subheader = [teacher.job, teacher.areaOfSpecialization].filter(Boolean).join(' | ');
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -122,7 +124,7 @@ export default function TeacherDetailPage() {
                         </Avatar>
                         <div>
                             <CardTitle className="text-4xl">{teacher.firstName} {teacher.lastName}</CardTitle>
-                            <CardDescription className="text-lg">{teacher.job} | {teacher.rank}</CardDescription>
+                             <CardDescription className="text-lg">{subheader}</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
