@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Loader2 } from 'lucide-react';
 import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher, supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const PAGE_SIZE = 20;
 
 export default function TeachersTab() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -27,18 +29,46 @@ export default function TeachersTab() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const fetchMoreTeachers = useCallback(async () => {
+      if (isLoadingMore || !hasMore) return;
+      setIsLoadingMore(true);
+      try {
+          const nextPage = page + 1;
+          const newTeachers = await getTeachers(nextPage, PAGE_SIZE);
+          setTeachers(prev => [...prev, ...newTeachers]);
+          setPage(nextPage);
+          if (newTeachers.length < PAGE_SIZE) {
+              setHasMore(false);
+          }
+      } catch (error) {
+          console.error("Failed to fetch more teachers:", error);
+          toast({ variant: 'destructive', title: "Error", description: "Failed to load more teachers." });
+      } finally {
+          setIsLoadingMore(false);
+      }
+  }, [page, hasMore, isLoadingMore, toast]);
+
   const handleFormSave = () => {
     setIsFormOpen(false);
-    // Real-time will handle the update, no need to refetch
   }
 
   useEffect(() => {
     const fetchInitialData = async () => {
         setIsLoading(true);
+        setPage(0);
+        setTeachers([]);
+        setHasMore(true);
         try {
-            const [teacherData, schoolData] = await Promise.all([getTeachers(), getSchools()]);
+            const [teacherData, schoolData] = await Promise.all([getTeachers(0, PAGE_SIZE), getSchools()]);
             setTeachers(teacherData);
             setSchools(schoolData);
+            if (teacherData.length < PAGE_SIZE) {
+                setHasMore(false);
+            }
         } catch (error) {
             console.error("Failed to fetch data:", error);
             toast({ variant: 'destructive', title: "Error", description: "Failed to load data." });
@@ -55,7 +85,8 @@ export default function TeachersTab() {
             console.log('Change received!', payload)
             const updatedTeacher = payload.new as Teacher;
             if (payload.eventType === 'INSERT') {
-                setTeachers(current => [updatedTeacher, ...current]);
+                // Add to top only if it doesn't already exist (to prevent duplicates from own action)
+                setTeachers(current => [updatedTeacher, ...current.filter(t => t.id !== updatedTeacher.id)]);
             }
             if (payload.eventType === 'UPDATE') {
                 setTeachers(current => current.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
@@ -112,6 +143,8 @@ export default function TeachersTab() {
     
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     
+    // Note: Search only applies to currently loaded teachers. 
+    // A full-text search would require a different backend approach.
     return teachers.filter(teacher => {
       const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
       const areaOfSpecialization = teacher.areaOfSpecialization?.toLowerCase() || '';
@@ -141,7 +174,7 @@ export default function TeachersTab() {
         <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-                placeholder="Search by name, ID, school, specialization..."
+                placeholder="Search loaded teachers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 max-w-md"
@@ -233,6 +266,18 @@ export default function TeachersTab() {
             </TableBody>
           </Table>
         </div>
+        {hasMore && !searchTerm && (
+            <div className="mt-4 flex justify-center">
+                <Button onClick={fetchMoreTeachers} disabled={isLoadingMore}>
+                    {isLoadingMore ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading...
+                        </>
+                    ) : 'Load More'}
+                </Button>
+            </div>
+        )}
       </CardContent>
       <TeacherForm
         key={editingTeacher ? editingTeacher.id : 'new'}

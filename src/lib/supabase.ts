@@ -19,8 +19,15 @@ const parseTeacherDates = (teacher: any): Teacher => ({
 
 // --- Data Fetching ---
 
-export const getTeachers = async (): Promise<Teacher[]> => {
-    const { data, error } = await supabase.from('teachers').select('*').order('firstName', { ascending: true });
+export const getTeachers = async (page: number = 0, limit: number = 20): Promise<Teacher[]> => {
+    const from = page * limit;
+    const to = from + limit - 1;
+    const { data, error } = await supabase
+        .from('teachers')
+        .select('*')
+        .order('firstName', { ascending: true })
+        .range(from, to);
+        
     if (error) throw error;
     return data.map(parseTeacherDates) || [];
 };
