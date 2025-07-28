@@ -168,6 +168,7 @@ The project follows a standard Next.js App Router structure:
     returns jsonb
     language sql
     stable
+    set search_path = ''
     as $$
       select nullif(current_setting('request.jwt.claims', true), '')::jsonb -> claim
     $$;
