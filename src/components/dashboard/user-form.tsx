@@ -36,7 +36,7 @@ interface UserFormProps {
   setIsOpen: (isOpen: boolean) => void;
   editingUser: User | null;
   currentUser: User | null;
-  onUserAction: (user: User) => void;
+  onUserAction: () => void;
 }
 
 export function UserForm({ isOpen, setIsOpen, editingUser, currentUser, onUserAction }: UserFormProps) {
@@ -69,15 +69,13 @@ export function UserForm({ isOpen, setIsOpen, editingUser, currentUser, onUserAc
     try {
         if (editingUser) {
             const { password, ...updateData } = data; // Exclude password from general update
-            const updatedUser = await updateUser({ ...editingUser, ...updateData });
-            onUserAction(updatedUser);
+            await updateUser({ ...editingUser, ...updateData });
             toast({ title: 'Success', description: 'User updated successfully.' });
         } else {
-            const newUser = await addUser(data);
-            onUserAction(newUser);
+            await addUser(data);
             toast({ title: 'Success', description: 'New user added.' });
         }
-        setIsOpen(false);
+        onUserAction();
     } catch (err: any) {
         toast({ variant: 'destructive', title: 'Error', description: err.message });
     }

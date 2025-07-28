@@ -13,7 +13,7 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher } from '@/lib/supabase';
+import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher, supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -27,23 +27,52 @@ export default function TeachersTab() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [teacherData, schoolData] = await Promise.all([getTeachers(), getSchools()]);
-      setTeachers(teacherData);
-      setSchools(schoolData);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      toast({ variant: 'destructive', title: "Error", description: "Failed to load data." });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+  const handleFormSave = () => {
+    setIsFormOpen(false);
+    // Real-time will handle the update, no need to refetch
+  }
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const fetchInitialData = async () => {
+        setIsLoading(true);
+        try {
+            const [teacherData, schoolData] = await Promise.all([getTeachers(), getSchools()]);
+            setTeachers(teacherData);
+            setSchools(schoolData);
+        } catch (error) {
+            console.error("Failed to fetch data:", error);
+            toast({ variant: 'destructive', title: "Error", description: "Failed to load data." });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchInitialData();
+
+    const channel = supabase
+      .channel('teachers-realtime-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, 
+        (payload) => {
+            console.log('Change received!', payload)
+            const updatedTeacher = payload.new as Teacher;
+            if (payload.eventType === 'INSERT') {
+                setTeachers(current => [updatedTeacher, ...current]);
+            }
+            if (payload.eventType === 'UPDATE') {
+                setTeachers(current => current.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
+            }
+            if (payload.eventType === 'DELETE') {
+                 const deletedId = (payload.old as Teacher).id;
+                 setTeachers(current => current.filter(t => t.id !== deletedId));
+            }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+
+  }, [toast]);
 
   const handleAdd = () => {
     setEditingTeacher(null);
@@ -55,16 +84,11 @@ export default function TeachersTab() {
     setIsFormOpen(true);
   };
   
-  const handleFormSave = () => {
-    setIsFormOpen(false);
-    fetchData();
-  }
-
   const handleDelete = async (teacherId: string) => {
     try {
       await dbDeleteTeacher(teacherId);
-      setTeachers(prev => prev.filter(t => t.id !== teacherId));
       toast({ title: 'Success', description: 'Teacher deleted successfully.' });
+      // Real-time will handle the state update
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }

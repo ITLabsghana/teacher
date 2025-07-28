@@ -18,15 +18,15 @@ import { useToast } from '@/hooks/use-toast';
 
 interface UsersTabProps {
   users: User[];
+  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
 }
 
-export default function UsersTab({ users: initialUsers }: UsersTabProps) {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+export default function UsersTab({ users, setUsers }: UsersTabProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isResetPasswordFormOpen, setIsResetPasswordFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
-  const { currentUser, addUser, updateUser, deleteUser } = useDataContext();
+  const { currentUser, deleteUser } = useDataContext();
   const { toast } = useToast();
 
   const handleAdd = () => {
@@ -47,7 +47,6 @@ export default function UsersTab({ users: initialUsers }: UsersTabProps) {
   const handleDelete = async (userId: string) => {
     try {
       await deleteUser(userId);
-      setUsers(prev => prev.filter(u => u.id !== userId));
       toast({ title: 'Success', description: 'User deleted successfully.' });
     } catch(err: any) {
       toast({ variant: 'destructive', title: 'Error', description: err.message });
@@ -74,12 +73,8 @@ export default function UsersTab({ users: initialUsers }: UsersTabProps) {
     return users;
   }, [users, currentUser]);
   
-  const handleUserAction = (user: User) => {
-    if(editingUser) {
-        setUsers(prev => prev.map(u => u.id === user.id ? user : u));
-    } else {
-        setUsers(prev => [user, ...prev]);
-    }
+  const handleUserAction = () => {
+    // State is now managed by real-time subscription on the parent page
     setIsFormOpen(false);
   }
 

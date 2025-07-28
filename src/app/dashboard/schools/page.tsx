@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { deleteSchool, getSchools } from '@/lib/supabase';
+import { deleteSchool, getSchools, supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -112,7 +112,7 @@ function SchoolListView({ schools, isLoading, onRowClick }: { schools: School[],
     );
 }
 
-function SchoolManagement({ schools, onDataChange, setSchools }: { schools: School[], onDataChange: () => void, setSchools: React.Dispatch<React.SetStateAction<School[]>> }) {
+function SchoolManagement({ schools, setSchools }: { schools: School[], setSchools: React.Dispatch<React.SetStateAction<School[]>> }) {
     const [editingSchool, setEditingSchool] = useState<School | null>(null);
     const { toast } = useToast();
 
@@ -128,7 +128,6 @@ function SchoolManagement({ schools, onDataChange, setSchools }: { schools: Scho
     const handleDelete = async (schoolId: string) => {
         try {
             await deleteSchool(schoolId);
-            setSchools(prev => prev.filter(s => s.id !== schoolId));
             toast({ title: "Success", description: "School deleted successfully." });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -140,10 +139,7 @@ function SchoolManagement({ schools, onDataChange, setSchools }: { schools: Scho
             <SchoolForm
                 editingSchool={editingSchool}
                 onCancelEdit={handleCancelEdit}
-                onSchoolAction={() => {
-                    setEditingSchool(null);
-                    onDataChange();
-                }}
+                onSchoolAction={() => setEditingSchool(null)}
             />
 
             <div className="space-y-2 pt-4 border-t">
@@ -205,19 +201,42 @@ export default function SchoolsPage() {
   const router = useRouter();
 
   const fetchSchoolData = async () => {
-      setIsLoading(true);
-      try {
-          const data = await getSchools();
-          setSchools(data);
-      } catch (error) {
-          console.error("Failed to fetch schools", error);
-      } finally {
-          setIsLoading(false);
-      }
-  }
+    setIsLoading(true);
+    try {
+      const data = await getSchools();
+      setSchools(data);
+    } catch (error) {
+      console.error("Failed to fetch schools", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchSchoolData();
+
+    const channel = supabase
+      .channel('schools-realtime-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, 
+        (payload) => {
+          const newSchool = payload.new as School;
+          if (payload.eventType === 'INSERT') {
+            setSchools(current => [newSchool, ...current]);
+          }
+          if (payload.eventType === 'UPDATE') {
+            setSchools(current => current.map(s => s.id === newSchool.id ? newSchool : s));
+          }
+          if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as School).id;
+            setSchools(current => current.filter(s => s.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
   
   const handleRowClick = (schoolId: string) => {
@@ -249,7 +268,6 @@ export default function SchoolsPage() {
             <TabsContent value="add" className="mt-4">
                 <SchoolManagement
                     schools={schools}
-                    onDataChange={fetchSchoolData}
                     setSchools={setSchools}
                 />
             </TabsContent>

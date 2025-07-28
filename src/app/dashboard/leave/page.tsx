@@ -4,7 +4,7 @@
 import LeaveTab from '@/components/dashboard/leave-tab';
 import { useEffect, useState } from 'react';
 import type { LeaveRequest, Teacher } from '@/lib/types';
-import { getLeaveRequests, getTeachers } from '@/lib/supabase';
+import { getLeaveRequests, getTeachers, supabase } from '@/lib/supabase';
 
 export default function LeavePage() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
@@ -27,6 +27,27 @@ export default function LeavePage() {
       }
     };
     fetchData();
+
+    const channel = supabase
+      .channel('leave-requests-realtime-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' },
+        (payload) => {
+          const newRequest = { ...payload.new, startDate: new Date(payload.new.startDate), returnDate: new Date(payload.new.returnDate)} as LeaveRequest;
+          if (payload.eventType === 'INSERT') {
+            setLeaveRequests(current => [newRequest, ...current]);
+          }
+          if (payload.eventType === 'UPDATE') {
+            setLeaveRequests(current => current.map(r => r.id === newRequest.id ? newRequest : r));
+          }
+          // Note: DELETE on leave_requests might need more complex logic if there are FK constraints
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+
   }, []);
 
   return (
