@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { differenceInYears } from 'date-fns';
 
 const PAGE_SIZE = 20;
 
@@ -141,18 +142,28 @@ export default function TeachersTab() {
     if (!searchTerm) return teachers;
     
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const searchNumber = parseInt(lowerCaseSearchTerm, 10);
     
     return teachers.filter(teacher => {
       const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
       const areaOfSpecialization = teacher.areaOfSpecialization?.toLowerCase() || '';
       
-      return (
+      const textMatch = (
         schoolName.includes(lowerCaseSearchTerm) ||
         areaOfSpecialization.includes(lowerCaseSearchTerm) ||
         Object.values(teacher).some(value => 
           String(value).toLowerCase().includes(lowerCaseSearchTerm)
         )
       );
+
+      if (!isNaN(searchNumber) && teacher.datePostedToCurrentSchool) {
+          const yearsInSchool = differenceInYears(new Date(), teacher.datePostedToCurrentSchool);
+          if (yearsInSchool === searchNumber) {
+              return true;
+          }
+      }
+
+      return textMatch;
     });
   }, [teachers, searchTerm, getSchoolName]);
 
@@ -171,7 +182,7 @@ export default function TeachersTab() {
         <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-                placeholder="Search loaded teachers..."
+                placeholder="Search by name, school, specialization, or years in school..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 max-w-md"

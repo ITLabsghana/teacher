@@ -154,11 +154,14 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
   
   const [age, setAge] = useState<number | null>(null);
   const dob = watch('dateOfBirth');
+  const datePostedToCurrentSchool = watch('datePostedToCurrentSchool');
   const professionalQualification = watch('professionalQualification');
   const leadershipPosition = watch('leadershipPosition');
   const job = watch('job');
   const photo = watch('photo');
   const documents = watch('documents', []);
+
+  const yearsInCurrentSchool = datePostedToCurrentSchool ? differenceInYears(new Date(), datePostedToCurrentSchool) : null;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docFileInputRef = useRef<HTMLInputElement>(null);
@@ -368,6 +371,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
                         <div><Label>Previous School</Label><Input {...register('previousSchool')} /></div>
                         <div><Label>Current School</Label><Controller control={control} name="schoolId" render={({ field }) => (<Select onValueChange={field.onChange} value={field.value ?? undefined}><SelectTrigger><SelectValue placeholder="Select a school" /></SelectTrigger><SelectContent>{schools.map(school => <SelectItem key={school.id} value={school.id}>{school.name}</SelectItem>)}</SelectContent></Select>)} /><p className="text-destructive text-xs mt-1">{errors.schoolId?.message}</p></div>
                         {renderDatePicker('datePostedToCurrentSchool', 'Date Posted To Current School')}
+                        <div><Label>Years in Current School</Label><Input value={yearsInCurrentSchool !== null ? `${yearsInCurrentSchool} year(s)` : ''} readOnly className="bg-muted" /></div>
                         <div><Label>Licensure No.</Label><Input {...register('licensureNo')} /></div>
                         {renderDatePicker('firstAppointmentDate', 'First Appointment Date')}
                         {renderDatePicker('dateConfirmed', 'Date Confirmed')}
