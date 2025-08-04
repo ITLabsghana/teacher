@@ -13,7 +13,7 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher, supabase } from '@/lib/supabase';
+import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -54,6 +54,7 @@ export default function TeachersTab() {
 
   const handleFormSave = () => {
     setIsFormOpen(false);
+    // Real-time listener will handle the update, no need to manually fetch or add.
   }
 
   useEffect(() => {
@@ -82,10 +83,9 @@ export default function TeachersTab() {
       .channel('teachers-realtime-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, 
         (payload) => {
-            console.log('Change received!', payload)
-            const updatedTeacher = payload.new as Teacher;
+            const updatedTeacher = parseTeacherDates(payload.new);
+            
             if (payload.eventType === 'INSERT') {
-                // Add to top only if it doesn't already exist (to prevent duplicates from own action)
                 setTeachers(current => [updatedTeacher, ...current.filter(t => t.id !== updatedTeacher.id)]);
             }
             if (payload.eventType === 'UPDATE') {
@@ -119,7 +119,6 @@ export default function TeachersTab() {
     try {
       await dbDeleteTeacher(teacherId);
       toast({ title: 'Success', description: 'Teacher deleted successfully.' });
-      // Real-time will handle the state update
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
@@ -143,8 +142,6 @@ export default function TeachersTab() {
     
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     
-    // Note: Search only applies to currently loaded teachers. 
-    // A full-text search would require a different backend approach.
     return teachers.filter(teacher => {
       const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
       const areaOfSpecialization = teacher.areaOfSpecialization?.toLowerCase() || '';

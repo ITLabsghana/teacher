@@ -6,7 +6,7 @@ import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
-import { getTeachers, getLeaveRequests, getSchools } from '@/lib/supabase';
+import { getTeachers, getLeaveRequests, getSchools, supabase } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function StatsCards({ 
@@ -300,25 +300,37 @@ export default function DashboardPage() {
     const [schools, setSchools] = useState<School[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    const fetchDashboardData = async () => {
+        setIsLoading(true);
+        try {
+            const [teacherData, leaveData, schoolData] = await Promise.all([
+                getTeachers(0, 1000), // Fetch a large number for dashboard stats
+                getLeaveRequests(),
+                getSchools()
+            ]);
+            setTeachers(teacherData);
+            setLeaveRequests(leaveData);
+            setSchools(schoolData);
+        } catch (error) {
+            console.error("Failed to fetch dashboard data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
     useEffect(() => {
-        const fetchDashboardData = async () => {
-            setIsLoading(true);
-            try {
-                const [teacherData, leaveData, schoolData] = await Promise.all([
-                    getTeachers(),
-                    getLeaveRequests(),
-                    getSchools()
-                ]);
-                setTeachers(teacherData);
-                setLeaveRequests(leaveData);
-                setSchools(schoolData);
-            } catch (error) {
-                console.error("Failed to fetch dashboard data:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchDashboardData();
+
+        const channel = supabase
+          .channel('dashboard-realtime-channel')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => fetchDashboardData())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => fetchDashboardData())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => fetchDashboardData())
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
     }, []);
 
     return (

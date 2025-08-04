@@ -7,7 +7,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-const parseTeacherDates = (teacher: any): Teacher => ({
+export const parseTeacherDates = (teacher: any): Teacher => ({
     ...teacher,
     documents: teacher.documents ? (typeof teacher.documents === 'string' ? JSON.parse(teacher.documents) : teacher.documents) : [],
     dateOfBirth: teacher.dateOfBirth ? new Date(teacher.dateOfBirth) : undefined,
