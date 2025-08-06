@@ -143,7 +143,7 @@ function StatsCards({
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+            <Card className="bg-blue-100 dark:bg-blue-900/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Teachers</CardTitle>
                     <User className="h-4 w-4 text-muted-foreground" />
@@ -152,7 +152,7 @@ function StatsCards({
                     <div className="text-2xl font-bold">{teachers.length}</div>
                 </CardContent>
             </Card>
-             <Card>
+             <Card className="bg-green-100 dark:bg-green-900/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Male Teachers</CardTitle>
                     <User className="h-4 w-4 text-muted-foreground" />
@@ -161,7 +161,7 @@ function StatsCards({
                     <div className="text-2xl font-bold">{stats.maleTeachers}</div>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-pink-100 dark:bg-pink-900/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Female Teachers</CardTitle>
                     <User className="h-4 w-4 text-muted-foreground" />
@@ -170,7 +170,7 @@ function StatsCards({
                     <div className="text-2xl font-bold">{stats.femaleTeachers}</div>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-yellow-100 dark:bg-yellow-900/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Teachers on Leave</CardTitle>
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
@@ -179,7 +179,7 @@ function StatsCards({
                     <div className="text-2xl font-bold">{stats.onLeaveCount}</div>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-orange-100 dark:bg-orange-900/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Leaves Ending Soon</CardTitle>
                     <Bell className="h-4 w-4 text-muted-foreground" />
@@ -189,7 +189,7 @@ function StatsCards({
                     <p className="text-xs text-muted-foreground">In the next 10 days</p>
                 </CardContent>
             </Card>
-             <Card>
+             <Card className="bg-purple-100 dark:bg-purple-900/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Nearing Retirement</CardTitle>
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -348,3 +348,5 @@ export default function DashboardPage() {
         </>
     );
 }
+
+    
