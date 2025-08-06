@@ -10,7 +10,7 @@ import DashboardRealtimeWrapper from '@/components/dashboard/dashboard-realtime-
 
 async function StatsCards() { 
   const [teachers, leaveRequests, schools] = await Promise.all([
-    getTeachers(0, 10000), // Fetch all for accurate stats
+    getTeachers(0, 10000, true), // Fetch all for accurate stats, using admin client
     getLeaveRequests(),
     getSchools()
   ]);

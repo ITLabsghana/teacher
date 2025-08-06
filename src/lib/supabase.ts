@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import type { Teacher, School, LeaveRequest, User } from './types';
+import { adminDb } from './supabase-admin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -19,10 +20,11 @@ export const parseTeacherDates = (teacher: any): Teacher => ({
 
 // --- Data Fetching ---
 
-export const getTeachers = async (page: number = 0, limit: number = 20): Promise<Teacher[]> => {
+export const getTeachers = async (page: number = 0, limit: number = 20, isAdmin: boolean = false): Promise<Teacher[]> => {
     const from = page * limit;
     const to = from + limit - 1;
-    const { data, error } = await supabase
+    const client = isAdmin ? adminDb : supabase;
+    const { data, error } = await client
         .from('teachers')
         .select('*')
         .order('firstName', { ascending: true })
