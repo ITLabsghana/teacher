@@ -50,10 +50,10 @@ export default function ReportsTab() {
     setIsLoading(true);
     try {
         const [t, s, l, u] = await Promise.all([
-            getTeachers(),
-            getSchools(),
-            getLeaveRequests(),
-            getUsers()
+            getTeachers(0, 10000, true),
+            getSchools(true),
+            getLeaveRequests(true),
+            getUsers(true)
         ]);
         setTeachers(t);
         setSchools(s);

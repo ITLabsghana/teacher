@@ -15,8 +15,8 @@ export default function LeavePage() {
     const fetchData = async () => {
       try {
         const [leaveData, teachersData] = await Promise.all([
-          getLeaveRequests(),
-          getTeachers(),
+          getLeaveRequests(true),
+          getTeachers(0, 10000, true),
         ]);
         setLeaveRequests(leaveData);
         setTeachers(teachersData);

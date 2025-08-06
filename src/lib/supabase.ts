@@ -34,8 +34,9 @@ export const getTeachers = async (page: number = 0, limit: number = 20, isAdmin:
     return data.map(parseTeacherDates) || [];
 };
 
-export const getTeacherById = async (id: string): Promise<Teacher | null> => {
-    const { data, error } = await supabase.from('teachers').select('*').eq('id', id).single();
+export const getTeacherById = async (id: string, isAdmin: boolean = false): Promise<Teacher | null> => {
+    const client = isAdmin ? adminDb : supabase;
+    const { data, error } = await client.from('teachers').select('*').eq('id', id).single();
     if (error) {
         // PGRST116: "single row not found" - this is expected, not an error.
         if (error.code !== 'PGRST116') {
@@ -46,14 +47,16 @@ export const getTeacherById = async (id: string): Promise<Teacher | null> => {
     return parseTeacherDates(data);
 }
 
-export const getSchools = async (): Promise<School[]> => {
-    const { data, error } = await supabase.from('schools').select('*').order('name');
+export const getSchools = async (isAdmin: boolean = false): Promise<School[]> => {
+    const client = isAdmin ? adminDb : supabase;
+    const { data, error } = await client.from('schools').select('*').order('name');
     if (error) throw error;
     return data || [];
 };
 
-export const getSchoolById = async (id: string): Promise<School | null> => {
-    const { data, error } = await supabase.from('schools').select('*').eq('id', id).single();
+export const getSchoolById = async (id: string, isAdmin: boolean = false): Promise<School | null> => {
+    const client = isAdmin ? adminDb : supabase;
+    const { data, error } = await client.from('schools').select('*').eq('id', id).single();
     if (error) {
         if (error.code !== 'PGRST116') {
           console.error("Error fetching school by id", error);
@@ -63,14 +66,16 @@ export const getSchoolById = async (id: string): Promise<School | null> => {
     return data;
 }
 
-export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
-    const { data, error } = await supabase.from('leave_requests').select('*').order('startDate', { ascending: false });
+export const getLeaveRequests = async (isAdmin: boolean = false): Promise<LeaveRequest[]> => {
+    const client = isAdmin ? adminDb : supabase;
+    const { data, error } = await client.from('leave_requests').select('*').order('startDate', { ascending: false });
     if (error) throw error;
     return data.map(r => ({ ...r, startDate: new Date(r.startDate), returnDate: new Date(r.returnDate)})) || [];
 };
 
-export const getUsers = async (): Promise<User[]> => {
-    const { data, error } = await supabase.from('users').select('*').order('username');
+export const getUsers = async (isAdmin: boolean = false): Promise<User[]> => {
+    const client = isAdmin ? adminDb : supabase;
+    const { data, error } = await client.from('users').select('*').order('username');
     if (error) throw error;
     return data || [];
 };

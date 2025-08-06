@@ -203,7 +203,7 @@ export default function SchoolsPage() {
   const fetchSchoolData = async () => {
     setIsLoading(true);
     try {
-      const data = await getSchools();
+      const data = await getSchools(true);
       setSchools(data);
     } catch (error) {
       console.error("Failed to fetch schools", error);

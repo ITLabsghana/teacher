@@ -14,7 +14,7 @@ export default function UsersPage() {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const data = await getUsers();
+        const data = await getUsers(true);
         setUsers(data);
       } catch (error) {
         console.error("Failed to fetch users", error);

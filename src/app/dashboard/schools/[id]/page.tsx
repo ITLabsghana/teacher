@@ -23,7 +23,7 @@ export default function SchoolDetailPage() {
 
     useEffect(() => {
         if (schoolId) {
-            getSchoolById(schoolId).then(data => {
+            getSchoolById(schoolId, true).then(data => {
                 if (data) {
                     setSchool(data)
                 }
@@ -59,7 +59,7 @@ export default function SchoolDetailPage() {
     const handleEnrollmentSave = async () => {
         setActiveTab('overview');
         if (schoolId) {
-             const updatedSchool = await getSchoolById(schoolId);
+             const updatedSchool = await getSchoolById(schoolId, true);
              if (updatedSchool) setSchool(updatedSchool);
         }
     }
