@@ -205,7 +205,7 @@ function StatsCards({
                     <CardTitle className="text-lg">Overall Enrollment</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card>
+                    <Card className="bg-indigo-200 dark:bg-indigo-800/60">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Students</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
@@ -214,7 +214,7 @@ function StatsCards({
                             <div className="text-2xl font-bold">{stats.grandTotalStudents}</div>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="bg-blue-200 dark:bg-blue-800/60">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Boys</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
@@ -223,7 +223,7 @@ function StatsCards({
                             <div className="text-2xl font-bold">{stats.enrollmentTotals.total.boys}</div>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="bg-pink-200 dark:bg-pink-800/60">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Girls</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
