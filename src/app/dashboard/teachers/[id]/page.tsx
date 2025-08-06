@@ -109,8 +109,8 @@ export default function TeacherDetailPage() {
             req.teacherId === teacher.id &&
             req.status === 'Approved' &&
             isWithinInterval(now, { 
-                start: typeof req.startDate === 'string' ? parseISO(req.startDate) : req.startDate, 
-                end: typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate
+                start: req.startDate, 
+                end: req.returnDate
             })
         );
     }, [teacher, leaveRequests]);
@@ -156,7 +156,7 @@ export default function TeacherDetailPage() {
         );
     }
 
-    const yearsInCurrentSchool = teacher.datePostedToCurrentSchool ? differenceInYears(new Date(), new Date(teacher.datePostedToCurrentSchool)) : null;
+    const yearsInCurrentSchool = teacher.datePostedToCurrentSchool ? differenceInYears(new Date(), teacher.datePostedToCurrentSchool) : null;
     const subheaderDetails = [
         teacher.job, 
         teacher.areaOfSpecialization,
@@ -231,8 +231,8 @@ export default function TeacherDetailPage() {
                     <Separator className="my-4" />
                     <h3 className="text-xl font-semibold mb-4">Personal Information</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-                        <DetailItem label="Date of Birth" value={teacher.dateOfBirth ? format(new Date(teacher.dateOfBirth), 'PPP') : null} />
-                        <DetailItem label="Age" value={teacher.dateOfBirth ? differenceInYears(new Date(), new Date(teacher.dateOfBirth)) : null} />
+                        <DetailItem label="Date of Birth" value={teacher.dateOfBirth ? format(teacher.dateOfBirth, 'PPP') : null} />
+                        <DetailItem label="Age" value={teacher.dateOfBirth ? differenceInYears(new Date(), teacher.dateOfBirth) : null} />
                         <DetailItem label="Gender" value={teacher.gender} />
                         <DetailItem label="Email" value={teacher.email} />
                         <DetailItem label="Phone No." value={teacher.phoneNo} />
@@ -252,10 +252,10 @@ export default function TeacherDetailPage() {
                         <DetailItem label="Leadership Position" value={teacher.leadershipPosition === 'Other' ? teacher.otherLeadershipPosition : teacher.leadershipPosition} />
                         <DetailItem label="Current School" value={getSchoolName(teacher.schoolId)} />
                         <DetailItem label="Previous School" value={teacher.previousSchool} />
-                        <DetailItem label="First Appointment Date" value={teacher.firstAppointmentDate ? format(new Date(teacher.firstAppointmentDate), 'PPP') : null} />
-                        <DetailItem label="Date Confirmed" value={teacher.dateConfirmed ? format(new Date(teacher.dateConfirmed), 'PPP') : null} />
-                        <DetailItem label="Last Promotion Date" value={teacher.lastPromotionDate ? format(new Date(teacher.lastPromotionDate), 'PPP') : null} />
-                        <DetailItem label="Date Posted To Current School" value={teacher.datePostedToCurrentSchool ? format(new Date(teacher.datePostedToCurrentSchool), 'PPP') : null} />
+                        <DetailItem label="First Appointment Date" value={teacher.firstAppointmentDate ? format(teacher.firstAppointmentDate, 'PPP') : null} />
+                        <DetailItem label="Date Confirmed" value={teacher.dateConfirmed ? format(teacher.dateConfirmed, 'PPP') : null} />
+                        <DetailItem label="Last Promotion Date" value={teacher.lastPromotionDate ? format(teacher.lastPromotionDate, 'PPP') : null} />
+                        <DetailItem label="Date Posted To Current School" value={teacher.datePostedToCurrentSchool ? format(teacher.datePostedToCurrentSchool, 'PPP') : null} />
                         <DetailItem label="Teacher Union" value={teacher.teacherUnion} />
                     </div>
 

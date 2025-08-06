@@ -94,7 +94,7 @@ export default function TeachersTab({ initialTeachers, schools: initialSchools }
       supabase.removeChannel(channel);
     };
 
-  }, [initialTeachers, initialSchools, toast]);
+  }, [initialTeachers, initialSchools]);
 
   const handleAdd = () => {
     setEditingTeacher(null);

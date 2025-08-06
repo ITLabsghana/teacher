@@ -44,7 +44,7 @@ export const getTeacherById = async (id: string, isAdmin: boolean = false): Prom
         }
         return null;
     }
-    return parseTeacherDates(data);
+    return data ? parseTeacherDates(data) : null;
 }
 
 export const getSchools = async (isAdmin: boolean = false): Promise<School[]> => {
@@ -93,8 +93,8 @@ const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
     
     // Convert empty strings back to null for the database
     Object.keys(dbData).forEach(key => {
-        if (dbData[key] === '' || dbData[key] === undefined) {
-            dbData[key] = null;
+        if (dbData[key as keyof typeof dbData] === '' || dbData[key as keyof typeof dbData] === undefined) {
+            dbData[key as keyof typeof dbData] = null;
         }
     });
 
