@@ -25,27 +25,15 @@ type BackupFormat = 'json';
 
 type ReportHeader = { key: string; label: string };
 
-interface ReportsTabProps {
-  initialTeachers: Teacher[];
-  initialSchools: School[];
-  initialLeaveRequests: LeaveRequest[];
-  initialUsers: User[];
-}
-
-export default function ReportsTab({
-  initialTeachers,
-  initialSchools,
-  initialLeaveRequests,
-  initialUsers
-}: ReportsTabProps) {
+export default function ReportsTab() {
   const { toast } = useToast();
   
-  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
-  const [schools, setSchools] = useState<School[]>(initialSchools);
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [reportType, setReportType] = useState('');
   const [reportFormat, setReportFormat] = useState<ReportFormat>('csv');
@@ -77,23 +65,25 @@ export default function ReportsTab({
   }
 
   useEffect(() => {
-      const allChannels = supabase.getChannels();
-      const reportsChannel = allChannels.find(c => c.topic === 'reports-realtime-channel');
-      if(reportsChannel) {
-        supabase.removeChannel(reportsChannel);
-      }
+    fetchData();
 
-      const channel = supabase
-        .channel('reports-realtime-channel')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => fetchData())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => fetchData())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => fetchData())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => fetchData())
-        .subscribe();
+    const allChannels = supabase.getChannels();
+    const reportsChannel = allChannels.find(c => c.topic === 'reports-realtime-channel');
+    if(reportsChannel) {
+      supabase.removeChannel(reportsChannel);
+    }
 
-      return () => {
-          supabase.removeChannel(channel);
-      }
+    const channel = supabase
+      .channel('reports-realtime-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => fetchData())
+      .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    }
   }, []);
 
   const downloadFile = (content: string, fileName: string, mimeType: string) => {
@@ -335,7 +325,7 @@ export default function ReportsTab({
     }
   };
 
-  if(isLoading && !initialTeachers.length) {
+  if(isLoading) {
     return <div>Loading report data...</div>
   }
 
