@@ -18,8 +18,7 @@ import autoTable from 'jspdf-autotable';
 import { Document, Packer, Paragraph, Table as DocxTable, TableRow, TableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import { getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher, addSchool, addLeaveRequest, supabase } from '@/lib/supabase';
-import { adminDb } from '@/lib/supabase-admin';
-import { createUserAction } from '@/app/actions/user-actions';
+import { createUserAction, clearAllDataAction } from '@/app/actions/user-actions';
 
 type ReportFormat = 'csv' | 'pdf' | 'docx';
 type BackupFormat = 'json';
@@ -327,27 +326,7 @@ export default function ReportsTab({
 
   const handleClearAllData = async () => {
     try {
-      const { error: tError } = await adminDb.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (tError) throw tError;
-
-      const { error: sError } = await adminDb.from('schools').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (sError) throw sError;
-
-      const { error: lError } = await adminDb.from('leave_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (lError) throw lError;
-
-      // Do not delete Admin/Supervisor users
-      const { data: usersToPreserve, error: usersError } = await adminDb.from('users').select('id').or('role.eq.Admin,role.eq.Supervisor');
-      if (usersError) throw usersError;
-      const userIdsToPreserve = usersToPreserve?.map(u => u.id) || [];
-      if (userIdsToPreserve.length > 0) {
-        const { error: uError } = await adminDb.from('users').delete().not('id', 'in', `(${userIdsToPreserve.join(',')})`);
-        if (uError) throw uError;
-      } else {
-        const { error: uError } = await adminDb.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if (uError) throw uError;
-      }
-
+      await clearAllDataAction();
       await fetchData();
       toast({ title: "All Data Cleared", description: "The application data has been reset, preserving Admin and Supervisor accounts." });
       setClearDataConfirmation('');

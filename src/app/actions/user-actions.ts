@@ -81,4 +81,29 @@ export async function deleteUserAction(id: string): Promise<void> {
     }
 };
 
+export async function clearAllDataAction(): Promise<void> {
+    // This action deletes all data except for admin/supervisor users.
+    const { error: tError } = await adminDb.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (tError) throw new Error(`Teacher Deletion Error: ${tError.message}`);
 
+    const { error: sError } = await adminDb.from('schools').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (sError) throw new Error(`School Deletion Error: ${sError.message}`);
+
+    const { error: lError } = await adminDb.from('leave_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (lError) throw new Error(`Leave Request Deletion Error: ${lError.message}`);
+
+    // Do not delete Admin/Supervisor users, but delete their associated auth entries if needed.
+    const { data: usersToPreserve, error: usersFetchError } = await adminDb.from('users').select('id').or('role.eq.Admin,role.eq.Supervisor');
+    if (usersFetchError) throw new Error(`User Fetch Error: ${usersFetchError.message}`);
+    
+    const userIdsToPreserve = usersToPreserve?.map(u => u.id) || [];
+    
+    if (userIdsToPreserve.length > 0) {
+      const { error: uError } = await adminDb.from('users').delete().not('id', 'in', `(${userIdsToPreserve.join(',')})`);
+      if (uError) throw new Error(`User Deletion Error: ${uError.message}`);
+    } else {
+      // If no admin/supervisors, delete all users.
+      const { error: uError } = await adminDb.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (uError) throw new Error(`User Deletion Error: ${uError.message}`);
+    }
+}
