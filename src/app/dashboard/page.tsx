@@ -4,111 +4,104 @@ import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday } from 'date-fns';
-import { getTeachers, getLeaveRequests, getSchools } from '@/lib/supabase';
+import { getTeachers, getLeaveRequests, getSchools, supabase } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardRealtimeWrapper from '@/components/dashboard/dashboard-realtime-wrapper';
+import { adminDb } from '@/lib/supabase-admin';
 
 async function StatsCards() { 
-  const [teachers, leaveRequests, schools] = await Promise.all([
-    getTeachers(0, 10000, true), // Fetch all for accurate stats, using admin client
-    getLeaveRequests(),
-    getSchools()
-  ]);
+  // Efficiently count totals directly from the database
+  const { count: totalTeachers, error: teachersError } = await adminDb.from('teachers').select('*', { count: 'exact', head: true });
+  const { count: maleTeachers, error: maleTeachersError } = await adminDb.from('teachers').select('*', { count: 'exact', head: true }).eq('gender', 'Male');
+  const { count: femaleTeachers, error: femaleTeachersError } = await adminDb.from('teachers').select('*', { count: 'exact', head: true }).eq('gender', 'Female');
 
-    const stats = (() => {
-        const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved' && isWithinInterval(new Date(), { start: req.startDate, end: req.returnDate })).length;
+  // Efficiently get teachers on leave
+  const today = new Date().toISOString();
+  const { count: onLeaveCount, error: onLeaveError } = await adminDb.from('leave_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'Approved')
+    .lte('start_date', today)
+    .gte('return_date', today);
+  
+  // Fetch only the specific data needed for notifications
+  const tenDaysFromNow = addDays(new Date(), 10).toISOString();
+  const { data: leavesEndingSoonDetails, error: leavesEndingSoonError } = await adminDb.from('leave_requests')
+    .select('*, teachers(firstName, lastName)')
+    .eq('status', 'Approved')
+    .gte('return_date', today)
+    .lte('return_date', tenDaysFromNow);
 
-        const getTeacherName = (teacherId: string) => {
-            const teacher = teachers.find(t => t.id === teacherId);
-            return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher';
-        };
+  const oneYearFromNow = addYears(new Date(), 1);
+  const { data: allTeachersForRetirement, error: allTeachersError } = await adminDb.from('teachers').select('id, firstName, lastName, date_of_birth').not('date_of_birth', 'is', null);
 
-        const leavesEndingSoonDetails = leaveRequests
-            .filter(req => {
-                if (req.status !== 'Approved' || !req.returnDate) return false;
-                const returnDate = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
-                return isWithinInterval(returnDate, {
-                    start: new Date(),
-                    end: addDays(new Date(), 10)
-                });
-            })
-            .map(req => {
-                const returnDateObj = typeof req.returnDate === 'string' ? parseISO(req.returnDate) : req.returnDate;
-                return {
-                    teacherName: getTeacherName(req.teacherId),
-                    returnDate: returnDateObj,
-                    daysToReturn: differenceInDays(returnDateObj, new Date()),
-                    isReturningToday: isToday(returnDateObj),
-                };
-            });
+  const nearingRetirementDetails = allTeachersForRetirement?.filter(teacher => {
+      const dob = parseISO(teacher.date_of_birth!);
+      const retirementDate = addYears(dob, 60);
+      return retirementDate > new Date() && retirementDate <= oneYearFromNow;
+    })
+    .map(teacher => {
+        const dob = parseISO(teacher.date_of_birth!);
+        const retirementDate = addYears(dob, 60);
+        return {
+          name: `${teacher.firstName} ${teacher.lastName}`,
+          timeToRetirement: formatDistanceToNow(retirementDate, { addSuffix: true }),
+        }
+    }) || [];
+  
+  // Handle potential errors from DB queries
+  if (teachersError || maleTeachersError || femaleTeachersError || onLeaveError || leavesEndingSoonError || allTeachersError) {
+    console.error({ teachersError, maleTeachersError, femaleTeachersError, onLeaveError, leavesEndingSoonError, allTeachersError });
+    // You might want to throw an error or return a specific error component
+  }
 
-        const nearingRetirementDetails = teachers
-            .filter(teacher => {
-                if (!teacher.dateOfBirth) return false;
-                const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth) : teacher.dateOfBirth;
-                const retirementDate = addYears(dob, 60);
-                const nextYear = addYears(new Date(), 1);
-                return retirementDate > new Date() && retirementDate <= nextYear;
-            })
-            .map(teacher => {
-                 const dob = typeof teacher.dateOfBirth === 'string' ? parseISO(teacher.dateOfBirth!) : teacher.dateOfBirth!;
-                 const retirementDate = addYears(dob, 60);
-                 return {
-                    name: `${teacher.firstName} ${teacher.lastName}`,
-                    timeToRetirement: formatDistanceToNow(retirementDate, { addSuffix: true }),
-                 }
-            });
-        
-        const enrollmentTotals = {
-            total: { boys: 0, girls: 0 },
-            kg: { boys: 0, girls: 0, total: 0 },
-            primary: { boys: 0, girls: 0, total: 0 },
-            jhs: { boys: 0, girls: 0, total: 0 },
-        };
+  // Fetch all schools for enrollment data - This could be optimized further with a DB function if it becomes a bottleneck
+  const schools = await getSchools(true);
+  
+  const enrollmentTotals = {
+      total: { boys: 0, girls: 0 },
+      kg: { boys: 0, girls: 0, total: 0 },
+      primary: { boys: 0, girls: 0, total: 0 },
+      jhs: { boys: 0, girls: 0, total: 0 },
+  };
 
-        schools.forEach(school => {
-            if (school.enrollment) {
-                Object.entries(school.enrollment).forEach(([classLevel, classData]) => {
-                    const boys = classData.boys || 0;
-                    const girls = classData.girls || 0;
+  schools.forEach(school => {
+      if (school.enrollment) {
+          Object.entries(school.enrollment).forEach(([classLevel, classData]) => {
+              const boys = classData.boys || 0;
+              const girls = classData.girls || 0;
 
-                    enrollmentTotals.total.boys += boys;
-                    enrollmentTotals.total.girls += girls;
+              enrollmentTotals.total.boys += boys;
+              enrollmentTotals.total.girls += girls;
 
-                    if (classLevel.startsWith('KG')) {
-                        enrollmentTotals.kg.boys += boys;
-                        enrollmentTotals.kg.girls += girls;
-                    } else if (classLevel.startsWith('Basic')) {
-                        enrollmentTotals.primary.boys += boys;
-                        enrollmentTotals.primary.girls += girls;
-                    } else if (classLevel.startsWith('JHS')) {
-                        enrollmentTotals.jhs.boys += boys;
-                        enrollmentTotals.jhs.girls += girls;
-                    }
-                });
-            }
-        });
-        
-        enrollmentTotals.kg.total = enrollmentTotals.kg.boys + enrollmentTotals.kg.girls;
-        enrollmentTotals.primary.total = enrollmentTotals.primary.boys + enrollmentTotals.primary.girls;
-        enrollmentTotals.jhs.total = enrollmentTotals.jhs.boys + enrollmentTotals.jhs.girls;
-        const grandTotalStudents = enrollmentTotals.total.boys + enrollmentTotals.total.girls;
+              if (classLevel.startsWith('KG')) {
+                  enrollmentTotals.kg.boys += boys;
+                  enrollmentTotals.kg.girls += girls;
+              } else if (classLevel.startsWith('Basic')) {
+                  enrollmentTotals.primary.boys += boys;
+                  enrollmentTotals.primary.girls += girls;
+              } else if (classLevel.startsWith('JHS')) {
+                  enrollmentTotals.jhs.boys += boys;
+                  enrollmentTotals.jhs.girls += girls;
+              }
+          });
+      }
+  });
+  
+  enrollmentTotals.kg.total = enrollmentTotals.kg.boys + enrollmentTotals.kg.girls;
+  enrollmentTotals.primary.total = enrollmentTotals.primary.boys + enrollmentTotals.primary.girls;
+  enrollmentTotals.jhs.total = enrollmentTotals.jhs.boys + enrollmentTotals.jhs.girls;
+  const grandTotalStudents = enrollmentTotals.total.boys + enrollmentTotals.total.girls;
 
-        const maleTeachers = teachers.filter(t => t.gender === 'Male').length;
-        const femaleTeachers = teachers.filter(t => t.gender === 'Female').length;
-
-        return { 
-            onLeaveCount, 
-            leavesEndingSoon: leavesEndingSoonDetails.length, 
-            nearingRetirementCount: nearingRetirementDetails.length, 
-            enrollmentTotals, 
-            grandTotalStudents,
-            leavesEndingSoonDetails,
-            nearingRetirementDetails,
-            maleTeachers,
-            femaleTeachers,
-        };
-    })();
+  const leavesEndingSoonFormatted = leavesEndingSoonDetails?.map(req => {
+    const returnDateObj = parseISO(req.return_date);
+    const teacher = Array.isArray(req.teachers) ? req.teachers[0] : req.teachers; // Handle one-to-one relationship
+    return {
+        teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher',
+        returnDate: returnDateObj,
+        daysToReturn: differenceInDays(returnDateObj, new Date()),
+        isReturningToday: isToday(returnDateObj),
+    };
+  }) || [];
 
 
     return (
@@ -119,7 +112,7 @@ async function StatsCards() {
                     <User className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{teachers.length}</div>
+                    <div className="text-2xl font-bold">{totalTeachers ?? 0}</div>
                 </CardContent>
             </Card>
              <Card className="bg-green-100 dark:bg-green-900/50">
@@ -128,7 +121,7 @@ async function StatsCards() {
                     <User className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.maleTeachers}</div>
+                    <div className="text-2xl font-bold">{maleTeachers ?? 0}</div>
                 </CardContent>
             </Card>
             <Card className="bg-pink-100 dark:bg-pink-900/50">
@@ -137,7 +130,7 @@ async function StatsCards() {
                     <User className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.femaleTeachers}</div>
+                    <div className="text-2xl font-bold">{femaleTeachers ?? 0}</div>
                 </CardContent>
             </Card>
             <Card className="bg-yellow-100 dark:bg-yellow-900/50">
@@ -146,7 +139,7 @@ async function StatsCards() {
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.onLeaveCount}</div>
+                    <div className="text-2xl font-bold">{onLeaveCount ?? 0}</div>
                 </CardContent>
             </Card>
             <Card className="bg-orange-100 dark:bg-orange-900/50">
@@ -155,7 +148,7 @@ async function StatsCards() {
                     <Bell className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">+{stats.leavesEndingSoon}</div>
+                    <div className="text-2xl font-bold">+{leavesEndingSoonFormatted.length}</div>
                     <p className="text-xs text-muted-foreground">In the next 10 days</p>
                 </CardContent>
             </Card>
@@ -165,7 +158,7 @@ async function StatsCards() {
                     <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">+{stats.nearingRetirementCount}</div>
+                    <div className="text-2xl font-bold">+{nearingRetirementDetails.length}</div>
                     <p className="text-xs text-muted-foreground">In the next year</p>
                 </CardContent>
             </Card>
@@ -181,7 +174,7 @@ async function StatsCards() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats.grandTotalStudents}</div>
+                            <div className="text-2xl font-bold">{grandTotalStudents}</div>
                         </CardContent>
                     </Card>
                     <Card className="bg-blue-200 dark:bg-blue-800/60">
@@ -190,7 +183,7 @@ async function StatsCards() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats.enrollmentTotals.total.boys}</div>
+                            <div className="text-2xl font-bold">{enrollmentTotals.total.boys}</div>
                         </CardContent>
                     </Card>
                     <Card className="bg-pink-200 dark:bg-pink-800/60">
@@ -199,7 +192,7 @@ async function StatsCards() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats.enrollmentTotals.total.girls}</div>
+                            <div className="text-2xl font-bold">{enrollmentTotals.total.girls}</div>
                         </CardContent>
                     </Card>
                 </CardContent>
@@ -209,25 +202,25 @@ async function StatsCards() {
                 <Card className="col-span-1 md:col-span-3 lg:col-span-1 bg-teal-100 dark:bg-teal-900/50">
                     <CardHeader><CardTitle className="text-md">KG Enrollment</CardTitle></CardHeader>
                     <CardContent className="flex gap-4">
-                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.boys}</p></div>
-                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.girls}</p></div>
-                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.total}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{enrollmentTotals.kg.boys}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{enrollmentTotals.kg.girls}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{enrollmentTotals.kg.total}</p></div>
                     </CardContent>
                 </Card>
                 <Card className="col-span-1 md:col-span-3 lg:col-span-1 bg-sky-100 dark:bg-sky-900/50">
                     <CardHeader><CardTitle className="text-md">Primary Enrollment</CardTitle></CardHeader>
                     <CardContent className="flex gap-4">
-                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.boys}</p></div>
-                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.girls}</p></div>
-                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.total}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{enrollmentTotals.primary.boys}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{enrollmentTotals.primary.girls}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{enrollmentTotals.primary.total}</p></div>
                     </CardContent>
                 </Card>
                 <Card className="col-span-1 md:col-span-3 lg:col-span-1 bg-lime-100 dark:bg-lime-900/50">
                     <CardHeader><CardTitle className="text-md">J.H.S Enrollment</CardTitle></CardHeader>
                     <CardContent className="flex gap-4">
-                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.boys}</p></div>
-                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.girls}</p></div>
-                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.total}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{enrollmentTotals.jhs.boys}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Girls</p><p className="text-xl font-bold">{enrollmentTotals.jhs.girls}</p></div>
+                        <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{enrollmentTotals.jhs.total}</p></div>
                     </CardContent>
                 </Card>
             </div>
@@ -240,7 +233,7 @@ async function StatsCards() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[120px] overflow-y-auto space-y-2 text-muted-foreground">
-                    {stats.leavesEndingSoonDetails.length > 0 && stats.leavesEndingSoonDetails.map((leave, index) => (
+                    {leavesEndingSoonFormatted.length > 0 && leavesEndingSoonFormatted.map((leave, index) => (
                         <p key={`leave-${index}`} className="text-foreground">
                             - <strong>{leave.teacherName}</strong> returns from leave 
                             {leave.isReturningToday ? (
@@ -250,12 +243,12 @@ async function StatsCards() {
                             )}.
                         </p>
                     ))}
-                    {stats.nearingRetirementDetails.length > 0 && stats.nearingRetirementDetails.map((retiree, index) => (
+                    {nearingRetirementDetails.length > 0 && nearingRetirementDetails.map((retiree, index) => (
                          <p key={`retire-${index}`} className="text-foreground">
                             - <strong>{retiree.name}</strong> is due for retirement {retiree.timeToRetirement}.
                         </p>
                     ))}
-                    {stats.leavesEndingSoon === 0 && stats.nearingRetirementCount === 0 && (
+                    {leavesEndingSoonFormatted.length === 0 && nearingRetirementDetails.length === 0 && (
                         <p>No new notifications.</p>
                     )}
                 </CardContent>
@@ -305,3 +298,5 @@ export default function DashboardPage() {
         </DashboardRealtimeWrapper>
     );
 }
+
+    
