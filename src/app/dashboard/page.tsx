@@ -5,22 +5,19 @@ import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday } from 'date-fns';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, Suspense } from 'react';
 import { getTeachers, getLeaveRequests, getSchools, supabase } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 
-function StatsCards({ 
-  teachers, 
-  leaveRequests, 
-  schools,
-  isLoading 
-}: { 
-  teachers: Teacher[], 
-  leaveRequests: LeaveRequest[], 
-  schools: School[],
-  isLoading: boolean
-}) {
-    const stats = useMemo(() => {
+async function StatsCards() { 
+  // This is now a server component, fetching its own data.
+  const [teachers, leaveRequests, schools] = await Promise.all([
+    getTeachers(0, 10000), // Fetch all for accurate stats
+    getLeaveRequests(),
+    getSchools()
+  ]);
+
+    const stats = (() => {
         const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
 
         const getTeacherName = (teacherId: string) => {
@@ -113,33 +110,8 @@ function StatsCards({
             maleTeachers,
             femaleTeachers,
         };
-    }, [teachers, leaveRequests, schools]);
+    })();
 
-    if (isLoading) {
-        return (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {Array.from({ length: 13 }).map((_, i) => (
-                    <Card key={i}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <Skeleton className="h-4 w-24" />
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-8 w-12" />
-                        </CardContent>
-                    </Card>
-                ))}
-                 <Card className="col-span-full">
-                    <CardHeader>
-                        <Skeleton className="h-6 w-32" />
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -294,38 +266,44 @@ function StatsCards({
     );
 }
 
+function StatsSkeleton() {
+    return (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 13 }).map((_, i) => (
+                <Card key={i}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <Skeleton className="h-4 w-24" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-8 w-12" />
+                    </CardContent>
+                </Card>
+            ))}
+             <Card className="col-span-full">
+                <CardHeader>
+                    <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+
 export default function DashboardPage() {
-    const [teachers, setTeachers] = useState<Teacher[]>([]);
-    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
-    const [schools, setSchools] = useState<School[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [_, setTick] = useState(0); // Used to force re-render on real-time updates
 
-    const fetchDashboardData = async () => {
-        setIsLoading(true);
-        try {
-            const [teacherData, leaveData, schoolData] = await Promise.all([
-                getTeachers(0, 1000), // Fetch a large number for dashboard stats
-                getLeaveRequests(),
-                getSchools()
-            ]);
-            setTeachers(teacherData);
-            setLeaveRequests(leaveData);
-            setSchools(schoolData);
-        } catch (error) {
-            console.error("Failed to fetch dashboard data:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
     useEffect(() => {
-        fetchDashboardData();
-
+        // This component is now only responsible for real-time updates.
+        // The initial data is fetched on the server.
         const channel = supabase
           .channel('dashboard-realtime-channel')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => fetchDashboardData())
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => fetchDashboardData())
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => fetchDashboardData())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => setTick(t => t+1))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => setTick(t => t+1))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => setTick(t => t+1))
           .subscribe();
 
         return () => {
@@ -339,14 +317,10 @@ export default function DashboardPage() {
                 <h1 className="text-4xl font-headline font-bold text-primary">TMS Dashboard</h1>
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
             </header>
-            <StatsCards 
-                teachers={teachers} 
-                leaveRequests={leaveRequests} 
-                schools={schools} 
-                isLoading={isLoading} 
-            />
+            <Suspense fallback={<StatsSkeleton />}>
+                {/* @ts-expect-error Async Server Component */}
+                <StatsCards />
+            </Suspense>
         </>
     );
 }
-
-    
