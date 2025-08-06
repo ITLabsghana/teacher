@@ -48,10 +48,11 @@ async function StatsCards() {
         }
     }) || [];
   
-  // Handle potential errors from DB queries
-  if (teachersError || maleTeachersError || femaleTeachersError || onLeaveError || leavesEndingSoonError || allTeachersError) {
-    console.error({ teachersError, maleTeachersError, femaleTeachersError, onLeaveError, leavesEndingSoonError, allTeachersError });
-    // You might want to throw an error or return a specific error component
+  const allErrors = { teachersError, maleTeachersError, femaleTeachersError, onLeaveError, leavesEndingSoonError, allTeachersError };
+  const actualErrors = Object.entries(allErrors).filter(([, error]) => error !== null);
+
+  if (actualErrors.length > 0) {
+      console.error("Dashboard data fetching errors:", Object.fromEntries(actualErrors));
   }
 
   // Fetch all schools for enrollment data - This could be optimized further with a DB function if it becomes a bottleneck
@@ -298,5 +299,7 @@ export default function DashboardPage() {
         </DashboardRealtimeWrapper>
     );
 }
+
+    
 
     
