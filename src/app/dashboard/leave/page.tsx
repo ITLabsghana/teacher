@@ -15,8 +15,8 @@ export default function LeavePage() {
     const fetchData = async () => {
       try {
         const [leaveData, teachersData] = await Promise.all([
-          getLeaveRequests(true),
-          getTeachers(0, 10000, true),
+          getLeaveRequests(false),
+          getTeachers(0, 10000, false),
         ]);
         setLeaveRequests(leaveData);
         setTeachers(teachersData);
@@ -52,10 +52,9 @@ export default function LeavePage() {
 
   return (
     <LeaveTab 
-      leaveRequests={leaveRequests} 
-      teachers={teachers} 
+      initialLeaveRequests={leaveRequests} 
+      initialTeachers={teachers} 
       isLoading={isLoading} 
-      setLeaveRequests={setLeaveRequests}
     />
   );
 }

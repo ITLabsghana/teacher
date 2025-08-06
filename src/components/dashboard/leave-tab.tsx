@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { LeaveRequest, Teacher } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,20 +10,50 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { LeaveForm } from './leave-form';
 import { Badge } from '@/components/ui/badge';
-import { updateLeaveRequest as dbUpdateLeaveRequest } from '@/lib/supabase';
+import { supabase, updateLeaveRequest as dbUpdateLeaveRequest } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface LeaveTabProps {
-  leaveRequests: LeaveRequest[];
-  teachers: Teacher[];
+  initialLeaveRequests: LeaveRequest[];
+  initialTeachers: Teacher[];
   isLoading: boolean;
-  setLeaveRequests: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
 }
 
-export default function LeaveTab({ leaveRequests, teachers, isLoading, setLeaveRequests }: LeaveTabProps) {
+export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoading }: LeaveTabProps) {
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
+  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    setLeaveRequests(initialLeaveRequests);
+    setTeachers(initialTeachers);
+  }, [initialLeaveRequests, initialTeachers]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('leave-requests-realtime-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' },
+        (payload) => {
+          const newRequest = { ...payload.new, startDate: new Date(payload.new.startDate), returnDate: new Date(payload.new.returnDate)} as LeaveRequest;
+          if (payload.eventType === 'INSERT') {
+            setLeaveRequests(current => [newRequest, ...current]);
+          } else if (payload.eventType === 'UPDATE') {
+            setLeaveRequests(current => current.map(r => r.id === newRequest.id ? newRequest : r));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as LeaveRequest).id;
+            setLeaveRequests(current => current.filter(r => r.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
 
   const getTeacherName = (teacherId: string) => {
     const teacher = teachers.find(t => t.id === teacherId);
@@ -35,7 +65,7 @@ export default function LeaveTab({ leaveRequests, teachers, isLoading, setLeaveR
     if(request) {
         try {
             const updatedRequest = await dbUpdateLeaveRequest({ ...request, status });
-            setLeaveRequests(prev => prev.map(r => r.id === leaveId ? updatedRequest : r));
+            // The real-time listener will update the state, so no need to call setLeaveRequests here.
             toast({ title: "Success", description: "Leave status updated." });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -53,7 +83,7 @@ export default function LeaveTab({ leaveRequests, teachers, isLoading, setLeaveR
   }
 
   const handleFormSave = (newRequest: LeaveRequest) => {
-    setLeaveRequests(prev => [newRequest, ...prev]);
+    // No need to manually add, real-time listener will handle it.
     setIsFormOpen(false);
   }
 
