@@ -82,7 +82,7 @@ function InnerLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="w-64 bg-card border-r border-border p-4 hidden md:flex flex-col">
+      <aside className="w-64 bg-background border-r border-border p-4 hidden md:flex flex-col">
         <MainNav onLogout={handleLogout} currentUser={currentUser} />
       </aside>
       <main className="flex-1 p-4 md:p-8 overflow-y-auto flex flex-col">
@@ -100,7 +100,7 @@ function InnerLayout({ children }: { children: ReactNode }) {
                         <span className="sr-only">Open navigation menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 bg-card p-4 flex flex-col">
+                <SheetContent side="left" className="w-64 bg-background p-4 flex flex-col">
                     <MainNav 
                         onLogout={handleLogout} 
                         currentUser={currentUser} 
