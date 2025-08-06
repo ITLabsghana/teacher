@@ -200,7 +200,7 @@ function StatsCards({
                 </CardContent>
             </Card>
             
-            <Card className="col-span-full border-b-4 border-primary">
+            <Card className="col-span-full border-b-4 border-primary bg-indigo-100 dark:bg-indigo-900/50">
                 <CardHeader>
                     <CardTitle className="text-lg">Overall Enrollment</CardTitle>
                 </CardHeader>
@@ -236,7 +236,7 @@ function StatsCards({
             </Card>
 
             <div className="md:col-span-2 lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="col-span-1 md:col-span-3 lg:col-span-1">
+                <Card className="col-span-1 md:col-span-3 lg:col-span-1 bg-teal-100 dark:bg-teal-900/50">
                     <CardHeader><CardTitle className="text-md">KG Enrollment</CardTitle></CardHeader>
                     <CardContent className="flex gap-4">
                         <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.boys}</p></div>
@@ -244,7 +244,7 @@ function StatsCards({
                         <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{stats.enrollmentTotals.kg.total}</p></div>
                     </CardContent>
                 </Card>
-                <Card className="col-span-1 md:col-span-3 lg:col-span-1">
+                <Card className="col-span-1 md:col-span-3 lg:col-span-1 bg-sky-100 dark:bg-sky-900/50">
                     <CardHeader><CardTitle className="text-md">Primary Enrollment</CardTitle></CardHeader>
                     <CardContent className="flex gap-4">
                         <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.boys}</p></div>
@@ -252,7 +252,7 @@ function StatsCards({
                         <div><p className="text-sm text-muted-foreground">Total</p><p className="text-xl font-bold">{stats.enrollmentTotals.primary.total}</p></div>
                     </CardContent>
                 </Card>
-                <Card className="col-span-1 md:col-span-3 lg:col-span-1">
+                <Card className="col-span-1 md:col-span-3 lg:col-span-1 bg-lime-100 dark:bg-lime-900/50">
                     <CardHeader><CardTitle className="text-md">J.H.S Enrollment</CardTitle></CardHeader>
                     <CardContent className="flex gap-4">
                         <div><p className="text-sm text-muted-foreground">Boys</p><p className="text-xl font-bold">{stats.enrollmentTotals.jhs.boys}</p></div>
@@ -262,7 +262,7 @@ function StatsCards({
                 </Card>
             </div>
             
-             <Card className="col-span-full">
+             <Card className="col-span-full bg-slate-100 dark:bg-slate-800">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Bell className="h-5 w-5" />
