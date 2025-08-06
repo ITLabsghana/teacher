@@ -13,17 +13,22 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { getTeachers, getSchools, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates } from '@/lib/supabase';
+import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { differenceInYears } from 'date-fns';
 
 const PAGE_SIZE = 20;
 
-export default function TeachersTab() {
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [schools, setSchools] = useState<School[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface TeachersTabProps {
+  initialTeachers: Teacher[];
+  schools: School[];
+}
+
+export default function TeachersTab({ initialTeachers, schools: initialSchools }: TeachersTabProps) {
+  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
+  const [schools, setSchools] = useState<School[]>(initialSchools);
+  const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,7 +36,7 @@ export default function TeachersTab() {
   const { toast } = useToast();
 
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(initialTeachers.length === PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const fetchMoreTeachers = useCallback(async () => {
@@ -59,26 +64,11 @@ export default function TeachersTab() {
   }
 
   useEffect(() => {
-    const fetchInitialData = async () => {
-        setIsLoading(true);
-        setPage(0);
-        setTeachers([]);
-        setHasMore(true);
-        try {
-            const [teacherData, schoolData] = await Promise.all([getTeachers(0, PAGE_SIZE), getSchools()]);
-            setTeachers(teacherData);
-            setSchools(schoolData);
-            if (teacherData.length < PAGE_SIZE) {
-                setHasMore(false);
-            }
-        } catch (error) {
-            console.error("Failed to fetch data:", error);
-            toast({ variant: 'destructive', title: "Error", description: "Failed to load data." });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    fetchInitialData();
+    // Set initial state from props
+    setTeachers(initialTeachers);
+    setSchools(initialSchools);
+    setPage(0);
+    setHasMore(initialTeachers.length === PAGE_SIZE);
 
     const channel = supabase
       .channel('teachers-realtime-channel')
@@ -104,7 +94,7 @@ export default function TeachersTab() {
       supabase.removeChannel(channel);
     };
 
-  }, [toast]);
+  }, [initialTeachers, initialSchools, toast]);
 
   const handleAdd = () => {
     setEditingTeacher(null);
