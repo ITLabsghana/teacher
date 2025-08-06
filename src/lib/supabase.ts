@@ -10,7 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const parseTeacherDates = (teacher: any): Teacher => ({
     ...teacher,
-    documents: teacher.documents ? (typeof teacher.documents === 'string' ? JSON.parse(teacher.documents) : teacher.documents) : [],
+    documents: teacher.documents || [], // No need to parse JSON if stored as jsonb
     dateOfBirth: teacher.dateOfBirth ? new Date(teacher.dateOfBirth) : undefined,
     firstAppointmentDate: teacher.firstAppointmentDate ? new Date(teacher.firstAppointmentDate) : undefined,
     lastPromotionDate: teacher.lastPromotionDate ? new Date(teacher.lastPromotionDate) : undefined,
@@ -98,10 +98,10 @@ const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
         }
     });
 
-    if (Array.isArray(dbData.documents)) {
-        dbData.documents = JSON.stringify(dbData.documents);
-    } else if (dbData.documents === null) {
-        dbData.documents = JSON.stringify([]);
+    // The 'documents' field is already a JSONB-compatible array of objects, so no stringification needed.
+    // If it's null, ensure it's an empty array.
+    if (!dbData.documents) {
+        dbData.documents = [];
     }
     
     return dbData;

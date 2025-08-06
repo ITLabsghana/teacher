@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User as UserIcon, Trash2, Upload, File as FileIcon, X } from 'lucide-react';
+import { User as UserIcon, Trash2, Upload, File as FileIcon, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { differenceInYears } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { addTeacher, updateTeacher } from '@/lib/supabase';
+import { uploadFile } from '@/app/actions/upload-actions';
 
 
 // Date Picker Component using 3 Selects
@@ -153,6 +154,11 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
   });
   
   const [age, setAge] = useState<number | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [docUploadProgress, setDocUploadProgress] = useState<{ [fileName: string]: number }>({});
+
+
   const dob = watch('dateOfBirth');
   const datePostedToCurrentSchool = watch('datePostedToCurrentSchool');
   const professionalQualification = watch('professionalQualification');
@@ -215,26 +221,50 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
       setValue('ghanaCardNo', formattedValue);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setValue('photo', reader.result as string);
-          };
-          reader.readAsDataURL(file);
+  const handleFileUpload = async (file: File): Promise<string> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const url = await uploadFile(formData);
+        return url;
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Upload Failed',
+          description: error.message || `Could not upload ${file.name}.`,
+        });
+        throw error;
       }
   };
 
-  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          setIsUploadingPhoto(true);
+          try {
+              const url = await handleFileUpload(file);
+              setValue('photo', url);
+          } catch (error) {
+              // Error is already toasted in handleFileUpload
+          } finally {
+              setIsUploadingPhoto(false);
+          }
+      }
+  };
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newDocument = { name: file.name, url: reader.result as string };
-        setValue('documents', [...(documents || []), newDocument]);
-      };
-      reader.readAsDataURL(file);
+        setIsUploadingDoc(true);
+        try {
+            const url = await handleFileUpload(file);
+            const newDocument = { name: file.name, url };
+            setValue('documents', [...(documents || []), newDocument]);
+        } catch (error) {
+            // Error handling is in handleFileUpload
+        } finally {
+            setIsUploadingDoc(false);
+        }
     }
   };
   
@@ -305,15 +335,22 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="md:col-span-1 flex flex-col items-center gap-4">
                             <Label>Teacher's Picture</Label>
-                            <div className="w-40 h-40 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
-                                {photo ? <Image src={photo} alt="Teacher" width={160} height={160} className="object-cover w-full h-full" /> : <UserIcon className="w-20 h-20 text-muted-foreground" />}
+                             <div className="relative w-40 h-40">
+                                <div className="w-40 h-40 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                                    {photo ? <Image src={photo} alt="Teacher" width={160} height={160} className="object-cover w-full h-full" /> : <UserIcon className="w-20 h-20 text-muted-foreground" />}
+                                </div>
+                                {isUploadingPhoto && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-2">
-                                <Button type="button" size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                <Button type="button" size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto}>
                                     <Upload className="mr-2 h-4 w-4" /> Add
                                 </Button>
                                 <input type="file" accept="image/*" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
-                                {photo && <Button type="button" size="sm" variant="destructive" onClick={() => setValue('photo', undefined)}><Trash2 className="mr-2 h-4 w-4" /> Clear</Button>}
+                                {photo && <Button type="button" size="sm" variant="destructive" onClick={() => setValue('photo', null)}><Trash2 className="mr-2 h-4 w-4" /> Clear</Button>}
                             </div>
                         </div>
                         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -412,9 +449,10 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
                               variant="outline"
                               className="border-primary text-primary hover:bg-primary/10"
                               onClick={() => docFileInputRef.current?.click()}
+                              disabled={isUploadingDoc}
                           >
-                              <Upload className="mr-2 h-4 w-4" /> 
-                              {documents && documents.length > 0 ? 'Upload Another Document' : 'Upload Document'}
+                              {isUploadingDoc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                              {isUploadingDoc ? 'Uploading...' : (documents && documents.length > 0 ? 'Upload Another Document' : 'Upload Document')}
                           </Button>
                           <input type="file" ref={docFileInputRef} onChange={handleDocumentUpload} className="hidden" />
                       </div>

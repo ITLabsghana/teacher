@@ -30,7 +30,7 @@ export interface Teacher {
   firstAppointmentDate?: Date;
   dateConfirmed?: Date;
   teacherUnion?: string;
-  photo?: string; // as a data URI
+  photo?: string | null; // URL of the uploaded photo
   bankName?: string;
   bankBranch?: string;
   accountNumber?: string;

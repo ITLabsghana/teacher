@@ -203,7 +203,7 @@ export default function TeacherDetailPage() {
                 <CardHeader>
                     <div className="flex items-start gap-6">
                         <Avatar className="h-40 w-40">
-                            <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
+                            <AvatarImage src={teacher.photo ?? undefined} alt={`${teacher.firstName} ${teacher.lastName}`} />
                             <AvatarFallback className="text-5xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
                         </Avatar>
                         <div>

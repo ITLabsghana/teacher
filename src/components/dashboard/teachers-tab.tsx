@@ -225,7 +225,7 @@ export default function TeachersTab() {
                 <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
                      <Avatar className="h-20 w-20">
-                          <AvatarImage src={teacher.photo} alt={`${teacher.firstName} ${teacher.lastName}`} />
+                          <AvatarImage src={teacher.photo ?? undefined} alt={`${teacher.firstName} ${teacher.lastName}`} />
                           <AvatarFallback className="text-2xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
                       </Avatar>
                   </TableCell>
