@@ -13,7 +13,7 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates } from '@/lib/supabase';
+import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates, getSchools } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { differenceInYears } from 'date-fns';
@@ -22,12 +22,11 @@ const PAGE_SIZE = 20;
 
 interface TeachersTabProps {
   initialTeachers: Teacher[];
-  schools: School[];
 }
 
-export default function TeachersTab({ initialTeachers, schools: initialSchools }: TeachersTabProps) {
+export default function TeachersTab({ initialTeachers }: TeachersTabProps) {
   const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
-  const [schools, setSchools] = useState<School[]>(initialSchools);
+  const [schools, setSchools] = useState<School[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
@@ -64,9 +63,17 @@ export default function TeachersTab({ initialTeachers, schools: initialSchools }
   }
 
   useEffect(() => {
+    const fetchSchoolData = async () => {
+      try {
+        const schoolData = await getSchools();
+        setSchools(schoolData);
+      } catch (error) {
+        toast({ variant: 'destructive', title: "Error", description: "Failed to load school data." });
+      }
+    };
+    fetchSchoolData();
     // Set initial state from props
     setTeachers(initialTeachers);
-    setSchools(initialSchools);
     setPage(0);
     setHasMore(initialTeachers.length === PAGE_SIZE);
 
@@ -94,7 +101,7 @@ export default function TeachersTab({ initialTeachers, schools: initialSchools }
       supabase.removeChannel(channel);
     };
 
-  }, [initialTeachers, initialSchools]);
+  }, [initialTeachers, toast]);
 
   const handleAdd = () => {
     setEditingTeacher(null);
