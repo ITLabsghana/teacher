@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { User } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,19 +15,50 @@ import { ResetPasswordForm } from './reset-password-form';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface UsersTabProps {
-  users: User[];
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  initialUsers: User[];
 }
 
-export default function UsersTab({ users, setUsers }: UsersTabProps) {
+export default function UsersTab({ initialUsers }: UsersTabProps) {
+  const [users, setUsers] = useState<User[]>(initialUsers);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isResetPasswordFormOpen, setIsResetPasswordFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
   const { currentUser, deleteUser } = useDataContext();
   const { toast } = useToast();
+
+  useEffect(() => {
+    setUsers(initialUsers);
+  }, [initialUsers]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('users-realtime-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' },
+        (payload) => {
+          const newUser = payload.new as User;
+          if (payload.eventType === 'INSERT') {
+            setUsers(current => [newUser, ...current]);
+          }
+          if (payload.eventType === 'UPDATE') {
+            setUsers(current => current.map(u => u.id === newUser.id ? newUser : u));
+          }
+          if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as User).id;
+            setUsers(current => current.filter(u => u.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
 
   const handleAdd = () => {
     setEditingUser(null);
@@ -74,7 +105,7 @@ export default function UsersTab({ users, setUsers }: UsersTabProps) {
   }, [users, currentUser]);
   
   const handleUserAction = () => {
-    // State is now managed by real-time subscription on the parent page
+    // State is managed by the real-time listener now
     setIsFormOpen(false);
   }
 

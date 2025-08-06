@@ -15,27 +15,38 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import type { School, Teacher, LeaveRequest, User } from '@/lib/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Document, Packer, Paragraph, TextRun, Table as DocxTable, TableRow, TableCell, WidthType } from 'docx';
+import { Document, Packer, Paragraph, Table as DocxTable, TableRow, TableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
-import { getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher, addSchool, addLeaveRequest } from '@/lib/supabase';
+import { getTeachers, getSchools, getLeaveRequests, getUsers, addTeacher, addSchool, addLeaveRequest, supabase } from '@/lib/supabase';
 import { adminDb } from '@/lib/supabase-admin';
 import { createUserAction } from '@/app/actions/user-actions';
-
 
 type ReportFormat = 'csv' | 'pdf' | 'docx';
 type BackupFormat = 'json';
 
 type ReportHeader = { key: string; label: string };
 
-export default function ReportsTab() {
+interface ReportsTabProps {
+  initialTeachers: Teacher[];
+  initialSchools: School[];
+  initialLeaveRequests: LeaveRequest[];
+  initialUsers: User[];
+}
+
+export default function ReportsTab({
+  initialTeachers,
+  initialSchools,
+  initialLeaveRequests,
+  initialUsers
+}: ReportsTabProps) {
   const { toast } = useToast();
   
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [schools, setSchools] = useState<School[]>([]);
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
+  const [schools, setSchools] = useState<School[]>(initialSchools);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
+  const [users, setUsers] = useState<User[]>(initialUsers);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [reportType, setReportType] = useState('');
   const [reportFormat, setReportFormat] = useState<ReportFormat>('csv');
@@ -67,7 +78,23 @@ export default function ReportsTab() {
   }
 
   useEffect(() => {
-    fetchData();
+      const allChannels = supabase.getChannels();
+      const reportsChannel = allChannels.find(c => c.topic === 'reports-realtime-channel');
+      if(reportsChannel) {
+        supabase.removeChannel(reportsChannel);
+      }
+
+      const channel = supabase
+        .channel('reports-realtime-channel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => fetchData())
+        .subscribe();
+
+      return () => {
+          supabase.removeChannel(channel);
+      }
   }, []);
 
   const downloadFile = (content: string, fileName: string, mimeType: string) => {
@@ -299,27 +326,37 @@ export default function ReportsTab() {
   };
 
   const handleClearAllData = async () => {
-    // This needs to be a server action to be secure and efficient
-    // but for now, we do it on the client.
     try {
-        const { error: tError } = await adminDb.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if (tError) throw tError;
-        
-        const { error: sError } = await adminDb.from('schools').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if(sError) throw sError;
-        
-        const { error: lError } = await adminDb.from('leave_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if(lError) throw lError;
+      const { error: tError } = await adminDb.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (tError) throw tError;
 
-        await fetchData();
-        toast({ title: "All Data Cleared", description: "The application data has been reset, preserving Admin and Supervisor accounts." });
-        setClearDataConfirmation('');
+      const { error: sError } = await adminDb.from('schools').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (sError) throw sError;
+
+      const { error: lError } = await adminDb.from('leave_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (lError) throw lError;
+
+      // Do not delete Admin/Supervisor users
+      const { data: usersToPreserve, error: usersError } = await adminDb.from('users').select('id').or('role.eq.Admin,role.eq.Supervisor');
+      if (usersError) throw usersError;
+      const userIdsToPreserve = usersToPreserve?.map(u => u.id) || [];
+      if (userIdsToPreserve.length > 0) {
+        const { error: uError } = await adminDb.from('users').delete().not('id', 'in', `(${userIdsToPreserve.join(',')})`);
+        if (uError) throw uError;
+      } else {
+        const { error: uError } = await adminDb.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (uError) throw uError;
+      }
+
+      await fetchData();
+      toast({ title: "All Data Cleared", description: "The application data has been reset, preserving Admin and Supervisor accounts." });
+      setClearDataConfirmation('');
     } catch (e: any) {
-        toast({ variant: 'destructive', title: "Error Clearing Data", description: e.message });
+      toast({ variant: 'destructive', title: "Error Clearing Data", description: e.message });
     }
   };
 
-  if(isLoading) {
+  if(isLoading && !initialTeachers.length) {
     return <div>Loading report data...</div>
   }
 
