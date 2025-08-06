@@ -20,14 +20,10 @@ import { differenceInYears } from 'date-fns';
 
 const PAGE_SIZE = 20;
 
-interface TeachersTabProps {
-  initialTeachers: Teacher[];
-}
-
-export default function TeachersTab({ initialTeachers }: TeachersTabProps) {
-  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
+export default function TeachersTab() {
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,8 +31,32 @@ export default function TeachersTab({ initialTeachers }: TeachersTabProps) {
   const { toast } = useToast();
 
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(initialTeachers.length === PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const fetchInitialData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const [initialTeachers, schoolData] = await Promise.all([
+            getTeachers(0, PAGE_SIZE),
+            getSchools()
+        ]);
+
+        setTeachers(initialTeachers);
+        setSchools(schoolData);
+        setPage(0);
+        setHasMore(initialTeachers.length === PAGE_SIZE);
+    } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Failed to load initial teacher data." });
+    } finally {
+        setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
 
   const fetchMoreTeachers = useCallback(async () => {
       if (isLoadingMore || !hasMore) return;
@@ -63,20 +83,6 @@ export default function TeachersTab({ initialTeachers }: TeachersTabProps) {
   }
 
   useEffect(() => {
-    const fetchSchoolData = async () => {
-      try {
-        const schoolData = await getSchools();
-        setSchools(schoolData);
-      } catch (error) {
-        toast({ variant: 'destructive', title: "Error", description: "Failed to load school data." });
-      }
-    };
-    fetchSchoolData();
-    // Set initial state from props
-    setTeachers(initialTeachers);
-    setPage(0);
-    setHasMore(initialTeachers.length === PAGE_SIZE);
-
     const channel = supabase
       .channel('teachers-realtime-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, 
@@ -101,7 +107,7 @@ export default function TeachersTab({ initialTeachers }: TeachersTabProps) {
       supabase.removeChannel(channel);
     };
 
-  }, [initialTeachers, toast]);
+  }, []);
 
   const handleAdd = () => {
     setEditingTeacher(null);

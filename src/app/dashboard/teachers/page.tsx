@@ -1,14 +1,13 @@
 
+"use client";
+
 import TeachersTab from '@/components/dashboard/teachers-tab';
 import { Suspense } from 'react';
-import { getTeachers }from '@/lib/supabase';
 
-export default async function TeachersPage() {
-    const initialTeachers = await getTeachers(0, 20, true);
-    
+export default function TeachersPage() {
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <TeachersTab initialTeachers={initialTeachers} />
+            <TeachersTab />
         </Suspense>
     );
 }
