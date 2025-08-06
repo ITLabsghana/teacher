@@ -1,16 +1,14 @@
 
-"use client";
-
+import { Suspense } from 'react';
 import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday } from 'date-fns';
-import { useMemo, useState, useEffect, Suspense } from 'react';
-import { getTeachers, getLeaveRequests, getSchools, supabase } from '@/lib/supabase';
+import { getTeachers, getLeaveRequests, getSchools } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
+import DashboardRealtimeWrapper from '@/components/dashboard/dashboard-realtime-wrapper';
 
 async function StatsCards() { 
-  // This is now a server component, fetching its own data.
   const [teachers, leaveRequests, schools] = await Promise.all([
     getTeachers(0, 10000), // Fetch all for accurate stats
     getLeaveRequests(),
@@ -18,7 +16,7 @@ async function StatsCards() {
   ]);
 
     const stats = (() => {
-        const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved').length;
+        const onLeaveCount = leaveRequests.filter(req => req.status === 'Approved' && isWithinInterval(new Date(), { start: req.startDate, end: req.returnDate })).length;
 
         const getTeacherName = (teacherId: string) => {
             const teacher = teachers.find(t => t.id === teacherId);
@@ -270,22 +268,22 @@ function StatsSkeleton() {
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 13 }).map((_, i) => (
-                <Card key={i}>
+                <Card key={i} className="bg-slate-100">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24 bg-slate-200" />
                     </CardHeader>
                     <CardContent>
-                        <Skeleton className="h-8 w-12" />
+                        <Skeleton className="h-8 w-12 bg-slate-200" />
                     </CardContent>
                 </Card>
             ))}
-             <Card className="col-span-full">
+             <Card className="col-span-full bg-slate-100">
                 <CardHeader>
-                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-6 w-32 bg-slate-200" />
                 </CardHeader>
                 <CardContent className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-full bg-slate-200" />
+                    <Skeleton className="h-4 w-3/4 bg-slate-200" />
                 </CardContent>
             </Card>
         </div>
@@ -294,25 +292,8 @@ function StatsSkeleton() {
 
 
 export default function DashboardPage() {
-    const [_, setTick] = useState(0); // Used to force re-render on real-time updates
-
-    useEffect(() => {
-        // This component is now only responsible for real-time updates.
-        // The initial data is fetched on the server.
-        const channel = supabase
-          .channel('dashboard-realtime-channel')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => setTick(t => t+1))
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => setTick(t => t+1))
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => setTick(t => t+1))
-          .subscribe();
-
-        return () => {
-          supabase.removeChannel(channel);
-        };
-    }, []);
-
     return (
-        <>
+        <DashboardRealtimeWrapper>
             <header className="mb-8">
                 <h1 className="text-4xl font-headline font-bold text-primary">TMS Dashboard</h1>
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
@@ -321,6 +302,6 @@ export default function DashboardPage() {
                 {/* @ts-expect-error Async Server Component */}
                 <StatsCards />
             </Suspense>
-        </>
+        </DashboardRealtimeWrapper>
     );
 }
