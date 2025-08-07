@@ -90,9 +90,9 @@ export default function TeacherDetailPage() {
             setSchools(schoolData);
             setLeaveRequests(leaveData);
         } catch (error) {
-            console.error("Failed to fetch teacher details", error);
+            console.error("Detailed error fetching teacher data:", error);
             setTeacher(null); // Ensure teacher is null on error
-            toast({ variant: 'destructive', title: 'Error', description: "Could not load teacher profile." });
+            toast({ variant: 'destructive', title: 'Error', description: "Could not load teacher profile. See console for details." });
         } finally {
             setIsLoading(false);
         }

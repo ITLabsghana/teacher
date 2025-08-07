@@ -21,7 +21,7 @@ async function StatsCards() {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'Approved')
     .lte('start_date', today)
-    .gte('return_date', today);
+    .gt('return_date', today);
   
   // Fetch only the specific data needed for notifications
   const tenDaysFromNow = addDays(new Date(), 10).toISOString();
