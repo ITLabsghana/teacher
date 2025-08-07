@@ -196,7 +196,7 @@ export default function ReportsTab() {
                 { key: 'rank', label: 'Rank' }, { key: 'job', label: 'Job' }, { key: 'currentSchool', label: 'Current School' },
                 { key: 'firstAppointmentDate', label: 'First Appointment Date' },
             ];
-            data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId) }));
+            data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId ?? undefined) }));
             break;
         case 'school-enrollment':
             title = 'School Enrollment Summary';

@@ -11,9 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerSelect } from '@/components/dashboard/teacher-form';
 import { useToast } from '@/hooks/use-toast';
-import { addLeaveRequest as dbAddLeaveRequest } from '@/lib/supabase';
+import { addLeaveRequest } from '@/lib/supabase';
 
-const leaveTypes: LeaveRequest['leaveType'][] = ['Study Leave (with pay)', 'Study Leave (without pay)', 'Sick', 'Maternity', 'Paternity', 'Casual', 'Other'];
+const leaveTypes = ['Study Leave (with pay)', 'Study Leave (without pay)', 'Sick', 'Maternity', 'Paternity', 'Casual', 'Other'] as const;
 
 const leaveSchema = z.object({
   teacherId: z.string().min(1, "Teacher is required"),
@@ -41,7 +41,7 @@ export function LeaveForm({ isOpen, setIsOpen, teachers, onSave }: LeaveFormProp
 
   const onSubmit = async (data: z.infer<typeof leaveSchema>) => {
     try {
-        const newRequest = await dbAddLeaveRequest(data);
+        const newRequest = await addLeaveRequest(data);
         toast({ title: 'Success', description: 'Leave request submitted.' });
         onSave(newRequest);
         reset();

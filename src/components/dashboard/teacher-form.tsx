@@ -281,18 +281,18 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
   };
 
   const onSubmit = async (data: TeacherFormData) => {
-    const sanitizedData = { ...data };
+    const sanitizedData: { [key: string]: any } = { ...data };
     for (const key in sanitizedData) {
-        if (sanitizedData[key as keyof typeof sanitizedData] === undefined) {
-            sanitizedData[key as keyof typeof sanitizedData] = null;
+        if (sanitizedData[key] === undefined) {
+            sanitizedData[key] = null;
         }
     }
     try {
         if (editingTeacher) {
-          await updateTeacher({ ...editingTeacher, ...sanitizedData });
+          await updateTeacher({ ...editingTeacher, ...(sanitizedData as Partial<Teacher>) });
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
-          await addTeacher(sanitizedData);
+          await addTeacher(sanitizedData as Partial<Omit<Teacher, "id">>);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
         onSave();

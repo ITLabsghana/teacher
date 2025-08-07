@@ -34,13 +34,14 @@ async function StatsCards() {
   const oneYearFromNow = addYears(new Date(), 1);
   const { data: allTeachersForRetirement, error: allTeachersError } = await adminDb.from('teachers').select('id, firstName, lastName, date_of_birth').not('date_of_birth', 'is', null);
 
-  const nearingRetirementDetails = allTeachersForRetirement?.filter(teacher => {
-      const dob = parseISO(teacher.date_of_birth!);
+  const typedTeachers = allTeachersForRetirement as { id: string, firstName: string, lastName: string, date_of_birth: string }[] | null;
+  const nearingRetirementDetails = typedTeachers?.filter(teacher => {
+      const dob = parseISO(teacher.date_of_birth);
       const retirementDate = addYears(dob, 60);
       return retirementDate > new Date() && retirementDate <= oneYearFromNow;
     })
     .map(teacher => {
-        const dob = parseISO(teacher.date_of_birth!);
+        const dob = parseISO(teacher.date_of_birth);
         const retirementDate = addYears(dob, 60);
         return {
           name: `${teacher.firstName} ${teacher.lastName}`,
@@ -86,7 +87,8 @@ async function StatsCards() {
   enrollmentTotals.jhs.total = enrollmentTotals.jhs.boys + enrollmentTotals.jhs.girls;
   const grandTotalStudents = enrollmentTotals.total.boys + enrollmentTotals.total.girls;
 
-  const leavesEndingSoonFormatted = leavesEndingSoonDetails?.map(req => {
+  const typedLeaves = leavesEndingSoonDetails as { return_date: string, teachers: { firstName: string, lastName: string } | null }[] | null;
+  const leavesEndingSoonFormatted = typedLeaves?.map(req => {
     const returnDateObj = parseISO(req.return_date);
     const teacher = Array.isArray(req.teachers) ? req.teachers[0] : req.teachers; // Handle one-to-one relationship
     return {
@@ -286,7 +288,6 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
             </header>
             <Suspense fallback={<StatsSkeleton />}>
-                {/* @ts-expect-error Async Server Component */}
                 <StatsCards />
             </Suspense>
         </DashboardRealtimeWrapper>
