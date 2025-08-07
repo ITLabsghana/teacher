@@ -8,15 +8,23 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const parseTeacherDates = (teacher: any): Teacher => ({
-    ...teacher,
-    documents: teacher.documents || [], // No need to parse JSON if stored as jsonb
-    dateOfBirth: teacher.dateOfBirth ? new Date(teacher.dateOfBirth) : undefined,
-    firstAppointmentDate: teacher.firstAppointmentDate ? new Date(teacher.firstAppointmentDate) : undefined,
-    lastPromotionDate: teacher.lastPromotionDate ? new Date(teacher.lastPromotionDate) : undefined,
-    datePostedToCurrentSchool: teacher.datePostedToCurrentSchool ? new Date(teacher.datePostedToCurrentSchool) : undefined,
-    dateConfirmed: teacher.dateConfirmed ? new Date(teacher.dateConfirmed) : undefined,
-});
+export const parseTeacherDates = (teacher: any): Teacher => {
+    const parseDate = (dateString: string | null | undefined): Date | null | undefined => {
+        if (!dateString) return undefined;
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? undefined : date;
+    };
+
+    return {
+        ...teacher,
+        documents: teacher.documents || [],
+        dateOfBirth: parseDate(teacher.dateOfBirth),
+        firstAppointmentDate: parseDate(teacher.firstAppointmentDate),
+        lastPromotionDate: parseDate(teacher.lastPromotionDate),
+        datePostedToCurrentSchool: parseDate(teacher.datePostedToCurrentSchool),
+        dateConfirmed: parseDate(teacher.dateConfirmed),
+    };
+};
 
 // --- Data Fetching ---
 
@@ -47,9 +55,9 @@ export const getTeacherById = async (id: string, isAdmin: boolean = false): Prom
     return data ? parseTeacherDates(data) : null;
 }
 
-export const getSchools = async (isAdmin: boolean = false): Promise<School[]> => {
+export const getSchools = async (isAdmin: boolean = false, columns: string = '*'): Promise<Partial<School>[]> => {
     const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client.from('schools').select('*').order('name');
+    const { data, error } = await client.from('schools').select(columns).order('name');
     if (error) throw error;
     return data || [];
 };

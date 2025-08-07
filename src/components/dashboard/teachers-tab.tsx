@@ -39,11 +39,11 @@ export default function TeachersTab() {
     try {
         const [initialTeachers, schoolData] = await Promise.all([
             getTeachers(0, PAGE_SIZE),
-            getSchools()
+            getSchools(false, 'id,name')
         ]);
 
         setTeachers(initialTeachers);
-        setSchools(schoolData);
+        setSchools(schoolData as School[]);
         setPage(0);
         setHasMore(initialTeachers.length === PAGE_SIZE);
     } catch (error) {

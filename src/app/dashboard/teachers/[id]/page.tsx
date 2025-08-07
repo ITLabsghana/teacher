@@ -83,7 +83,7 @@ export default function TeacherDetailPage() {
         try {
             const [teacherData, schoolData, leaveData] = await Promise.all([
                 getTeacherById(teacherId, true),
-                getSchools(true),
+                getSchools(true, 'id,name'),
                 getLeaveRequests(true)
             ]);
             if (teacherData) setTeacher(teacherData);

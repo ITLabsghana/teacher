@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday } from 'date-fns';
+import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday, subYears } from 'date-fns';
 import { getTeachers, getLeaveRequests, getSchools, supabase } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardRealtimeWrapper from '@/components/dashboard/dashboard-realtime-wrapper';
@@ -32,25 +32,28 @@ async function StatsCards() {
     .lte('return_date', tenDaysFromNow);
 
   const oneYearFromNow = addYears(new Date(), 1);
-  const { data: allTeachersForRetirement, error: allTeachersError } = await adminDb.from('teachers').select('id, firstName, lastName, date_of_birth').not('date_of_birth', 'is', null);
+  const todayForRetirement = new Date();
+  const retirementWindowStart = subYears(todayForRetirement, 60);
+  const retirementWindowEnd = subYears(oneYearFromNow, 60);
 
-  const typedTeachers = allTeachersForRetirement as { id: string, firstName: string, lastName: string, date_of_birth: string }[] | null;
-  const nearingRetirementDetails = typedTeachers?.filter(teacher => {
-      const dob = parseISO(teacher.date_of_birth);
+  const { data: nearingRetirement, error: nearingRetirementError } = await adminDb
+    .from('teachers')
+    .select('id, firstName, lastName, date_of_birth')
+    .not('date_of_birth', 'is', null)
+    .gt('date_of_birth', retirementWindowStart.toISOString())
+    .lte('date_of_birth', retirementWindowEnd.toISOString());
+
+  const nearingRetirementDetails = (nearingRetirement || []).map(teacher => {
+      const dob = parseISO(teacher.date_of_birth!);
       const retirementDate = addYears(dob, 60);
-      return retirementDate > new Date() && retirementDate <= oneYearFromNow;
-    })
-    .map(teacher => {
-        const dob = parseISO(teacher.date_of_birth);
-        const retirementDate = addYears(dob, 60);
-        return {
-          name: `${teacher.firstName} ${teacher.lastName}`,
-          timeToRetirement: formatDistanceToNow(retirementDate, { addSuffix: true }),
-        }
-    }) || [];
+      return {
+        name: `${teacher.firstName} ${teacher.lastName}`,
+        timeToRetirement: formatDistanceToNow(retirementDate, { addSuffix: true }),
+      }
+  });
   
   // Fetch all schools for enrollment data - This could be optimized further with a DB function if it becomes a bottleneck
-  const schools = await getSchools(true);
+  const schools = await getSchools(true, 'name,enrollment');
   
   const enrollmentTotals = {
       total: { boys: 0, girls: 0 },

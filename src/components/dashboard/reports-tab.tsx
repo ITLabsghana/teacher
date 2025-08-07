@@ -49,12 +49,12 @@ export default function ReportsTab() {
     try {
         const [t, s, l, u] = await Promise.all([
             getTeachers(0, 10000, true),
-            getSchools(true),
+            getSchools(true, 'id,name,enrollment'),
             getLeaveRequests(true),
             getUsers(true)
         ]);
         setTeachers(t);
-        setSchools(s);
+        setSchools(s as School[]);
         setLeaveRequests(l);
         setUsers(u);
     } catch(e) {
