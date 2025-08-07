@@ -8,13 +8,13 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const parseTeacherDates = (teacher: any): Teacher => {
-    const parseDate = (dateString: string | null | undefined): Date | null | undefined => {
-        if (!dateString) return undefined;
-        const date = new Date(dateString);
-        return isNaN(date.getTime()) ? undefined : date;
-    };
+const parseDate = (dateString: string | null | undefined): Date | undefined => {
+    if (!dateString) return undefined;
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? undefined : date;
+};
 
+export const parseTeacherDates = (teacher: any): Teacher => {
     return {
         ...teacher,
         documents: teacher.documents || [],
@@ -78,7 +78,11 @@ export const getLeaveRequests = async (isAdmin: boolean = false): Promise<LeaveR
     const client = isAdmin ? adminDb : supabase;
     const { data, error } = await client.from('leave_requests').select('*').order('startDate', { ascending: false });
     if (error) throw error;
-    return data.map(r => ({ ...r, startDate: new Date(r.startDate), returnDate: new Date(r.returnDate)})) || [];
+    return data.map(r => ({
+        ...r,
+        startDate: parseDate(r.startDate),
+        returnDate: parseDate(r.returnDate)
+    })) as LeaveRequest[];
 };
 
 export const getUsers = async (isAdmin: boolean = false): Promise<User[]> => {
