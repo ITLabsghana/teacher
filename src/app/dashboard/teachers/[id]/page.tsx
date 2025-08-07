@@ -81,30 +81,18 @@ export default function TeacherDetailPage() {
         
         setIsLoading(true);
         try {
-            console.log("Fetching teacher data for ID:", teacherId);
-            const teacherData = await getTeacherById(teacherId, true);
-            console.log("Fetched teacher data:", teacherData);
-            if (teacherData) {
-                setTeacher(teacherData);
-            } else {
-                setTeacher(null);
-                throw new Error("Teacher not found");
-            }
-
-            console.log("Fetching schools data...");
-            const schoolData = await getSchools(true, 'id,name');
-            console.log("Fetched schools data:", schoolData);
+            const [teacherData, schoolData, leaveData] = await Promise.all([
+                getTeacherById(teacherId, true),
+                getSchools(true, 'id,name'),
+                getLeaveRequests(true)
+            ]);
+            if (teacherData) setTeacher(teacherData);
             setSchools(schoolData);
-
-            console.log("Fetching leave requests...");
-            const leaveData = await getLeaveRequests(true);
-            console.log("Fetched leave requests:", leaveData);
             setLeaveRequests(leaveData);
-
         } catch (error) {
-            console.error("Detailed error fetching teacher data:", error);
+            console.error("Failed to fetch teacher details", error);
             setTeacher(null); // Ensure teacher is null on error
-            toast({ variant: 'destructive', title: 'Error', description: "Could not load teacher profile. See console for details." });
+            toast({ variant: 'destructive', title: 'Error', description: "Could not load teacher profile." });
         } finally {
             setIsLoading(false);
         }
