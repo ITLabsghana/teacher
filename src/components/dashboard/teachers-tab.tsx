@@ -141,34 +141,41 @@ export default function TeachersTab() {
     router.push(`/dashboard/teachers/${teacherId}`);
   };
 
-  const filteredTeachers = useMemo(() => {
-    if (!searchTerm) return teachers;
-    
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    const searchNumber = parseInt(lowerCaseSearchTerm, 10);
-    
-    return teachers.filter(teacher => {
-      const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
-      const areaOfSpecialization = teacher.areaOfSpecialization?.toLowerCase() || '';
-      
-      const textMatch = (
-        schoolName.includes(lowerCaseSearchTerm) ||
-        areaOfSpecialization.includes(lowerCaseSearchTerm) ||
-        Object.values(teacher).some(value => 
-          String(value).toLowerCase().includes(lowerCaseSearchTerm)
-        )
-      );
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
 
-      if (!isNaN(searchNumber) && teacher.datePostedToCurrentSchool) {
-          const yearsInSchool = differenceInYears(new Date(), teacher.datePostedToCurrentSchool);
-          if (yearsInSchool === searchNumber) {
-              return true;
-          }
-      }
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(0); // Reset page when search term changes
+    }, 500); // 500ms debounce delay
 
-      return textMatch;
-    });
-  }, [teachers, searchTerm, getSchoolName]);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const searchTeachers = async () => {
+        setIsLoading(true);
+        try {
+            const newTeachers = await getTeachers(0, PAGE_SIZE, false, debouncedSearchTerm);
+            setTeachers(newTeachers);
+            setPage(0);
+            setHasMore(newTeachers.length === PAGE_SIZE);
+        } catch (error) {
+            console.error("Failed to search teachers:", error);
+            toast({ variant: 'destructive', title: "Error", description: "Failed to search for teachers." });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (debouncedSearchTerm) {
+        searchTeachers();
+    } else {
+        fetchInitialData();
+    }
+  }, [debouncedSearchTerm, fetchInitialData, toast]);
 
   return (
     <Card>
@@ -221,7 +228,7 @@ export default function TeachersTab() {
                           <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                       </TableRow>
                   ))
-              ) : filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
+              ) : teachers.length > 0 ? teachers.map(teacher => (
                 <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
                      <Avatar className="h-20 w-20">

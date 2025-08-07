@@ -9,98 +9,36 @@ import { Skeleton } from '@/components/ui/skeleton';
 import DashboardRealtimeWrapper from '@/components/dashboard/dashboard-realtime-wrapper';
 import { adminDb } from '@/lib/supabase-admin';
 
-async function StatsCards() { 
-  // Efficiently count totals directly from the database
-  const { count: totalTeachers, error: teachersError } = await adminDb.from('teachers').select('*', { count: 'exact', head: true });
-  const { count: maleTeachers, error: maleTeachersError } = await adminDb.from('teachers').select('*', { count: 'exact', head: true }).eq('gender', 'Male');
-  const { count: femaleTeachers, error: femaleTeachersError } = await adminDb.from('teachers').select('*', { count: 'exact', head: true }).eq('gender', 'Female');
+async function StatsCards() {
+  const { data: stats, error: statsError } = await adminDb.rpc('get_dashboard_stats').single();
+  const { data: enrollments, error: enrollmentsError } = await adminDb.rpc('get_enrollment_totals').single();
+  const { data: notifications, error: notificationsError } = await adminDb.rpc('get_notification_details');
 
-  // Efficiently get teachers on leave
-  const today = new Date().toISOString();
-  const { count: onLeaveCount, error: onLeaveError } = await adminDb.from('leave_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'Approved')
-    .lte('start_date', today)
-    .gt('return_date', today);
-  
-  // Fetch only the specific data needed for notifications
-  const tenDaysFromNow = addDays(new Date(), 10).toISOString();
-  const { data: leavesEndingSoonDetails, error: leavesEndingSoonError } = await adminDb.from('leave_requests')
-    .select('*, teachers(firstName, lastName)')
-    .eq('status', 'Approved')
-    .gte('return_date', today)
-    .lte('return_date', tenDaysFromNow);
+  if (statsError || enrollmentsError || notificationsError) {
+    console.error({ statsError, enrollmentsError, notificationsError });
+    // You might want to render an error state here
+    return <div>Error loading dashboard data.</div>;
+  }
 
-  const oneYearFromNow = addYears(new Date(), 1);
-  const todayForRetirement = new Date();
-  const retirementWindowStart = subYears(todayForRetirement, 60);
-  const retirementWindowEnd = subYears(oneYearFromNow, 60);
-
-  const { data: nearingRetirement, error: nearingRetirementError } = await adminDb
-    .from('teachers')
-    .select('id, firstName, lastName, date_of_birth')
-    .not('date_of_birth', 'is', null)
-    .gt('date_of_birth', retirementWindowStart.toISOString())
-    .lte('date_of_birth', retirementWindowEnd.toISOString());
-
-  const nearingRetirementDetails = (nearingRetirement || []).map(teacher => {
-      const dob = parseISO(teacher.date_of_birth!);
-      const retirementDate = addYears(dob, 60);
-      return {
-        name: `${teacher.firstName} ${teacher.lastName}`,
-        timeToRetirement: formatDistanceToNow(retirementDate, { addSuffix: true }),
-      }
-  });
-  
-  // Fetch all schools for enrollment data - This could be optimized further with a DB function if it becomes a bottleneck
-  const schools = await getSchools(true, 'name,enrollment');
-  
   const enrollmentTotals = {
-      total: { boys: 0, girls: 0 },
-      kg: { boys: 0, girls: 0, total: 0 },
-      primary: { boys: 0, girls: 0, total: 0 },
-      jhs: { boys: 0, girls: 0, total: 0 },
+    total: { boys: enrollments?.total_boys || 0, girls: enrollments?.total_girls || 0 },
+    kg: { boys: enrollments?.kg_boys || 0, girls: enrollments?.kg_girls || 0, total: (enrollments?.kg_boys || 0) + (enrollments?.kg_girls || 0) },
+    primary: { boys: enrollments?.primary_boys || 0, girls: enrollments?.primary_girls || 0, total: (enrollments?.primary_boys || 0) + (enrollments?.primary_girls || 0) },
+    jhs: { boys: enrollments?.jhs_boys || 0, girls: enrollments?.jhs_girls || 0, total: (enrollments?.jhs_boys || 0) + (enrollments?.jhs_girls || 0) },
   };
-
-  schools.forEach(school => {
-      if (school.enrollment) {
-          Object.entries(school.enrollment).forEach(([classLevel, classData]) => {
-              const boys = classData.boys || 0;
-              const girls = classData.girls || 0;
-
-              enrollmentTotals.total.boys += boys;
-              enrollmentTotals.total.girls += girls;
-
-              if (classLevel.startsWith('KG')) {
-                  enrollmentTotals.kg.boys += boys;
-                  enrollmentTotals.kg.girls += girls;
-              } else if (classLevel.startsWith('Basic')) {
-                  enrollmentTotals.primary.boys += boys;
-                  enrollmentTotals.primary.girls += girls;
-              } else if (classLevel.startsWith('JHS')) {
-                  enrollmentTotals.jhs.boys += boys;
-                  enrollmentTotals.jhs.girls += girls;
-              }
-          });
-      }
-  });
-  
-  enrollmentTotals.kg.total = enrollmentTotals.kg.boys + enrollmentTotals.kg.girls;
-  enrollmentTotals.primary.total = enrollmentTotals.primary.boys + enrollmentTotals.primary.girls;
-  enrollmentTotals.jhs.total = enrollmentTotals.jhs.boys + enrollmentTotals.jhs.girls;
   const grandTotalStudents = enrollmentTotals.total.boys + enrollmentTotals.total.girls;
 
-  const typedLeaves = leavesEndingSoonDetails as { return_date: string, teachers: { firstName: string, lastName: string } | null }[] | null;
-  const leavesEndingSoonFormatted = typedLeaves?.map(req => {
-    const returnDateObj = parseISO(req.return_date);
-    const teacher = Array.isArray(req.teachers) ? req.teachers[0] : req.teachers; // Handle one-to-one relationship
-    return {
-        teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher',
-        returnDate: returnDateObj,
-        daysToReturn: differenceInDays(returnDateObj, new Date()),
-        isReturningToday: isToday(returnDateObj),
-    };
-  }) || [];
+  const leavesEndingSoonFormatted = notifications?.filter(n => n.type === 'leave').map(n => ({
+      teacherName: n.name,
+      returnDate: parseISO(n.date),
+      daysToReturn: differenceInDays(parseISO(n.date), new Date()),
+      isReturningToday: isToday(parseISO(n.date)),
+  })) || [];
+
+  const nearingRetirementDetails = notifications?.filter(n => n.type === 'retirement').map(n => ({
+      name: n.name,
+      timeToRetirement: formatDistanceToNow(parseISO(n.date), { addSuffix: true }),
+  })) || [];
 
 
     return (
@@ -111,7 +49,7 @@ async function StatsCards() {
                     <User className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{totalTeachers ?? 0}</div>
+                    <div className="text-2xl font-bold">{stats?.total_teachers ?? 0}</div>
                 </CardContent>
             </Card>
              <Card className="bg-green-100 dark:bg-green-900/50">
@@ -120,7 +58,7 @@ async function StatsCards() {
                     <User className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{maleTeachers ?? 0}</div>
+                    <div className="text-2xl font-bold">{stats?.male_teachers ?? 0}</div>
                 </CardContent>
             </Card>
             <Card className="bg-pink-100 dark:bg-pink-900/50">
@@ -129,7 +67,7 @@ async function StatsCards() {
                     <User className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{femaleTeachers ?? 0}</div>
+                    <div className="text-2xl font-bold">{stats?.female_teachers ?? 0}</div>
                 </CardContent>
             </Card>
             <Card className="bg-yellow-100 dark:bg-yellow-900/50">
@@ -138,7 +76,7 @@ async function StatsCards() {
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{onLeaveCount ?? 0}</div>
+                    <div className="text-2xl font-bold">{stats?.on_leave_count ?? 0}</div>
                 </CardContent>
             </Card>
             <Card className="bg-orange-100 dark:bg-orange-900/50">

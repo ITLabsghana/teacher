@@ -28,16 +28,26 @@ export const parseTeacherDates = (teacher: any): Teacher => {
 
 // --- Data Fetching ---
 
-export const getTeachers = async (page: number = 0, limit: number = 20, isAdmin: boolean = false): Promise<Teacher[]> => {
+export const getTeachers = async (page: number = 0, limit: number = 20, isAdmin: boolean = false, searchTerm: string = ''): Promise<Teacher[]> => {
     const from = page * limit;
     const to = from + limit - 1;
     const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client
+
+    let query = client
         .from('teachers')
-        .select('*')
+        .select('*, school:schools(name)')
         .order('firstName', { ascending: true })
         .range(from, to);
+
+    if (searchTerm) {
+        const nameQuery = `firstName.ilike.%${searchTerm}%,lastName.ilike.%${searchTerm}%`;
+        const specializationQuery = `areaOfSpecialization.ilike.%${searchTerm}%`;
+        // This is a simplified search. A more advanced search might use full-text search.
+        query = query.or(`${nameQuery},${specializationQuery}`);
+    }
         
+    const { data, error } = await query;
+
     if (error) throw error;
     return data.map(parseTeacherDates) || [];
 };
