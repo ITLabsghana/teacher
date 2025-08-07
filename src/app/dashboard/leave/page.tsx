@@ -32,7 +32,7 @@ export default function LeavePage() {
       .channel('leave-requests-realtime-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' },
         (payload) => {
-          const newRequest = { ...(payload.new as any), startDate: new Date((payload.new as any).startDate), returnDate: new Date((payload.new as any).returnDate)} as LeaveRequest;
+          const newRequest = { ...payload.new, startDate: new Date(payload.new.startDate), returnDate: new Date(payload.new.returnDate)} as LeaveRequest;
           if (payload.eventType === 'INSERT') {
             setLeaveRequests(current => [newRequest, ...current]);
           }

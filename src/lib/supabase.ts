@@ -1,183 +1,203 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Teacher, School, LeaveRequest, User } from './types';
-import { adminDb } from './supabase-admin';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// 1. Supabase Client Initialization
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Supabase URL and Anon Key must be provided.");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// 2. Helper function for robust date parsing
 const parseDate = (dateString: string | null | undefined): Date | undefined => {
     if (!dateString) return undefined;
     const date = new Date(dateString);
     return isNaN(date.getTime()) ? undefined : date;
 };
 
-export const parseTeacherDates = (teacher: any): Teacher => {
+// 3. Helper function to map snake_case from DB to camelCase in the app
+const teacherFromDb = (dbTeacher: any): Teacher => {
     return {
-        ...teacher,
-        documents: teacher.documents || [],
-        dateOfBirth: parseDate(teacher.dateOfBirth),
-        firstAppointmentDate: parseDate(teacher.firstAppointmentDate),
-        lastPromotionDate: parseDate(teacher.lastPromotionDate),
-        datePostedToCurrentSchool: parseDate(teacher.datePostedToCurrentSchool),
-        dateConfirmed: parseDate(teacher.dateConfirmed),
+        id: dbTeacher.id,
+        staffId: dbTeacher.staff_id,
+        firstName: dbTeacher.first_name,
+        lastName: dbTeacher.last_name,
+        dateOfBirth: parseDate(dbTeacher.date_of_birth),
+        gender: dbTeacher.gender,
+        registeredNo: dbTeacher.registered_no,
+        ghanaCardNo: dbTeacher.ghana_card_no,
+        ssnitNo: dbTeacher.ssnit_no,
+        tinNo: dbTeacher.tin_no,
+        phoneNo: dbTeacher.phone_no,
+        homeTown: dbTeacher.home_town,
+        email: dbTeacher.email,
+        address: dbTeacher.address,
+        academicQualification: dbTeacher.academic_qualification,
+        professionalQualification: dbTeacher.professional_qualification,
+        otherProfessionalQualification: dbTeacher.other_professional_qualification,
+        rank: dbTeacher.rank,
+        job: dbTeacher.job,
+        subjects: dbTeacher.subjects,
+        leadershipPosition: dbTeacher.leadership_position,
+        otherLeadershipPosition: dbTeacher.other_leadership_position,
+        areaOfSpecialization: dbTeacher.area_of_specialization,
+        lastPromotionDate: parseDate(dbTeacher.last_promotion_date),
+        previousSchool: dbTeacher.previous_school,
+        schoolId: dbTeacher.school_id,
+        datePostedToCurrentSchool: parseDate(dbTeacher.date_posted_to_current_school),
+        licensureNo: dbTeacher.licensure_no,
+        firstAppointmentDate: parseDate(dbTeacher.first_appointment_date),
+        dateConfirmed: parseDate(dbTeacher.date_confirmed),
+        teacherUnion: dbTeacher.teacher_union,
+        photo: dbTeacher.photo,
+        bankName: dbTeacher.bank_name,
+        bankBranch: dbTeacher.bank_branch,
+        accountNumber: dbTeacher.account_number,
+        salaryScale: dbTeacher.salary_scale,
+        documents: dbTeacher.documents || [],
     };
 };
 
-// --- Data Fetching ---
+const teacherToDb = (appTeacher: Partial<Teacher>): any => {
+    return {
+        id: appTeacher.id,
+        staff_id: appTeacher.staffId,
+        first_name: appTeacher.firstName,
+        last_name: appTeacher.lastName,
+        date_of_birth: appTeacher.dateOfBirth,
+        gender: appTeacher.gender,
+        registered_no: appTeacher.registeredNo,
+        ghana_card_no: appTeacher.ghanaCardNo,
+        ssnit_no: appTeacher.ssnitNo,
+        tin_no: appTeacher.tinNo,
+        phone_no: appTeacher.phoneNo,
+        home_town: appTeacher.homeTown,
+        email: appTeacher.email,
+        address: appTeacher.address,
+        academic_qualification: appTeacher.academicQualification,
+        professional_qualification: appTeacher.professionalQualification,
+        other_professional_qualification: appTeacher.otherProfessionalQualification,
+        rank: appTeacher.rank,
+        job: appTeacher.job,
+        subjects: appTeacher.subjects,
+        leadership_position: appTeacher.leadershipPosition,
+        other_leadership_position: appTeacher.otherLeadershipPosition,
+        area_of_specialization: appTeacher.areaOfSpecialization,
+        last_promotion_date: appTeacher.lastPromotionDate,
+        previous_school: appTeacher.previousSchool,
+        school_id: appTeacher.schoolId,
+        date_posted_to_current_school: appTeacher.datePostedToCurrentSchool,
+        licensure_no: appTeacher.licensureNo,
+        first_appointment_date: appTeacher.firstAppointmentDate,
+        date_confirmed: appTeacher.dateConfirmed,
+        teacher_union: appTeacher.teacherUnion,
+        photo: appTeacher.photo,
+        bank_name: appTeacher.bankName,
+        bank_branch: appTeacher.bankBranch,
+        account_number: appTeacher.accountNumber,
+        salary_scale: appTeacher.salaryScale,
+        documents: appTeacher.documents,
+    };
+};
 
-export const getTeachers = async (page: number = 0, limit: number = 20, isAdmin: boolean = false, searchTerm: string = ''): Promise<Teacher[]> => {
+// --- Teacher Data ---
+
+export const getTeachers = async (page: number = 0, limit: number = 20, searchTerm: string = ''): Promise<Teacher[]> => {
     const from = page * limit;
     const to = from + limit - 1;
-    const client = isAdmin ? adminDb : supabase;
 
-    let query = client
+    let query = supabase
         .from('teachers')
-        .select('*, school:schools(name)')
-        .order('firstName', { ascending: true })
+        .select(`
+            *,
+            school:schools(name)
+        `)
+        .order('first_name', { ascending: true })
         .range(from, to);
 
     if (searchTerm) {
-        const nameQuery = `firstName.ilike.%${searchTerm}%,lastName.ilike.%${searchTerm}%`;
-        const specializationQuery = `areaOfSpecialization.ilike.%${searchTerm}%`;
-        // This is a simplified search. A more advanced search might use full-text search.
-        query = query.or(`${nameQuery},${specializationQuery}`);
+        query = query.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,area_of_specialization.ilike.%${searchTerm}%`);
     }
         
     const { data, error } = await query;
 
-    if (error) throw error;
-    return data.map(parseTeacherDates) || [];
+    if (error) {
+        console.error("Error fetching teachers:", error);
+        throw new Error("Could not fetch teachers.");
+    }
+
+    return data.map(teacherFromDb) || [];
 };
 
-export const getTeacherById = async (id: string, isAdmin: boolean = false): Promise<Teacher | null> => {
-    const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client.from('teachers').select('*').eq('id', id).single();
+export const getTeacherById = async (id: string): Promise<Teacher | null> => {
+    const { data, error } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('id', id)
+        .single();
+
     if (error) {
-        // PGRST116: "single row not found" - this is expected, not an error.
         if (error.code !== 'PGRST116') {
-            console.error("Error fetching teacher by id", error);
+            console.error("Error fetching teacher by id:", error);
         }
         return null;
     }
-    return data ? parseTeacherDates(data) : null;
-}
+    return data ? teacherFromDb(data) : null;
+};
 
-export const getSchools = async (isAdmin: boolean = false, columns: string = '*'): Promise<Partial<School>[]> => {
-    const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client.from('schools').select(columns).order('name');
-    if (error) throw error;
+// --- School Data ---
+
+export const getSchools = async (columns: string = '*'): Promise<Partial<School>[]> => {
+    const { data, error } = await supabase.from('schools').select(columns).order('name');
+    if (error) {
+        console.error("Error fetching schools:", error);
+        throw new Error("Could not fetch schools.");
+    }
     return data || [];
 };
 
-export const getSchoolById = async (id: string, isAdmin: boolean = false): Promise<School | null> => {
-    const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client.from('schools').select('*').eq('id', id).single();
-    if (error) {
-        if (error.code !== 'PGRST116') {
-          console.error("Error fetching school by id", error);
-        }
-        return null;
-    }
-    return data;
-}
+// --- Leave Request Data ---
 
-export const getLeaveRequests = async (isAdmin: boolean = false): Promise<LeaveRequest[]> => {
-    const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client.from('leave_requests').select('*').order('startDate', { ascending: false });
-    if (error) throw error;
+export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
+    const { data, error } = await supabase.from('leave_requests').select('*').order('start_date', { ascending: false });
+    if (error) {
+        console.error("Error fetching leave requests:", error);
+        throw new Error("Could not fetch leave requests.");
+    }
     return data.map(r => ({
         ...r,
-        startDate: parseDate(r.startDate),
-        returnDate: parseDate(r.returnDate)
+        startDate: parseDate(r.start_date),
+        returnDate: parseDate(r.return_date)
     })) as LeaveRequest[];
 };
 
-export const getUsers = async (isAdmin: boolean = false): Promise<User[]> => {
-    const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client.from('users').select('*').order('username');
-    if (error) throw error;
-    return data || [];
-};
-
-export const getUserByUsername = async (username: string): Promise<User | null> => {
-    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
-}
-
-// --- Data Mutation ---
-
-const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
-    const dbData: { [key: string]: any } = { ...teacher };
-    
-    // Convert empty strings back to null for the database
-    Object.keys(dbData).forEach(key => {
-        if (dbData[key as keyof typeof dbData] === '' || dbData[key as keyof typeof dbData] === undefined) {
-            dbData[key as keyof typeof dbData] = null;
-        }
-    });
-
-    // The 'documents' field is already a JSONB-compatible array of objects, so no stringification needed.
-    // If it's null, ensure it's an empty array.
-    if (!dbData.documents) {
-        dbData.documents = [];
-    }
-    
-    return dbData;
-};
+// --- Mutation Functions ---
 
 export const addTeacher = async (teacher: Partial<Omit<Teacher, 'id'>>): Promise<Teacher> => {
-    const teacherData = prepareTeacherForDb(teacher);
-    const { data, error } = await supabase.from('teachers').insert([teacherData]).select().single();
-    if (error) throw error;
-    return parseTeacherDates(data);
+    const { data, error } = await supabase.from('teachers').insert([teacherToDb(teacher)]).select().single();
+    if (error) {
+        console.error("Error adding teacher:", error);
+        throw new Error("Could not add teacher.");
+    }
+    return teacherFromDb(data);
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
-    const dbData = prepareTeacherForDb(teacher);
-    const { data, error } = await supabase.from('teachers').update(dbData).eq('id', teacher.id).select().single();
-    
+    const { data, error } = await supabase.from('teachers').update(teacherToDb(teacher)).eq('id', teacher.id).select().single();
     if (error) {
-        throw error;
+        console.error("Error updating teacher:", error);
+        throw new Error("Could not update teacher.");
     }
-    
-    return parseTeacherDates(data);
+    return teacherFromDb(data);
 };
 
 export const deleteTeacher = async (id: string): Promise<void> => {
     const { error } = await supabase.from('teachers').delete().eq('id', id);
-    if (error) throw error;
-};
-
-export const addSchool = async (school: Omit<School, 'id'>): Promise<School> => {
-    const { data, error } = await supabase.from('schools').insert([school]).select().single();
-    if (error) throw error;
-    return data;
-};
-
-export const updateSchool = async (school: School): Promise<School> => {
-    const { data, error } = await supabase.from('schools').update(school).eq('id', school.id).select().single();
-    if (error) throw error;
-    return data;
-};
-
-export const deleteSchool = async (id: string): Promise<void> => {
-    const { error } = await supabase.from('schools').delete().eq('id', id);
-    if (error) throw error;
-};
-
-export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status'>): Promise<LeaveRequest> => {
-    const newRequest = { ...request, status: 'Pending' as const };
-    const { data, error } = await supabase.from('leave_requests').insert([newRequest]).select().single();
-    if (error) throw error;
-    return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
-};
-
-export const updateLeaveRequest = async (request: LeaveRequest): Promise<LeaveRequest> => {
-    const { data, error } = await supabase.from('leave_requests').update(request).eq('id', request.id).select().single();
-    if (error) throw error;
-    return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
+    if (error) {
+        console.error("Error deleting teacher:", error);
+        throw new Error("Could not delete teacher.");
+    }
 };

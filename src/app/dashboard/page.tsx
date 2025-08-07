@@ -3,21 +3,27 @@ import { Suspense } from 'react';
 import type { Teacher, LeaveRequest, School } from '@/lib/types';
 import { Bell, User, CalendarOff, Users, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday, subYears } from 'date-fns';
+import { isWithinInterval, addDays, parseISO, addYears, formatDistanceToNow, differenceInDays, isToday } from 'date-fns';
 import { getTeachers, getLeaveRequests, getSchools, supabase } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardRealtimeWrapper from '@/components/dashboard/dashboard-realtime-wrapper';
 import { adminDb } from '@/lib/supabase-admin';
 
 async function StatsCards() {
-  const { data: stats, error: statsError } = await adminDb.rpc('get_dashboard_stats').single();
-  const { data: enrollments, error: enrollmentsError } = await adminDb.rpc('get_enrollment_totals').single();
-  const { data: notifications, error: notificationsError } = await adminDb.rpc('get_notification_details');
+  // Fetch all stats in parallel using the new database functions
+  const [
+    { data: stats, error: statsError },
+    { data: enrollments, error: enrollmentsError },
+    { data: notifications, error: notificationsError }
+  ] = await Promise.all([
+    adminDb.rpc('get_dashboard_stats').single(),
+    adminDb.rpc('get_enrollment_totals').single(),
+    adminDb.rpc('get_notification_details')
+  ]);
 
   if (statsError || enrollmentsError || notificationsError) {
     console.error({ statsError, enrollmentsError, notificationsError });
-    // You might want to render an error state here
-    return <div>Error loading dashboard data.</div>;
+    return <div className="text-red-500">Error loading dashboard data. Check server logs for details.</div>;
   }
 
   const enrollmentTotals = {
@@ -39,7 +45,6 @@ async function StatsCards() {
       name: n.name,
       timeToRetirement: formatDistanceToNow(parseISO(n.date), { addSuffix: true }),
   })) || [];
-
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -229,6 +234,7 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
             </header>
             <Suspense fallback={<StatsSkeleton />}>
+                {/* @ts-expect-error Async Server Component */}
                 <StatsCards />
             </Suspense>
         </DashboardRealtimeWrapper>

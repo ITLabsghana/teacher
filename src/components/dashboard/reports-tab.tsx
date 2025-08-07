@@ -49,12 +49,12 @@ export default function ReportsTab() {
     try {
         const [t, s, l, u] = await Promise.all([
             getTeachers(0, 10000, true),
-            getSchools(true, 'id,name,enrollment'),
+            getSchools(true),
             getLeaveRequests(true),
             getUsers(true)
         ]);
         setTeachers(t);
-        setSchools(s as School[]);
+        setSchools(s);
         setLeaveRequests(l);
         setUsers(u);
     } catch(e) {
@@ -196,7 +196,7 @@ export default function ReportsTab() {
                 { key: 'rank', label: 'Rank' }, { key: 'job', label: 'Job' }, { key: 'currentSchool', label: 'Current School' },
                 { key: 'firstAppointmentDate', label: 'First Appointment Date' },
             ];
-            data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId ?? undefined) }));
+            data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId) }));
             break;
         case 'school-enrollment':
             title = 'School Enrollment Summary';

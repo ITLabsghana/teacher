@@ -14,22 +14,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 
-const allUserRoles = ['Admin', 'Supervisor', 'Viewer'] as const;
+const allUserRoles: User['role'][] = ['Admin', 'Supervisor', 'Viewer'];
 
 const userSchema = z.object({
   username: z.string().min(2, "Username is too short"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters long"),
-  role: z.enum(allUserRoles, { required_error: "Role is required" }).optional(),
+  role: z.enum(allUserRoles, { required_error: "Role is required" }),
 });
 
 // For editing, password is not required
 const editUserSchema = userSchema.omit({ password: true }).extend({
-    password: z.string().optional(),
+    password: z.string().optional()
 });
 
 
-type UserFormData = z.infer<typeof editUserSchema>;
+type UserFormData = z.infer<typeof userSchema>;
 
 interface UserFormProps {
   isOpen: boolean;
@@ -69,18 +69,10 @@ export function UserForm({ isOpen, setIsOpen, editingUser, currentUser, onUserAc
     try {
         if (editingUser) {
             const { password, ...updateData } = data; // Exclude password from general update
-            await updateUser({ ...editingUser, ...updateData, role: data.role! });
+            await updateUser({ ...editingUser, ...updateData });
             toast({ title: 'Success', description: 'User updated successfully.' });
         } else {
-            if (!data.password) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Password is required.' });
-                return;
-            }
-            if (!data.role) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Role is required.' });
-                return;
-            }
-            await addUser({ ...data, password: data.password, role: data.role });
+            await addUser(data);
             toast({ title: 'Success', description: 'New user added.' });
         }
         onUserAction();
