@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Teacher, School } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -12,82 +13,101 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { getTeachers, deleteTeacher, getSchools } from '@/lib/supabase';
+import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates, getSchools } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { differenceInYears } from 'date-fns';
 
 const PAGE_SIZE = 20;
 
-// Custom hook for debouncing
-function useDebounce(value: string, delay: number) {
-    const [debouncedValue, setDebouncedValue] = useState(value);
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [value, delay]);
-    return debouncedValue;
-}
-
 export default function TeachersTab() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [schools, setSchools] = useState<Partial<School>[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-
   const router = useRouter();
   const { toast } = useToast();
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  const loadTeachers = useCallback(async (loadPage: number, search: string) => {
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const newTeachers = await getTeachers(loadPage, PAGE_SIZE, search);
-      setTeachers(prev => loadPage === 0 ? newTeachers : [...prev, ...newTeachers]);
-      setPage(loadPage);
-      setHasMore(newTeachers.length === PAGE_SIZE);
+        const [initialTeachers, schoolData] = await Promise.all([
+            getTeachers(0, PAGE_SIZE),
+            getSchools()
+        ]);
+
+        setTeachers(initialTeachers);
+        setSchools(schoolData);
+        setPage(0);
+        setHasMore(initialTeachers.length === PAGE_SIZE);
     } catch (error) {
-      toast({ variant: 'destructive', title: "Error", description: "Failed to load teachers." });
+        console.error("Failed to fetch initial data:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Failed to load initial teacher data." });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   }, [toast]);
 
-  // Effect for handling search
   useEffect(() => {
-    loadTeachers(0, debouncedSearchTerm);
-  }, [debouncedSearchTerm, loadTeachers]);
+    fetchInitialData();
+  }, [fetchInitialData]);
 
-  // Effect for fetching initial schools data
-  useEffect(() => {
-    const fetchSchools = async () => {
-        try {
-            const schoolData = await getSchools('id,name');
-            setSchools(schoolData);
-        } catch (error) {
-            toast({ variant: 'destructive', title: "Error", description: "Failed to load schools." });
-        }
-    };
-    fetchSchools();
-  }, [toast]);
-
-  const handleLoadMore = () => {
-    if (hasMore && !isLoading) {
-      loadTeachers(page + 1, debouncedSearchTerm);
-    }
-  };
+  const fetchMoreTeachers = useCallback(async () => {
+      if (isLoadingMore || !hasMore) return;
+      setIsLoadingMore(true);
+      try {
+          const nextPage = page + 1;
+          const newTeachers = await getTeachers(nextPage, PAGE_SIZE);
+          setTeachers(prev => [...prev, ...newTeachers]);
+          setPage(nextPage);
+          if (newTeachers.length < PAGE_SIZE) {
+              setHasMore(false);
+          }
+      } catch (error) {
+          console.error("Failed to fetch more teachers:", error);
+          toast({ variant: 'destructive', title: "Error", description: "Failed to load more teachers." });
+      } finally {
+          setIsLoadingMore(false);
+      }
+  }, [page, hasMore, isLoadingMore, toast]);
 
   const handleFormSave = () => {
     setIsFormOpen(false);
-    loadTeachers(0, debouncedSearchTerm); // Refresh the list
-  };
+    // Real-time listener will handle the update, no need to manually fetch or add.
+  }
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('teachers-realtime-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' },
+        (payload) => {
+            const updatedTeacher = parseTeacherDates(payload.new);
+
+            if (payload.eventType === 'INSERT') {
+                setTeachers(current => [updatedTeacher, ...current.filter(t => t.id !== updatedTeacher.id)]);
+            }
+            if (payload.eventType === 'UPDATE') {
+                setTeachers(current => current.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
+            }
+            if (payload.eventType === 'DELETE') {
+                 const deletedId = (payload.old as Teacher).id;
+                 setTeachers(current => current.filter(t => t.id !== deletedId));
+            }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+
+  }, []);
 
   const handleAdd = () => {
     setEditingTeacher(null);
@@ -101,25 +121,54 @@ export default function TeachersTab() {
   
   const handleDelete = async (teacherId: string) => {
     try {
-      await deleteTeacher(teacherId);
-      setTeachers(prev => prev.filter(t => t.id !== teacherId));
+      await dbDeleteTeacher(teacherId);
       toast({ title: 'Success', description: 'Teacher deleted successfully.' });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
   };
 
-  const getSchoolName = useCallback((teacher: Teacher) => {
-    // The new getTeachers function includes the school name
-    if (teacher.school && 'name' in teacher.school) {
-        return (teacher.school as School).name;
-    }
-    return 'N/A';
-  }, []);
+  const getSchoolName = useCallback((schoolId?: string | null) => {
+    if (!schoolId) return 'N/A';
+    return schools.find(s => s.id === schoolId)?.name || 'N/A';
+  }, [schools]);
 
-  const getInitials = (firstName?: string, lastName?: string) => {
+  const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
   };
+
+  const handleRowClick = (teacherId: string) => {
+    router.push(`/dashboard/teachers/${teacherId}`);
+  };
+
+  const filteredTeachers = useMemo(() => {
+    if (!searchTerm) return teachers;
+
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const searchNumber = parseInt(lowerCaseSearchTerm, 10);
+
+    return teachers.filter(teacher => {
+      const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
+      const areaOfSpecialization = teacher.areaOfSpecialization?.toLowerCase() || '';
+
+      const textMatch = (
+        schoolName.includes(lowerCaseSearchTerm) ||
+        areaOfSpecialization.includes(lowerCaseSearchTerm) ||
+        Object.values(teacher).some(value =>
+          String(value).toLowerCase().includes(lowerCaseSearchTerm)
+        )
+      );
+
+      if (!isNaN(searchNumber) && teacher.datePostedToCurrentSchool) {
+          const yearsInSchool = differenceInYears(new Date(), teacher.datePostedToCurrentSchool);
+          if (yearsInSchool === searchNumber) {
+              return true;
+          }
+      }
+
+      return textMatch;
+    });
+  }, [teachers, searchTerm, getSchoolName]);
 
   return (
     <Card>
@@ -129,12 +178,14 @@ export default function TeachersTab() {
                 <CardTitle>Teacher Management</CardTitle>
                 <CardDescription>Add, edit, and manage teacher profiles.</CardDescription>
             </div>
-            <Button size="sm" onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" /> Add Teacher</Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+                <Button size="sm" onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" /> Add Teacher</Button>
+            </div>
         </div>
         <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-                placeholder="Search by name or specialization..."
+                placeholder="Search by name, school, specialization, or years in school..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 max-w-md"
@@ -149,29 +200,33 @@ export default function TeachersTab() {
                 <TableHead>Picture</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Staff ID</TableHead>
+                <TableHead>Professional Qualification</TableHead>
                 <TableHead>Current School</TableHead>
+                <TableHead>Registered No.</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && teachers.length === 0 ? (
+              {isLoading ? (
                   Array.from({length: 5}).map((_, i) => (
                       <TableRow key={i}>
-                          <TableCell><Skeleton className="h-12 w-12 rounded-full" /></TableCell>
-                          <TableCell><div className="space-y-2"><Skeleton className="h-4 w-40" /></div></TableCell>
+                          <TableCell><Skeleton className="h-20 w-20 rounded-full" /></TableCell>
+                          <TableCell><div className="space-y-2"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-48" /></div></TableCell>
                           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                           <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                       </TableRow>
                   ))
-              ) : teachers.length > 0 ? teachers.map(teacher => (
-                <TableRow key={teacher.id} onClick={() => router.push(`/dashboard/teachers/${teacher.id}`)} className="cursor-pointer">
+              ) : filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
+                <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
-                     <Avatar className="h-12 w-12">
+                     <Avatar className="h-20 w-20">
                           <AvatarImage src={teacher.photo ?? undefined} alt={`${teacher.firstName} ${teacher.lastName}`} />
-                          <AvatarFallback>{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
+                          <AvatarFallback className="text-2xl">{getInitials(teacher.firstName, teacher.lastName)}</AvatarFallback>
                       </Avatar>
                   </TableCell>
                   <TableCell>
@@ -179,7 +234,9 @@ export default function TeachersTab() {
                     <div className="text-sm text-muted-foreground">{teacher.areaOfSpecialization || 'N/A'}</div>
                   </TableCell>
                   <TableCell>{teacher.staffId}</TableCell>
-                  <TableCell>{getSchoolName(teacher)}</TableCell>
+                  <TableCell>{teacher.professionalQualification || 'N/A'}</TableCell>
+                  <TableCell>{getSchoolName(teacher.schoolId)}</TableCell>
+                  <TableCell>{teacher.registeredNo || 'N/A'}</TableCell>
                   <TableCell>{teacher.phoneNo || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <AlertDialog>
@@ -212,7 +269,7 @@ export default function TeachersTab() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     {searchTerm ? 'No teachers found matching your search.' : 'No teachers have been added yet.'}
                   </TableCell>
                 </TableRow>
@@ -220,10 +277,10 @@ export default function TeachersTab() {
             </TableBody>
           </Table>
         </div>
-        {hasMore && (
+        {hasMore && !searchTerm && (
             <div className="mt-4 flex justify-center">
-                <Button onClick={handleLoadMore} disabled={isLoading}>
-                    {isLoading ? (
+                <Button onClick={fetchMoreTeachers} disabled={isLoadingMore}>
+                    {isLoadingMore ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Loading...
@@ -239,7 +296,7 @@ export default function TeachersTab() {
         setIsOpen={setIsFormOpen}
         editingTeacher={editingTeacher}
         onSave={handleFormSave}
-        schools={schools as School[]}
+        schools={schools}
       />
     </Card>
   );
