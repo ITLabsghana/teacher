@@ -36,7 +36,7 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
       .channel('leave-requests-realtime-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' },
         (payload) => {
-          const newRequest = { ...payload.new, startDate: new Date(payload.new.startDate), returnDate: new Date(payload.new.returnDate)} as LeaveRequest;
+          const newRequest = { ...(payload.new as LeaveRequest), startDate: new Date((payload.new as LeaveRequest).startDate), returnDate: new Date((payload.new as LeaveRequest).returnDate)} as LeaveRequest;
           if (payload.eventType === 'INSERT') {
             setLeaveRequests(current => [newRequest, ...current]);
           } else if (payload.eventType === 'UPDATE') {

@@ -174,12 +174,12 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
 
   useEffect(() => {
     const defaultValues: Partial<TeacherFormData> = {
-        staffId: '', firstName: '', lastName: '', gender: null,
+        staffId: '', firstName: '', lastName: '', gender: undefined,
         registeredNo: '', ghanaCardNo: 'GHA-', ssnitNo: '', tinNo: '', phoneNo: '', homeTown: '',
-        email: '', address: '', photo: '', academicQualification: '', professionalQualification: '',
-        otherProfessionalQualification: '', rank: '', job: null, subjects: '', leadershipPosition: '',
+        email: '', address: '', photo: null, academicQualification: '', professionalQualification: '',
+        otherProfessionalQualification: '', rank: '', job: undefined, subjects: '', leadershipPosition: '',
         otherLeadershipPosition: '', areaOfSpecialization: '', previousSchool: '',
-        schoolId: null, licensureNo: '', teacherUnion: '', bankName: '', bankBranch: '', accountNumber: '',
+        schoolId: undefined, licensureNo: '', teacherUnion: '', bankName: '', bankBranch: '', accountNumber: '',
         salaryScale: '', documents: [], dateOfBirth: null, lastPromotionDate: null, datePostedToCurrentSchool: null,
         firstAppointmentDate: null, dateConfirmed: null,
     };
@@ -281,18 +281,18 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
   };
 
   const onSubmit = async (data: TeacherFormData) => {
-    const sanitizedData = { ...data };
+    const sanitizedData: { [key: string]: any } = { ...data };
     for (const key in sanitizedData) {
-        if (sanitizedData[key as keyof typeof sanitizedData] === undefined) {
-            sanitizedData[key as keyof typeof sanitizedData] = null;
+        if (sanitizedData[key] === undefined) {
+            sanitizedData[key] = null;
         }
     }
     try {
         if (editingTeacher) {
-          await updateTeacher({ ...editingTeacher, ...sanitizedData });
+          await updateTeacher({ ...editingTeacher, ...sanitizedData } as Teacher);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
         } else {
-          await addTeacher(sanitizedData);
+          await addTeacher(sanitizedData as Partial<Omit<Teacher, 'id'>>);
           toast({ title: 'Success', description: 'New teacher added.' });
         }
         onSave();

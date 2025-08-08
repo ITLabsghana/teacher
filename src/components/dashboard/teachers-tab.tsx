@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Teacher, School } from '@/lib/types';
+import type { Teacher, School, LeaveRequest } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,16 +13,18 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates, getSchools } from '@/lib/supabase';
+import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates, getSchools, getLeaveRequests } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { differenceInYears } from 'date-fns';
+import { differenceInYears, isWithinInterval } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 const PAGE_SIZE = 20;
 
 export default function TeachersTab() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
@@ -37,13 +39,15 @@ export default function TeachersTab() {
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const [initialTeachers, schoolData] = await Promise.all([
+        const [initialTeachers, schoolData, leaveData] = await Promise.all([
             getTeachers(0, PAGE_SIZE),
-            getSchools()
+            getSchools(),
+            getLeaveRequests()
         ]);
 
         setTeachers(initialTeachers);
         setSchools(schoolData);
+        setLeaveRequests(leaveData);
         setPage(0);
         setHasMore(initialTeachers.length === PAGE_SIZE);
     } catch (error) {
@@ -141,6 +145,18 @@ export default function TeachersTab() {
     router.push(`/dashboard/teachers/${teacherId}`);
   };
 
+  const onLeaveTeacherIds = useMemo(() => {
+    const now = new Date();
+    return new Set(
+      leaveRequests
+        .filter(req =>
+            req.status === 'Approved' &&
+            isWithinInterval(now, { start: new Date(req.startDate), end: new Date(req.returnDate) })
+        )
+        .map(req => req.teacherId)
+    );
+  }, [leaveRequests]);
+
   const filteredTeachers = useMemo(() => {
     if (!searchTerm) return teachers;
 
@@ -230,7 +246,10 @@ export default function TeachersTab() {
                       </Avatar>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{teacher.firstName} {teacher.lastName}</div>
+                    <div className="font-medium flex items-center gap-2">
+                        {teacher.firstName} {teacher.lastName}
+                        {onLeaveTeacherIds.has(teacher.id) && <Badge className="bg-destructive text-destructive-foreground">On Leave</Badge>}
+                    </div>
                     <div className="text-sm text-muted-foreground">{teacher.areaOfSpecialization || 'N/A'}</div>
                   </TableCell>
                   <TableCell>{teacher.staffId}</TableCell>

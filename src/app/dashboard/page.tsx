@@ -20,33 +20,35 @@ async function StatsCards() {
   const { count: onLeaveCount, error: onLeaveError } = await adminDb.from('leave_requests')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'Approved')
-    .lte('start_date', today)
-    .gte('return_date', today);
+    .lte('startDate', today)
+    .gte('returnDate', today);
 
   // Fetch only the specific data needed for notifications
   const tenDaysFromNow = addDays(new Date(), 10).toISOString();
   const { data: leavesEndingSoonDetails, error: leavesEndingSoonError } = await adminDb.from('leave_requests')
     .select('*, teachers(firstName, lastName)')
     .eq('status', 'Approved')
-    .gte('return_date', today)
-    .lte('return_date', tenDaysFromNow);
+    .gte('returnDate', today)
+    .lte('returnDate', tenDaysFromNow);
 
   const oneYearFromNow = addYears(new Date(), 1);
-  const { data: allTeachersForRetirement, error: allTeachersError } = await adminDb.from('teachers').select('id, firstName, lastName, date_of_birth').not('date_of_birth', 'is', null);
+  const { data: allTeachersForRetirement, error: allTeachersError } = await adminDb.from('teachers').select('id, firstName, lastName, dateOfBirth').not('dateOfBirth', 'is', null);
 
   const nearingRetirementDetails = allTeachersForRetirement?.filter(teacher => {
-      const dob = parseISO(teacher.date_of_birth!);
+      if (!teacher.dateOfBirth) return false;
+      const dob = parseISO(teacher.dateOfBirth);
       const retirementDate = addYears(dob, 60);
       return retirementDate > new Date() && retirementDate <= oneYearFromNow;
     })
     .map(teacher => {
-        const dob = parseISO(teacher.date_of_birth!);
+        if (!teacher.dateOfBirth) return null;
+        const dob = parseISO(teacher.dateOfBirth);
         const retirementDate = addYears(dob, 60);
         return {
           name: `${teacher.firstName} ${teacher.lastName}`,
           timeToRetirement: formatDistanceToNow(retirementDate, { addSuffix: true }),
         }
-    }) || [];
+    }).filter(Boolean) || [];
 
   // Fetch all schools for enrollment data - This could be optimized further with a DB function if it becomes a bottleneck
   const schools = await getSchools(true);
@@ -87,7 +89,8 @@ async function StatsCards() {
   const grandTotalStudents = enrollmentTotals.total.boys + enrollmentTotals.total.girls;
 
   const leavesEndingSoonFormatted = leavesEndingSoonDetails?.map(req => {
-    const returnDateObj = parseISO(req.return_date);
+    if (!req.returnDate) return null;
+    const returnDateObj = parseISO(req.returnDate);
     const teacher = Array.isArray(req.teachers) ? req.teachers[0] : req.teachers; // Handle one-to-one relationship
     return {
         teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher',
@@ -95,7 +98,7 @@ async function StatsCards() {
         daysToReturn: differenceInDays(returnDateObj, new Date()),
         isReturningToday: isToday(returnDateObj),
     };
-  }) || [];
+  }).filter(Boolean) || [];
 
 
     return (
@@ -286,7 +289,6 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground">An overview of your institution's data.</p>
             </header>
             <Suspense fallback={<StatsSkeleton />}>
-                {/* @ts-expect-error Async Server Component */}
                 <StatsCards />
             </Suspense>
         </DashboardRealtimeWrapper>
