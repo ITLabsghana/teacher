@@ -159,6 +159,43 @@ export const getSchools = async (columns: string = '*'): Promise<Partial<School>
     return data || [];
 };
 
+export const getSchoolById = async (id: string): Promise<School | null> => {
+    const { data, error } = await supabase.from('schools').select('*').eq('id', id).single();
+    if (error) {
+        if (error.code !== 'PGRST116') {
+            console.error("Error fetching school by id:", error);
+        }
+        return null;
+    }
+    return data;
+};
+
+export const addSchool = async (school: Omit<School, 'id'>): Promise<School> => {
+    const { data, error } = await supabase.from('schools').insert([school]).select().single();
+    if (error) {
+        console.error("Error adding school:", error);
+        throw new Error("Could not add school.");
+    }
+    return data;
+};
+
+export const updateSchool = async (school: School): Promise<School> => {
+    const { data, error } = await supabase.from('schools').update(school).eq('id', school.id).select().single();
+    if (error) {
+        console.error("Error updating school:", error);
+        throw new Error("Could not update school.");
+    }
+    return data;
+};
+
+export const deleteSchool = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('schools').delete().eq('id', id);
+    if (error) {
+        console.error("Error deleting school:", error);
+        throw new Error("Could not delete school.");
+    }
+};
+
 // --- Leave Request Data ---
 
 export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
@@ -172,6 +209,47 @@ export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
         startDate: parseDate(r.start_date),
         returnDate: parseDate(r.return_date)
     })) as LeaveRequest[];
+};
+
+// --- Leave Request Data ---
+
+export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status'>): Promise<LeaveRequest> => {
+    const newRequest = { ...request, status: 'Pending' as const };
+    const { data, error } = await supabase.from('leave_requests').insert([newRequest]).select().single();
+    if (error) {
+        console.error("Error adding leave request:", error);
+        throw new Error("Could not add leave request.");
+    }
+    return { ...data, startDate: parseDate(data.start_date), returnDate: parseDate(data.return_date)} as LeaveRequest;
+};
+
+export const updateLeaveRequest = async (request: LeaveRequest): Promise<LeaveRequest> => {
+    const { data, error } = await supabase.from('leave_requests').update(request).eq('id', request.id).select().single();
+    if (error) {
+        console.error("Error updating leave request:", error);
+        throw new Error("Could not update leave request.");
+    }
+    return { ...data, startDate: parseDate(data.start_date), returnDate: parseDate(data.return_date)} as LeaveRequest;
+};
+
+// --- User Data ---
+
+export const getUsers = async (): Promise<User[]> => {
+    const { data, error } = await supabase.from('users').select('*').order('username');
+    if (error) {
+        console.error("Error fetching users:", error);
+        throw new Error("Could not fetch users.");
+    }
+    return data || [];
+};
+
+export const getUserByUsername = async (username: string): Promise<User | null> => {
+    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
+    if (error && error.code !== 'PGRST116') {
+        console.error("Error fetching user by username:", error);
+        throw new Error("Could not fetch user.");
+    }
+    return data;
 };
 
 // --- Mutation Functions ---
