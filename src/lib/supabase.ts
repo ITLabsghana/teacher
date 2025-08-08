@@ -211,8 +211,6 @@ export const getLeaveRequests = async (): Promise<LeaveRequest[]> => {
     })) as LeaveRequest[];
 };
 
-// --- Leave Request Data ---
-
 export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status'>): Promise<LeaveRequest> => {
     const newRequest = { ...request, status: 'Pending' as const };
     const { data, error } = await supabase.from('leave_requests').insert([newRequest]).select().single();
