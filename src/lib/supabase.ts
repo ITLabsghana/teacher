@@ -8,9 +8,24 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const parseDocuments = (docs: any) => {
+    if (Array.isArray(docs)) {
+        return docs;
+    }
+    if (typeof docs === 'string') {
+        try {
+            const parsed = JSON.parse(docs);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+    return [];
+};
+
 export const parseTeacherDates = (teacher: any): Teacher => ({
     ...teacher,
-    documents: teacher.documents || [], // No need to parse JSON if stored as jsonb
+    documents: parseDocuments(teacher.documents),
     dateOfBirth: teacher.dateOfBirth ? new Date(teacher.dateOfBirth) : undefined,
     firstAppointmentDate: teacher.firstAppointmentDate ? new Date(teacher.firstAppointmentDate) : undefined,
     lastPromotionDate: teacher.lastPromotionDate ? new Date(teacher.lastPromotionDate) : undefined,
