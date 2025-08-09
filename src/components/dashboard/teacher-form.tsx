@@ -156,6 +156,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
   const [age, setAge] = useState<number | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [docUploadProgress, setDocUploadProgress] = useState<{ [fileName: string]: number }>({});
 
 
@@ -281,6 +282,7 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
   };
 
   const onSubmit = async (data: TeacherFormData) => {
+    setIsSubmitting(true);
     const sanitizedData: { [key: string]: any } = { ...data };
     for (const key in sanitizedData) {
         if (sanitizedData[key] === undefined) {
@@ -298,6 +300,8 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
         onSave();
     } catch(err: any) {
         toast({ variant: 'destructive', title: 'Error', description: err.message || "An unknown error occurred." });
+    } finally {
+        setIsSubmitting(false);
     }
   };
   
@@ -461,8 +465,11 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
                 </div>
             </ScrollArea>
             <DialogFooter className="pt-6 border-t">
-                <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-accent hover:bg-accent/90">{editingTeacher ? 'Save Changes' : 'Add Teacher'}</Button>
+                <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
+                <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {editingTeacher ? 'Save Changes' : 'Add Teacher'}
+                </Button>
             </DialogFooter>
         </form>
       </DialogContent>
