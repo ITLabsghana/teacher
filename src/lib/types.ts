@@ -51,6 +51,7 @@ export interface LeaveRequest {
   startDate: Date;
   returnDate: Date;
   status: 'Pending' | 'Approved' | 'Rejected';
+  teachers?: { firstName: string; lastName: string; };
 }
 
 export interface User {

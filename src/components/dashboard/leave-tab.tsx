@@ -18,20 +18,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface LeaveTabProps {
   initialLeaveRequests: LeaveRequest[];
-  initialTeachers: Teacher[];
   isLoading: boolean;
 }
 
-export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoading }: LeaveTabProps) {
+export default function LeaveTab({ initialLeaveRequests, isLoading }: LeaveTabProps) {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
-  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
     setLeaveRequests(initialLeaveRequests);
-    setTeachers(initialTeachers);
-  }, [initialLeaveRequests, initialTeachers]);
+  }, [initialLeaveRequests]);
 
   useEffect(() => {
     const channel = supabase
@@ -57,9 +54,11 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
   }, []);
 
 
-  const getTeacherName = (teacherId: string) => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'N/A';
+  const getTeacherName = (req: LeaveRequest) => {
+    if (req.teachers) {
+        return `${req.teachers.firstName} ${req.teachers.lastName}`;
+    }
+    return 'N/A';
   };
 
   const handleUpdateStatus = async (leaveId: string, status: LeaveRequest['status']) => {
@@ -139,7 +138,7 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
             ) : leaveRequests.length > 0 ? leaveRequests.map(req => (
               <AlertDialog>
               <TableRow key={req.id}>
-                <TableCell>{getTeacherName(req.teacherId)}</TableCell>
+                <TableCell>{getTeacherName(req)}</TableCell>
                 <TableCell>{req.leaveType}</TableCell>
                 <TableCell>{new Date(req.startDate).toLocaleDateString()}</TableCell>
                 <TableCell>{new Date(req.returnDate).toLocaleDateString()}</TableCell>
@@ -205,7 +204,6 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
       <LeaveForm
         isOpen={isFormOpen}
         setIsOpen={setIsFormOpen}
-        teachers={teachers}
         onSave={handleFormSave}
       />
     </Card>

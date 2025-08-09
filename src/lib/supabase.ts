@@ -68,7 +68,7 @@ export const getSchoolById = async (id: string, isAdmin: boolean = false): Promi
 
 export const getLeaveRequests = async (isAdmin: boolean = false): Promise<LeaveRequest[]> => {
     const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client.from('leave_requests').select('*').order('startDate', { ascending: false });
+    const { data, error } = await client.from('leave_requests').select('*, teachers(firstName, lastName)').order('startDate', { ascending: false });
     if (error) throw error;
     return data.map(r => ({ ...r, startDate: new Date(r.startDate), returnDate: new Date(r.returnDate)})) || [];
 };
