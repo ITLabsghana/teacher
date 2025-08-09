@@ -143,7 +143,7 @@ interface TeacherFormProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   editingTeacher: Teacher | null;
-  onSave: () => void;
+  onSave: (newTeacher: Teacher) => void;
   schools: School[];
 }
 
@@ -291,13 +291,14 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
     }
     try {
         if (editingTeacher) {
-          await updateTeacher({ ...editingTeacher, ...sanitizedData } as Teacher);
+          const updatedTeacher = await updateTeacher({ ...editingTeacher, ...sanitizedData } as Teacher);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
+          onSave(updatedTeacher);
         } else {
-          await addTeacher(sanitizedData as Partial<Omit<Teacher, 'id'>>);
+          const newTeacher = await addTeacher(sanitizedData as Partial<Omit<Teacher, 'id'>>);
           toast({ title: 'Success', description: 'New teacher added.' });
+          onSave(newTeacher);
         }
-        onSave();
     } catch(err: any) {
         toast({ variant: 'destructive', title: 'Error', description: err.message || "An unknown error occurred." });
     } finally {

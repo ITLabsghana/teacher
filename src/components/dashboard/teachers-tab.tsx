@@ -42,21 +42,6 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
   const [hasMore, setHasMore] = useState(initialTeachers.length === PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const refreshTeachers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-        const newTeachers = await getTeachers(0, PAGE_SIZE);
-        setTeachers(newTeachers);
-        setPage(0);
-        setHasMore(newTeachers.length === PAGE_SIZE);
-    } catch (error) {
-        console.error("Failed to refresh teachers:", error);
-        toast({ variant: 'destructive', title: "Error", description: "Failed to refresh teachers." });
-    } finally {
-        setIsLoading(false);
-    }
-  }, [toast]);
-
   const fetchMoreTeachers = useCallback(async () => {
       if (isLoadingMore || !hasMore) return;
       setIsLoadingMore(true);
@@ -76,16 +61,25 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
       }
   }, [page, hasMore, isLoadingMore, toast]);
 
-  const handleFormSave = () => {
+  const handleFormSave = (newTeacher: Teacher) => {
+    setTeachers(current => [newTeacher, ...current.filter(t => t.id !== newTeacher.id)]);
     setIsFormOpen(false);
-    refreshTeachers();
   }
 
   useEffect(() => {
     const channel = supabase
       .channel('teachers-realtime-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => {
-        refreshTeachers();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+              const newTeacher = parseTeacherDates(payload.new);
+              setTeachers(current => [newTeacher, ...current.filter(t => t.id !== newTeacher.id)]);
+          } else if (payload.eventType === 'UPDATE') {
+              const updatedTeacher = parseTeacherDates(payload.new);
+              setTeachers(current => current.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
+          } else if (payload.eventType === 'DELETE') {
+              const deletedId = (payload.old as Teacher).id;
+              setTeachers(current => current.filter(t => t.id !== deletedId));
+          }
       })
       .subscribe();
 
@@ -93,7 +87,7 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
       supabase.removeChannel(channel);
     };
 
-  }, [refreshTeachers]);
+  }, []);
 
   const handleAdd = () => {
     setEditingTeacher(null);
