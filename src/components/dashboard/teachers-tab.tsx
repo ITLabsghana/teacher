@@ -102,6 +102,7 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
   const handleDelete = async (teacherId: string) => {
     try {
       await dbDeleteTeacher(teacherId);
+      setTeachers(current => current.filter(t => t.id !== teacherId));
       toast({ title: 'Success', description: 'Teacher deleted successfully.' });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });

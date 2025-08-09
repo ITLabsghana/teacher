@@ -1,7 +1,6 @@
 'use server';
 
 import { adminDb } from '@/lib/supabase-admin';
-import { v4 as uuidv4 } from 'uuid';
 
 export async function uploadFile(formData: FormData): Promise<string> {
     const file = formData.get('file') as File;
@@ -13,7 +12,7 @@ export async function uploadFile(formData: FormData): Promise<string> {
     // The browser will pass a FormData object, but we need to convert it to a Buffer for the server-side upload.
     const buffer = Buffer.from(await file.arrayBuffer());
     const fileExtension = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExtension}`;
+    const fileName = `${Date.now()}.${fileExtension}`;
     
     const { data, error } = await adminDb.storage
         .from('teacher-files')
@@ -23,6 +22,7 @@ export async function uploadFile(formData: FormData): Promise<string> {
         });
 
     if (error) {
+        console.error('Supabase Storage Error:', error);
         throw new Error(`Storage Error: ${error.message}`);
     }
 

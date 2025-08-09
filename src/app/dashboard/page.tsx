@@ -286,7 +286,7 @@ export default function DashboardPage() {
         <DashboardRealtimeWrapper>
             <header className="mb-8">
                 <h1 className="text-4xl font-headline font-bold text-primary">TMS Dashboard</h1>
-                <p className="text-muted-foreground">An overview of your institution's data.</p>
+                <p className="text-muted-foreground">An overview of your circuit's data.</p>
             </header>
             <Suspense fallback={<StatsSkeleton />}>
                 <StatsCards />
