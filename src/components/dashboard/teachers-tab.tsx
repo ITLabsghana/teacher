@@ -13,24 +13,23 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates, getSchools, getLeaveRequests } from '@/lib/supabase';
+import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates, getSchools } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { differenceInYears, isWithinInterval } from 'date-fns';
+import { differenceInYears } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { searchTeachers } from '@/app/actions/teacher-actions';
 
 const PAGE_SIZE = 20;
 
 interface TeachersTabProps {
     initialTeachers: Teacher[];
     initialSchools: School[];
-    initialLeaveRequests: LeaveRequest[];
 }
 
-export default function TeachersTab({ initialTeachers, initialSchools, initialLeaveRequests }: TeachersTabProps) {
+export default function TeachersTab({ initialTeachers, initialSchools }: TeachersTabProps) {
   const [teachers, setTeachers] = useState<Teacher[]>(() => initialTeachers.map(parseTeacherDates));
   const [schools, setSchools] = useState<School[]>(initialSchools);
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
@@ -41,6 +40,24 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(initialTeachers.length === PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    const handler = setTimeout(async () => {
+        if (searchTerm) {
+            setIsSearching(true);
+            const searchResults = await searchTeachers(searchTerm);
+            setTeachers(searchResults);
+            setIsSearching(false);
+        } else {
+            setTeachers(initialTeachers.map(parseTeacherDates));
+        }
+    }, 500); // 500ms debounce
+
+    return () => {
+        clearTimeout(handler);
+    };
+  }, [searchTerm, initialTeachers]);
 
   const fetchMoreTeachers = useCallback(async () => {
       if (isLoadingMore || !hasMore) return;
@@ -122,46 +139,9 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
     router.push(`/dashboard/teachers/${teacherId}`);
   };
 
-  const onLeaveTeacherIds = useMemo(() => {
-    const now = new Date();
-    return new Set(
-      leaveRequests
-        .filter(req =>
-            req.status === 'Approved' &&
-            isWithinInterval(now, { start: new Date(req.startDate), end: new Date(req.returnDate) })
-        )
-        .map(req => req.teacherId)
-    );
-  }, [leaveRequests]);
-
   const filteredTeachers = useMemo(() => {
-    if (!searchTerm) return teachers;
-
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    const searchNumber = parseInt(lowerCaseSearchTerm, 10);
-
-    return teachers.filter(teacher => {
-      const schoolName = getSchoolName(teacher.schoolId).toLowerCase();
-      const areaOfSpecialization = teacher.areaOfSpecialization?.toLowerCase() || '';
-
-      const textMatch = (
-        schoolName.includes(lowerCaseSearchTerm) ||
-        areaOfSpecialization.includes(lowerCaseSearchTerm) ||
-        Object.values(teacher).some(value =>
-          String(value).toLowerCase().includes(lowerCaseSearchTerm)
-        )
-      );
-
-      if (!isNaN(searchNumber) && teacher.datePostedToCurrentSchool) {
-          const yearsInSchool = differenceInYears(new Date(), teacher.datePostedToCurrentSchool);
-          if (yearsInSchool === searchNumber) {
-              return true;
-          }
-      }
-
-      return textMatch;
-    });
-  }, [teachers, searchTerm, getSchoolName]);
+    return teachers;
+  }, [teachers]);
 
   return (
     <Card className="bg-purple-100 dark:bg-purple-900/50">
@@ -177,6 +157,7 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
         </div>
         <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
             <Input
                 placeholder="Search by name, school, specialization, or years in school..."
                 value={searchTerm}
@@ -225,7 +206,6 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
                   <TableCell>
                     <div className="font-medium flex items-center gap-2">
                         {teacher.firstName} {teacher.lastName}
-                        {onLeaveTeacherIds.has(teacher.id) && <Badge className="bg-destructive text-destructive-foreground">On Leave</Badge>}
                     </div>
                     <div className="text-sm text-muted-foreground">{teacher.areaOfSpecialization || 'N/A'}</div>
                   </TableCell>
