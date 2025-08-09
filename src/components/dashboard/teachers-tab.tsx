@@ -42,6 +42,21 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
   const [hasMore, setHasMore] = useState(initialTeachers.length === PAGE_SIZE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  const refreshTeachers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const newTeachers = await getTeachers(0, PAGE_SIZE);
+        setTeachers(newTeachers);
+        setPage(0);
+        setHasMore(newTeachers.length === PAGE_SIZE);
+    } catch (error) {
+        console.error("Failed to refresh teachers:", error);
+        toast({ variant: 'destructive', title: "Error", description: "Failed to refresh teachers." });
+    } finally {
+        setIsLoading(false);
+    }
+  }, [toast]);
+
   const fetchMoreTeachers = useCallback(async () => {
       if (isLoadingMore || !hasMore) return;
       setIsLoadingMore(true);
@@ -63,35 +78,22 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
 
   const handleFormSave = () => {
     setIsFormOpen(false);
-    // Real-time listener will handle the update, no need to manually fetch or add.
+    refreshTeachers();
   }
 
   useEffect(() => {
     const channel = supabase
       .channel('teachers-realtime-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' },
-        (payload) => {
-            const updatedTeacher = parseTeacherDates(payload.new);
-
-            if (payload.eventType === 'INSERT') {
-                setTeachers(current => [updatedTeacher, ...current.filter(t => t.id !== updatedTeacher.id)]);
-            }
-            if (payload.eventType === 'UPDATE') {
-                setTeachers(current => current.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
-            }
-            if (payload.eventType === 'DELETE') {
-                 const deletedId = (payload.old as Teacher).id;
-                 setTeachers(current => current.filter(t => t.id !== deletedId));
-            }
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => {
+        refreshTeachers();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
 
-  }, []);
+  }, [refreshTeachers]);
 
   const handleAdd = () => {
     setEditingTeacher(null);
