@@ -11,8 +11,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { LeaveForm } from './leave-form';
 import { Badge } from '@/components/ui/badge';
-import { supabase, updateLeaveRequest as dbUpdateLeaveRequest } from '@/lib/supabase';
+import { supabase, updateLeaveRequest as dbUpdateLeaveRequest, deleteLeaveRequest as dbDeleteLeaveRequest } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface LeaveTabProps {
@@ -73,6 +74,15 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
         }
     }
   };
+
+  const handleDelete = async (leaveId: string) => {
+    try {
+        await dbDeleteLeaveRequest(leaveId);
+        toast({ title: "Success", description: "Leave request deleted." });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
   
   const getStatusVariant = (status: LeaveRequest['status']): "default" | "secondary" | "destructive" => {
     switch (status) {
@@ -127,6 +137,7 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
                     </TableRow>
                 ))
             ) : leaveRequests.length > 0 ? leaveRequests.map(req => (
+              <AlertDialog>
               <TableRow key={req.id}>
                 <TableCell>{getTeacherName(req.teacherId)}</TableCell>
                 <TableCell>{req.leaveType}</TableCell>
@@ -161,10 +172,26 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
                             </DropdownMenuSubContent>
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
+                        <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>Delete</DropdownMenuItem>
+                        </AlertDialogTrigger>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete this leave request.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(req.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
                 </TableCell>
               </TableRow>
+              </AlertDialog>
             )) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">

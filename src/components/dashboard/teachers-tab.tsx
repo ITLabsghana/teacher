@@ -167,7 +167,7 @@ export default function TeachersTab({ initialTeachers, initialSchools, initialLe
   }, [teachers, searchTerm, getSchoolName]);
 
   return (
-    <Card>
+    <Card className="bg-purple-100 dark:bg-purple-900/50">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>

@@ -74,26 +74,26 @@ function SchoolListView({ schools, isLoading, onRowClick }: { schools: School[],
                 return (
                     <div
                         key={school.id}
-                        className="p-4 bg-secondary rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                        className="p-4 bg-blue-100 dark:bg-blue-900/50 rounded-lg cursor-pointer hover:bg-blue-200/50 dark:hover:bg-blue-800/50 transition-colors"
                         onClick={() => onRowClick(school.id)}
                     >
                         <h3 className="font-bold text-lg text-primary">{school.name}</h3>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                            <div className="flex items-center gap-2 p-3 bg-background rounded-md">
+                            <div className="flex items-center gap-2 p-3 bg-blue-200 dark:bg-blue-800/60 rounded-md">
                                 <Users className="h-5 w-5 text-muted-foreground" />
                                 <div>
                                     <p className="text-muted-foreground">Total Boys</p>
                                     <p className="font-semibold">{totals.boys}</p>
                                 </div>
                             </div>
-                             <div className="flex items-center gap-2 p-3 bg-background rounded-md">
+                             <div className="flex items-center gap-2 p-3 bg-pink-200 dark:bg-pink-800/60 rounded-md">
                                 <Users className="h-5 w-5 text-muted-foreground" />
                                 <div>
                                     <p className="text-muted-foreground">Total Girls</p>
                                     <p className="font-semibold">{totals.girls}</p>
                                 </div>
                             </div>
-                             <div className="flex items-center gap-2 p-3 bg-background rounded-md">
+                             <div className="flex items-center gap-2 p-3 bg-indigo-200 dark:bg-indigo-800/60 rounded-md">
                                 <Users className="h-5 w-5 text-muted-foreground" />
                                 <div>
                                     <p className="text-muted-foreground">Grand Total</p>

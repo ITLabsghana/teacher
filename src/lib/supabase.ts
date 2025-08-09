@@ -154,6 +154,11 @@ export const addLeaveRequest = async (request: Omit<LeaveRequest, 'id' | 'status
     return { ...data, startDate: new Date(data.startDate), returnDate: new Date(data.returnDate)};
 };
 
+export const deleteLeaveRequest = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('leave_requests').delete().eq('id', id);
+    if (error) throw error;
+};
+
 export const updateLeaveRequest = async (request: LeaveRequest): Promise<LeaveRequest> => {
     const { data, error } = await supabase.from('leave_requests').update(request).eq('id', request.id).select().single();
     if (error) throw error;

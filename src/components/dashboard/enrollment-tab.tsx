@@ -159,7 +159,7 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
         )}
         {selectedSchoolId ? (
           <div className="space-y-4">
-             <div className="p-4 border rounded-lg space-y-4">
+             <div className="p-4 bg-green-200 dark:bg-green-800/60 border rounded-lg space-y-4">
                 <p className="text-sm font-medium">Add Class Sections</p>
                 <div className="flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleAddSection('KG')} disabled={checkSectionExists('KG')}>Add KG Section</Button>
@@ -226,7 +226,7 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
                     <TableFooter>
                         <TableRow>
                             <TableCell colSpan={5} className="p-0">
-                                <div className="flex flex-wrap justify-between w-full items-center bg-muted p-4 mt-4 rounded-b-lg gap-4">
+                                <div className="flex flex-wrap justify-between w-full items-center bg-green-200 dark:bg-green-800/60 p-4 mt-4 rounded-b-lg gap-4">
                                     <div className="flex flex-wrap gap-x-8 gap-y-2 font-bold">
                                         <span>Total Boys: {totals.boys}</span>
                                         <span>Total Girls: {totals.girls}</span>
@@ -280,7 +280,7 @@ export default function EnrollmentTab({ schools, selectedSchoolId: initialSchool
   }
 
   return (
-    <Card>
+    <Card className="bg-green-100 dark:bg-green-900/50">
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>
