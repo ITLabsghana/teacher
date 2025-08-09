@@ -132,7 +132,7 @@ const teacherSchema = z.object({
 
 type TeacherFormData = z.infer<typeof teacherSchema>;
 
-const academicQualifications = ['SSSCE', 'WASSCE', 'Diploma', 'HND', 'B.Ed', 'Cert \'A\''];
+const academicQualifications = ['SSSCE', 'WASSCE', 'G.C.E A LEVEL', 'Diploma', 'HND', 'B.Ed', 'Cert \'A\''];
 const professionalQualificationsList = ['Diploma in Basic Education', 'Diploma in Basic Education (J.H.S)', 'Cert \'A\'', 'Fashion', 'Technical', 'B.Ed', 'M.Ed', 'PhD', 'Ed.D', 'Other'];
 const ranks = ['Superintendent II', 'Superintendent I', 'Senior Superintendent II', 'Senior Superintendent I', 'Principal Superintendent', 'Assistant Director II', 'Assistant Director I', 'Deputy Director', 'Director II', 'Director I', 'Deputy Director General'];
 const jobs = ['Head Teacher', 'Class Teacher', 'Subject Teacher'];
