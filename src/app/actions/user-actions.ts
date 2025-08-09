@@ -40,7 +40,7 @@ export async function createUserAction(user: Omit<User, 'id'>): Promise<User> {
         throw new Error(`Profile Error: ${profileError.message}`);
     }
 
-    return profile;
+    return profile as User;
 };
 
 export async function updateUserAction(user: User): Promise<User> {
@@ -57,7 +57,7 @@ export async function updateUserAction(user: User): Promise<User> {
     // Update the user profile in the public 'users' table
     const { data, error } = await adminDb.from('users').update(updateData).eq('id', user.id).select().single();
     if (error) throw error;
-    return data;
+    return data as User;
 };
 
 export async function deleteUserAction(id: string): Promise<void> {
@@ -72,7 +72,7 @@ export async function deleteUserAction(id: string): Promise<void> {
 
     // Finally, delete the user from Supabase Auth
     if (user.auth_id) {
-        const { error: deleteAuthError } = await adminDb.auth.admin.deleteUser(user.auth_id);
+        const { error: deleteAuthError } = await adminDb.auth.admin.deleteUser(user.auth_id as string);
         // We don't throw an error here if auth deletion fails,
         // as the primary record is gone. But we should log it.
         if (deleteAuthError) {

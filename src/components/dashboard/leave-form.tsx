@@ -13,7 +13,7 @@ import { DatePickerSelect } from '@/components/dashboard/teacher-form';
 import { useToast } from '@/hooks/use-toast';
 import { addLeaveRequest as dbAddLeaveRequest } from '@/lib/supabase';
 
-const leaveTypes: LeaveRequest['leaveType'][] = ['Study Leave (with pay)', 'Study Leave (without pay)', 'Sick', 'Maternity', 'Paternity', 'Casual', 'Other'];
+const leaveTypes = ['Study Leave (with pay)', 'Study Leave (without pay)', 'Sick', 'Maternity', 'Paternity', 'Casual', 'Other'] as const;
 
 const leaveSchema = z.object({
   teacherId: z.string().min(1, "Teacher is required"),

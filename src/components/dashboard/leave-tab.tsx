@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import type { LeaveRequest, Teacher } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { isWithinInterval } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
@@ -36,7 +37,7 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
       .channel('leave-requests-realtime-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' },
         (payload) => {
-          const newRequest = { ...payload.new, startDate: new Date(payload.new.startDate), returnDate: new Date(payload.new.returnDate)} as LeaveRequest;
+          const newRequest = { ...(payload.new as LeaveRequest), startDate: new Date((payload.new as LeaveRequest).startDate), returnDate: new Date((payload.new as LeaveRequest).returnDate)} as LeaveRequest;
           if (payload.eventType === 'INSERT') {
             setLeaveRequests(current => [newRequest, ...current]);
           } else if (payload.eventType === 'UPDATE') {
@@ -109,6 +110,7 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
               <TableHead>Start Date</TableHead>
               <TableHead>Return Date</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -132,6 +134,13 @@ export default function LeaveTab({ initialLeaveRequests, initialTeachers, isLoad
                 <TableCell>{new Date(req.returnDate).toLocaleDateString()}</TableCell>
                 <TableCell>
                     <Badge variant={getStatusVariant(req.status)} className={req.status === 'Approved' ? 'bg-green-500' : ''}>{req.status}</Badge>
+                </TableCell>
+                <TableCell>
+                    {req.status === 'Approved' && isWithinInterval(new Date(), { start: new Date(req.startDate), end: new Date(req.returnDate) }) ? (
+                        <Badge className="bg-blue-500">Active</Badge>
+                    ) : (
+                        <Badge variant="outline">Inactive</Badge>
+                    )}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

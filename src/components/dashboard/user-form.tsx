@@ -14,13 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 
-const allUserRoles: User['role'][] = ['Admin', 'Supervisor', 'Viewer'];
+const roles = ['Admin', 'Supervisor', 'Viewer'] as const;
 
 const userSchema = z.object({
   username: z.string().min(2, "Username is too short"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters long"),
-  role: z.enum(allUserRoles, { required_error: "Role is required" }),
+  role: z.enum(roles, { required_error: "Role is required" }),
 });
 
 // For editing, password is not required
@@ -29,7 +29,7 @@ const editUserSchema = userSchema.omit({ password: true }).extend({
 });
 
 
-type UserFormData = z.infer<typeof userSchema>;
+type UserFormData = z.infer<typeof userSchema> | z.infer<typeof editUserSchema>;
 
 interface UserFormProps {
   isOpen: boolean;
@@ -49,9 +49,9 @@ export function UserForm({ isOpen, setIsOpen, editingUser, currentUser, onUserAc
 
   const availableRoles = useMemo(() => {
     if (currentUser?.role === 'Supervisor') {
-      return allUserRoles.filter(role => role !== 'Admin');
+      return roles.filter(role => role !== 'Admin');
     }
-    return allUserRoles;
+    return roles;
   }, [currentUser]);
 
 
@@ -69,10 +69,10 @@ export function UserForm({ isOpen, setIsOpen, editingUser, currentUser, onUserAc
     try {
         if (editingUser) {
             const { password, ...updateData } = data; // Exclude password from general update
-            await updateUser({ ...editingUser, ...updateData });
+            await updateUser({ ...editingUser, ...updateData } as User);
             toast({ title: 'Success', description: 'User updated successfully.' });
         } else {
-            await addUser(data);
+            await addUser(data as Omit<User, 'id'>);
             toast({ title: 'Success', description: 'New user added.' });
         }
         onUserAction();
