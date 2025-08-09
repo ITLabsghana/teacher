@@ -28,7 +28,7 @@ interface TeachersTabProps {
 }
 
 export default function TeachersTab({ initialTeachers, initialSchools, initialLeaveRequests }: TeachersTabProps) {
-  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
+  const [teachers, setTeachers] = useState<Teacher[]>(() => initialTeachers.map(parseTeacherDates));
   const [schools, setSchools] = useState<School[]>(initialSchools);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [isLoading, setIsLoading] = useState(false);
