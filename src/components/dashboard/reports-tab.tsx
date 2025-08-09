@@ -28,12 +28,7 @@ type ReportHeader = { key: string; label: string };
 export default function ReportsTab() {
   const { toast } = useToast();
   
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [schools, setSchools] = useState<School[]>([]);
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [reportType, setReportType] = useState('');
   const [reportFormat, setReportFormat] = useState<ReportFormat>('csv');
@@ -43,48 +38,6 @@ export default function ReportsTab() {
   const [clearDataConfirmation, setClearDataConfirmation] = useState('');
 
   const CONFIRMATION_TEXT = 'DELETE ALL DATA';
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-        const [t, s, l, u] = await Promise.all([
-            getTeachers(0, 10000, true),
-            getSchools(true),
-            getLeaveRequests(true),
-            getUsers(true)
-        ]);
-        setTeachers(t);
-        setSchools(s);
-        setLeaveRequests(l);
-        setUsers(u);
-    } catch(e) {
-        toast({variant: 'destructive', title: 'Error', description: 'Could not load data for reports.'})
-    } finally {
-        setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchData();
-
-    const allChannels = supabase.getChannels();
-    const reportsChannel = allChannels.find(c => c.topic === 'reports-realtime-channel');
-    if(reportsChannel) {
-      supabase.removeChannel(reportsChannel);
-    }
-
-    const channel = supabase
-      .channel('reports-realtime-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'schools' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => fetchData())
-      .subscribe();
-
-    return () => {
-        supabase.removeChannel(channel);
-    }
-  }, []);
 
   const downloadFile = (content: string, fileName: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
@@ -172,95 +125,120 @@ export default function ReportsTab() {
       });
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (!reportType) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please select a report type.' });
         return;
     }
 
-    let data: any[] = [];
-    let headers: ReportHeader[] = [];
-    let title = '';
-    const getSchoolName = (schoolId?: string) => schools.find(s => s.id === schoolId)?.name || 'N/A';
-    const getTeacherName = (teacherId: string) => {
-        const teacher = teachers.find(t => t.id === teacherId);
-        return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'N/A';
-    };
-    
-    switch (reportType) {
-        case 'teacher-list':
-            title = 'Teacher List';
-            headers = [
-                { key: 'staffId', label: 'Staff ID' }, { key: 'firstName', label: 'First Name' }, { key: 'lastName', label: 'Last Name' },
-                { key: 'email', label: 'Email' }, { key: 'phoneNo', label: 'Phone No.' }, { key: 'gender', label: 'Gender' },
-                { key: 'rank', label: 'Rank' }, { key: 'job', label: 'Job' }, { key: 'currentSchool', label: 'Current School' },
-                { key: 'firstAppointmentDate', label: 'First Appointment Date' },
-            ];
-            data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId) }));
-            break;
-        case 'school-enrollment':
-            title = 'School Enrollment Summary';
-            headers = [
-                { key: 'schoolName', label: 'School Name' }, { key: 'classLevel', label: 'Class' }, { key: 'boys', label: 'Boys' },
-                { key: 'girls', label: 'Girls' }, { key: 'total', label: 'Total Students' },
-            ];
-            schools.forEach(school => {
-                if (school.enrollment && Object.keys(school.enrollment).length > 0) {
-                    Object.entries(school.enrollment).forEach(([classLevel, { boys, girls }]) => {
-                        data.push({ schoolName: school.name, classLevel, boys, girls, total: (boys || 0) + (girls || 0) });
-                    });
-                } else {
-                    data.push({ schoolName: school.name, classLevel: 'N/A', boys: 0, girls: 0, total: 0 });
-                }
-            });
-            break;
-        case 'leave-summary':
-            title = 'Leave Summary';
-            headers = [
-                { key: 'teacherName', label: 'Teacher Name' }, { key: 'leaveType', label: 'Leave Type' },
-                { key: 'startDate', label: 'Start Date' }, { key: 'returnDate', label: 'Return Date' }, { key: 'status', label: 'Status' },
-            ];
-            data = leaveRequests.map(req => ({
-                teacherName: getTeacherName(req.teacherId), ...req
-            }));
-            break;
-        case 'general-report':
-            title = 'General Institution Report';
-            const totalStudents = schools.reduce((sum, school) => sum + Object.values(school.enrollment || {}).reduce((acc, curr) => acc + (curr.boys || 0) + (curr.girls || 0), 0), 0);
-            headers = [{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }];
-            data = [
-                { metric: 'Total Teachers', value: teachers.length }, { metric: 'Total Schools', value: schools.length },
-                { metric: 'Total Students', value: totalStudents }, { metric: 'Total Leave Requests', value: leaveRequests.length },
-                { metric: 'Approved Leave Requests', value: leaveRequests.filter(r => r.status === 'Approved').length },
-            ];
-            break;
-        default:
-            toast({ variant: 'destructive', title: 'Error', description: 'Unknown report type.' });
-            return;
+    setIsLoading(true);
+    try {
+        let data: any[] = [];
+        let headers: ReportHeader[] = [];
+        let title = '';
+
+        switch (reportType) {
+            case 'teacher-list':
+                title = 'Teacher List';
+                headers = [
+                    { key: 'staffId', label: 'Staff ID' }, { key: 'firstName', label: 'First Name' }, { key: 'lastName', label: 'Last Name' },
+                    { key: 'email', label: 'Email' }, { key: 'phoneNo', label: 'Phone No.' }, { key: 'gender', label: 'Gender' },
+                    { key: 'rank', label: 'Rank' }, { key: 'job', label: 'Job' }, { key: 'currentSchool', label: 'Current School' },
+                    { key: 'firstAppointmentDate', label: 'First Appointment Date' },
+                ];
+                const teachers = await getTeachers(0, 10000, true);
+                const schoolsForTeachers = await getSchools(true);
+                const getSchoolName = (schoolId?: string) => schoolsForTeachers.find(s => s.id === schoolId)?.name || 'N/A';
+                data = teachers.map(t => ({ ...t, currentSchool: getSchoolName(t.schoolId) }));
+                break;
+            case 'school-enrollment':
+                title = 'School Enrollment Summary';
+                headers = [
+                    { key: 'schoolName', label: 'School Name' }, { key: 'classLevel', label: 'Class' }, { key: 'boys', label: 'Boys' },
+                    { key: 'girls', label: 'Girls' }, { key: 'total', label: 'Total Students' },
+                ];
+                const schoolsForEnrollment = await getSchools(true);
+                schoolsForEnrollment.forEach(school => {
+                    if (school.enrollment && Object.keys(school.enrollment).length > 0) {
+                        Object.entries(school.enrollment).forEach(([classLevel, { boys, girls }]) => {
+                            data.push({ schoolName: school.name, classLevel, boys, girls, total: (boys || 0) + (girls || 0) });
+                        });
+                    } else {
+                        data.push({ schoolName: school.name, classLevel: 'N/A', boys: 0, girls: 0, total: 0 });
+                    }
+                });
+                break;
+            case 'leave-summary':
+                title = 'Leave Summary';
+                headers = [
+                    { key: 'teacherName', label: 'Teacher Name' }, { key: 'leaveType', label: 'Leave Type' },
+                    { key: 'startDate', label: 'Start Date' }, { key: 'returnDate', label: 'Return Date' }, { key: 'status', label: 'Status' },
+                ];
+                const leaveRequests = await getLeaveRequests(true);
+                data = leaveRequests.map(req => ({
+                    teacherName: req.teachers ? `${req.teachers.firstName} ${req.teachers.lastName}` : 'N/A', ...req
+                }));
+                break;
+            case 'general-report':
+                title = 'General Institution Report';
+                const [genTeachers, genSchools, genLeaveRequests] = await Promise.all([
+                    getTeachers(0, 10000, true),
+                    getSchools(true),
+                    getLeaveRequests(true),
+                ]);
+                const totalStudents = genSchools.reduce((sum, school) => sum + Object.values(school.enrollment || {}).reduce((acc, curr) => acc + (curr.boys || 0) + (curr.girls || 0), 0), 0);
+                headers = [{ key: 'metric', label: 'Metric' }, { key: 'value', label: 'Value' }];
+                data = [
+                    { metric: 'Total Teachers', value: genTeachers.length }, { metric: 'Total Schools', value: genSchools.length },
+                    { metric: 'Total Students', value: totalStudents }, { metric: 'Total Leave Requests', value: genLeaveRequests.length },
+                    { metric: 'Approved Leave Requests', value: genLeaveRequests.filter(r => r.status === 'Approved').length },
+                ];
+                break;
+            default:
+                toast({ variant: 'destructive', title: 'Error', description: 'Unknown report type.' });
+                return;
+        }
+
+        const fileName = `${reportType}-${new Date().toISOString().split('T')[0]}.${reportFormat}`;
+
+        if (reportFormat === 'csv') {
+            const csvContent = arrayToCSV(data, headers);
+            downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
+        } else if (reportFormat === 'pdf') {
+            generatePdf(data, headers, title, fileName);
+        } else if (reportFormat === 'docx') {
+            generateDocx(data, headers, title, fileName);
+        }
+
+        toast({ title: 'Report Generated', description: `${title} has been successfully exported as a ${reportFormat.toUpperCase()} file.` });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error Generating Report', description: error.message });
+    } finally {
+        setIsLoading(false);
     }
-
-    const fileName = `${reportType}-${new Date().toISOString().split('T')[0]}.${reportFormat}`;
-
-    if (reportFormat === 'csv') {
-        const csvContent = arrayToCSV(data, headers);
-        downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
-    } else if (reportFormat === 'pdf') {
-        generatePdf(data, headers, title, fileName);
-    } else if (reportFormat === 'docx') {
-        generateDocx(data, headers, title, fileName);
-    }
-
-    toast({ title: 'Report Generated', description: `${title} has been successfully exported as a ${reportFormat.toUpperCase()} file.` });
   };
 
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const timestamp = new Date().toISOString().split('T')[0];
 
     if (exportFormat === 'json') {
-      const allData = { teachers, schools, leaveRequests, users, exportDate: new Date().toISOString() };
-      downloadFile(JSON.stringify(allData, null, 2), `tms-backup-${timestamp}.json`, 'application/json');
-      toast({ title: "Export Successful", description: "All data has been exported as JSON." });
+        setIsLoading(true);
+        try {
+            const [teachers, schools, leaveRequests, users] = await Promise.all([
+                getTeachers(0, 10000, true),
+                getSchools(true),
+                getLeaveRequests(true),
+                getUsers(true)
+            ]);
+            const allData = { teachers, schools, leaveRequests, users, exportDate: new Date().toISOString() };
+            downloadFile(JSON.stringify(allData, null, 2), `tms-backup-${timestamp}.json`, 'application/json');
+            toast({ title: "Export Successful", description: "All data has been exported as JSON." });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error Exporting Data', description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
     }
   };
 
@@ -298,8 +276,7 @@ export default function ReportsTab() {
           ...data.users.map((u: User) => createUserAction(u)),
         ]);
 
-        await fetchData(); // Refresh data from DB
-        toast({ title: "Import Successful", description: "Data has been successfully restored from the backup file." });
+        toast({ title: "Import Successful", description: "Data has been imported. Please refresh the page to see the changes." });
       } catch (error: any) {
         console.error("Import failed:", error);
         setImportError(error.message || "Failed to parse the backup file. Please ensure it's a valid JSON backup.");
@@ -317,17 +294,12 @@ export default function ReportsTab() {
   const handleClearAllData = async () => {
     try {
       await clearAllDataAction();
-      await fetchData();
-      toast({ title: "All Data Cleared", description: "The application data has been reset, preserving Admin and Supervisor accounts." });
+      toast({ title: "All Data Cleared", description: "The application data has been reset, preserving Admin and Supervisor accounts. Please refresh the page." });
       setClearDataConfirmation('');
     } catch (e: any) {
       toast({ variant: 'destructive', title: "Error Clearing Data", description: e.message });
     }
   };
-
-  if(isLoading) {
-    return <div>Loading report data...</div>
-  }
 
   return (
     <div className="space-y-6">
