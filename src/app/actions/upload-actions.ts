@@ -8,18 +8,16 @@ export async function uploadFile(formData: FormData): Promise<string> {
         throw new Error('No file provided.');
     }
 
-    // The browser will pass a FormData object, but we need to convert it to a Buffer for the server-side upload.
-    const buffer = Buffer.from(await file.arrayBuffer());
     const fileExtension = file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExtension}`;
-
-    // Hypothesis: The bucket name is 'teacher_files' not 'teacher-files'.
     const BUCKET_NAME = 'teacher_files';
 
+    // Pass the File object directly to the upload method.
+    // The Supabase client library is designed to handle this correctly, even in a server environment.
+    // This avoids potential issues with manual Buffer conversion.
     const { data, error: uploadError } = await adminDb.storage
         .from(BUCKET_NAME)
-        .upload(fileName, buffer, {
-            contentType: file.type,
+        .upload(fileName, file, {
             upsert: true,
         });
 
