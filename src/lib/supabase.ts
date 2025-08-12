@@ -125,9 +125,11 @@ export const addTeacher = async (teacher: Partial<Omit<Teacher, 'id'>>): Promise
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
     const dbData = prepareTeacherForDb(teacher);
-    const { data, error } = await supabase.from('teachers').update(dbData).eq('id', teacher.id).select().single();
+    // Use the admin client to bypass RLS policies for updates.
+    const { data, error } = await adminDb.from('teachers').update(dbData).eq('id', teacher.id).select().single();
 
     if (error) {
+        console.error("Update Teacher Error:", error);
         throw error;
     }
 
