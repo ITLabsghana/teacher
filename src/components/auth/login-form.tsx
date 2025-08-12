@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { supabase } from '@/lib/supabase';
+import { supabase, getUserByUsername } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { getUserEmailByUsername } from '@/app/actions/user-actions';
 
 export default function LoginForm() {
   const [identifier, setIdentifier] = useState('');
@@ -29,9 +28,9 @@ export default function LoginForm() {
       let emailToAuth = identifier;
 
       if (!identifier.includes('@')) {
-        const foundEmail = await getUserEmailByUsername(identifier);
-        if (foundEmail) {
-          emailToAuth = foundEmail;
+        const user = await getUserByUsername(identifier);
+        if (user) {
+          emailToAuth = user.email;
         } else {
           setError("Invalid username or password.");
           setIsLoading(false);
