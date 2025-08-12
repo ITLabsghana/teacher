@@ -95,12 +95,6 @@ export const getUsers = async (isAdmin: boolean = false): Promise<User[]> => {
     return data || [];
 };
 
-export const getUserByUsername = async (username: string): Promise<User | null> => {
-    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
-}
-
 // --- Data Mutation ---
 
 const prepareTeacherForDb = (teacher: Partial<Teacher>) => {

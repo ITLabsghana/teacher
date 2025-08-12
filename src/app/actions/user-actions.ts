@@ -107,3 +107,21 @@ export async function clearAllDataAction(): Promise<void> {
       if (uError) throw new Error(`User Deletion Error: ${uError.message}`);
     }
 }
+
+export async function getUserEmailByUsername(username: string): Promise<string | null> {
+    const { data, error } = await adminDb
+        .from('users')
+        .select('email')
+        .eq('username', username)
+        .single();
+
+    if (error) {
+        if (error.code === 'PGRST116') {
+            return null; // User not found, not an error
+        }
+        console.error("Error fetching user by username:", error);
+        return null;
+    }
+
+    return data?.email || null;
+}
