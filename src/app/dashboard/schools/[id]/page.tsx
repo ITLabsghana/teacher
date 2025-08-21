@@ -78,7 +78,7 @@ export default function SchoolDetailPage() {
                 </Button>
             </div>
 
-            <Card>
+            <Card className="bg-green-100 dark:bg-green-900/50">
                 <CardHeader>
                     <CardTitle className="text-4xl">{school.name}</CardTitle>
                     <CardDescription>Enrollment Information</CardDescription>
@@ -113,7 +113,7 @@ export default function SchoolDetailPage() {
                                     <TableFooter>
                                         <TableRow>
                                             <TableCell colSpan={4} className="p-0">
-                                                <div className="flex justify-end gap-8 font-bold bg-muted p-4 mt-4 rounded-b-lg">
+                                                <div className="flex justify-end gap-8 font-bold bg-green-200 dark:bg-green-800/60 p-4 mt-4 rounded-b-lg">
                                                     <span>Total Boys: {enrollmentData.totalBoys}</span>
                                                     <span>Total Girls: {enrollmentData.totalGirls}</span>
                                                     <span>Grand Total: {enrollmentData.grandTotal}</span>
