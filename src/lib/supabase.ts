@@ -71,7 +71,7 @@ export const getSchools = async (isAdmin: boolean = false): Promise<School[]> =>
 
 export const getSchoolById = async (id: string, isAdmin: boolean = false): Promise<School | null> => {
     const client = isAdmin ? adminDb : supabase;
-    const { data, error } = await client.from('schools').select('*').eq('id', id).single();
+    const { data, error } = await client.from('schools').select('*, enrollment(*)').eq('id', id).single();
     if (error) {
         if (error.code !== 'PGRST116') {
           console.error("Error fetching school by id", error);
