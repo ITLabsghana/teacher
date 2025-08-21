@@ -116,6 +116,14 @@ function SchoolManagement({ schools, setSchools }: { schools: School[], setSchoo
     const [editingSchool, setEditingSchool] = useState<School | null>(null);
     const { toast } = useToast();
 
+    const bgColors = [
+        "bg-blue-100 dark:bg-blue-900/50",
+        "bg-green-100 dark:bg-green-900/50",
+        "bg-pink-100 dark:bg-pink-900/50",
+        "bg-indigo-100 dark:bg-indigo-900/50",
+        "bg-yellow-100 dark:bg-yellow-900/50",
+    ];
+
     const handleEdit = (school: School) => {
         setEditingSchool(school);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -144,8 +152,8 @@ function SchoolManagement({ schools, setSchools }: { schools: School[], setSchoo
 
             <div className="space-y-2 pt-4 border-t">
                  <h3 className="text-lg font-medium text-muted-foreground mb-4">Existing Schools</h3>
-                {schools.length > 0 ? schools.map(school => (
-                    <div key={school.id} className="flex items-center justify-between p-3 bg-green-200 dark:bg-green-800/60 rounded-lg">
+                {schools.length > 0 ? schools.map((school, index) => (
+                    <div key={school.id} className={`flex items-center justify-between p-3 rounded-lg ${bgColors[index % bgColors.length]}`}>
                         <div>
                             <p className="font-semibold">{school.name}</p>
                         </div>
