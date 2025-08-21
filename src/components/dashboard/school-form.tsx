@@ -86,7 +86,7 @@ export function SchoolForm({
   );
 
   return (
-    <Card>
+    <Card className="bg-green-100 dark:bg-green-900/50">
         <CardHeader>
             <CardTitle>{editingSchool ? 'Edit School' : 'Add New School'}</CardTitle>
             <CardDescription>{editingSchool ? `Editing: ${editingSchool.name}` : 'Create a new school record.'}</CardDescription>

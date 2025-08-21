@@ -145,7 +145,7 @@ function SchoolManagement({ schools, setSchools }: { schools: School[], setSchoo
             <div className="space-y-2 pt-4 border-t">
                  <h3 className="text-lg font-medium text-muted-foreground mb-4">Existing Schools</h3>
                 {schools.length > 0 ? schools.map(school => (
-                    <div key={school.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                    <div key={school.id} className="flex items-center justify-between p-3 bg-green-200 dark:bg-green-800/60 rounded-lg">
                         <div>
                             <p className="font-semibold">{school.name}</p>
                         </div>
