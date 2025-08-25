@@ -13,12 +13,12 @@ import { TeacherForm } from './teacher-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { getTeachers, deleteTeacher as dbDeleteTeacher, supabase, parseTeacherDates, getSchools } from '@/lib/supabase';
+import { getTeachers, supabase, parseTeacherDates, getSchools } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { differenceInYears } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { searchTeachers } from '@/app/actions/teacher-actions';
+import { searchTeachers, deleteTeacherAction } from '@/app/actions/teacher-actions';
 
 const PAGE_SIZE = 20;
 
@@ -118,7 +118,9 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
   
   const handleDelete = async (teacherId: string) => {
     try {
-      await dbDeleteTeacher(teacherId);
+      await deleteTeacherAction(teacherId);
+      // The optimistic update is good, but the real-time subscription should also catch this.
+      // We'll keep the optimistic update for a snappy UI.
       setTeachers(current => current.filter(t => t.id !== teacherId));
       toast({ title: 'Success', description: 'Teacher deleted successfully.' });
     } catch (error: any) {

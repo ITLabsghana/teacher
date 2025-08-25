@@ -3,6 +3,9 @@
 import { adminDb } from '@/lib/supabase-admin';
 
 export async function uploadFile(formData: FormData): Promise<string> {
+    console.log("--- [Server Action] uploadFile ---");
+    console.log("Checking for SUPABASE_SERVICE_ROLE_KEY presence:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+
     const file = formData.get('file') as File;
     if (!file) {
         throw new Error('No file provided.');

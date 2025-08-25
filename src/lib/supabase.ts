@@ -144,7 +144,8 @@ export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
 };
 
 export const deleteTeacher = async (id: string): Promise<void> => {
-    const { error } = await supabase.from('teachers').delete().eq('id', id);
+    // Use the admin client to bypass RLS policies for deletes.
+    const { error } = await adminDb.from('teachers').delete().eq('id', id);
     if (error) throw error;
 };
 
