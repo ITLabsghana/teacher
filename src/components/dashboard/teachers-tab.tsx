@@ -79,7 +79,8 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
   }, [page, hasMore, isLoadingMore, toast]);
 
   const handleFormSave = (newTeacher: Teacher) => {
-    setTeachers(current => [newTeacher, ...current.filter(t => t.id !== newTeacher.id)]);
+    // The real-time subscription will handle updating the state.
+    // We just need to close the form.
     setIsFormOpen(false);
   }
 
