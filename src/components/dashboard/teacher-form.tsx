@@ -18,8 +18,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-import { addTeacher, updateTeacher } from '@/lib/supabase';
 import { uploadFile } from '@/app/actions/upload-actions';
+import { addTeacherAction, updateTeacherAction } from '@/app/actions/teacher-actions';
 
 
 // Date Picker Component using 3 Selects
@@ -291,11 +291,11 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
     }
     try {
         if (editingTeacher) {
-          const updatedTeacher = await updateTeacher({ ...editingTeacher, ...sanitizedData } as Teacher);
+          const updatedTeacher = await updateTeacherAction({ ...editingTeacher, ...sanitizedData } as Teacher);
           toast({ title: 'Success', description: 'Teacher profile updated.' });
           onSave(updatedTeacher);
         } else {
-          const newTeacher = await addTeacher(sanitizedData as Partial<Omit<Teacher, 'id'>>);
+          const newTeacher = await addTeacherAction(sanitizedData as Partial<Omit<Teacher, 'id'>>);
           toast({ title: 'Success', description: 'New teacher added.' });
           onSave(newTeacher);
         }
