@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-import { uploadFile } from '@/app/actions/upload-actions';
+import { uploadFile, createSignedUploadUrlAction } from '@/app/actions/upload-actions';
 import { addTeacherAction, updateTeacherAction } from '@/app/actions/teacher-actions';
 
 
@@ -240,15 +240,42 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) {
-          setIsUploadingPhoto(true);
-          try {
-              const url = await handleFileUpload(file);
-              setValue('photo', url);
-          } catch (error) {
-              // Error is already toasted in handleFileUpload
-          } finally {
-              setIsUploadingPhoto(false);
+      if (!file) return;
+
+      setIsUploadingPhoto(true);
+
+      try {
+          // 1. Get a signed URL from our server action
+          const { signedUrl, publicUrl } = await createSignedUploadUrlAction(file.type, file.size);
+
+          // 2. Upload the file directly to Supabase Storage using the signed URL
+          const uploadResponse = await fetch(signedUrl, {
+              method: 'PUT',
+              body: file,
+              headers: { 'Content-Type': file.type },
+          });
+
+          if (!uploadResponse.ok) {
+              const errorBody = await uploadResponse.text();
+              console.error("Direct upload failed:", errorBody);
+              throw new Error('Failed to upload photo to storage.');
+          }
+
+          // 3. Set the public URL in the form state
+          setValue('photo', publicUrl);
+          toast({ title: 'Success', description: 'Photo uploaded successfully.' });
+
+      } catch (error: any) {
+          toast({
+              variant: 'destructive',
+              title: 'Upload Failed',
+              description: error.message || 'An unexpected error occurred.',
+          });
+      } finally {
+          setIsUploadingPhoto(false);
+          // Reset the file input so the same file can be selected again if needed
+          if(fileInputRef.current) {
+            fileInputRef.current.value = '';
           }
       }
   };

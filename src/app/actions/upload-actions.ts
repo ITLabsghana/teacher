@@ -1,11 +1,46 @@
 'use server';
 
 import { adminDb } from '@/lib/supabase-admin';
+import { randomUUID } from 'crypto';
+
+export async function createSignedUploadUrlAction(type: string, size: number) {
+    console.log("--- [Server Action] createSignedUploadUrlAction ---");
+
+    // 1. Validate file type and size
+    if (!type.startsWith('image/')) {
+        throw new Error('Invalid file type. Only images are allowed.');
+    }
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (size > MAX_FILE_SIZE) {
+        throw new Error('File is too large. Maximum size is 10 MB.');
+    }
+
+    // 2. Generate a unique path for the file
+    const BUCKET_NAME = 'teacher_files';
+    const fileExtension = type.split('/')[1];
+    const path = `${randomUUID()}.${fileExtension}`;
+
+    // 3. Create the signed upload URL
+    const { data, error } = await adminDb.storage
+        .from(BUCKET_NAME)
+        .createSignedUploadUrl(path);
+
+    if (error) {
+        console.error("Error creating signed URL:", error);
+        throw new Error("Could not create an upload URL. Please try again.");
+    }
+
+    // 4. Get the public URL for after the upload is complete
+    const { data: { publicUrl } } = adminDb.storage.from(BUCKET_NAME).getPublicUrl(path);
+
+    return {
+        signedUrl: data.signedUrl,
+        publicUrl: publicUrl,
+        path: data.path,
+    };
+}
 
 export async function uploadFile(formData: FormData): Promise<string> {
-    console.log("--- [Server Action] uploadFile ---");
-    console.log("Checking for SUPABASE_SERVICE_ROLE_KEY presence:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-
     const file = formData.get('file') as File;
     if (!file) {
         throw new Error('No file provided.');
