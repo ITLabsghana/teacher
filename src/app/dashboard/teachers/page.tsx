@@ -12,7 +12,6 @@ export default async function TeachersPage() {
         <TeachersTab
             initialTeachers={initialTeachers}
             initialSchools={initialSchools}
-            initialLeaveRequests={[]}
         />
     );
 }

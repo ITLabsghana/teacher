@@ -36,13 +36,13 @@ async function StatsCards() {
 
   const nearingRetirementDetails = allTeachersForRetirement?.filter(teacher => {
       if (!teacher.dateOfBirth) return false;
-      const dob = parseISO(teacher.dateOfBirth);
+      const dob = parseISO(teacher.dateOfBirth as string);
       const retirementDate = addYears(dob, 60);
       return retirementDate > new Date() && retirementDate <= oneYearFromNow;
     })
     .map(teacher => {
         if (!teacher.dateOfBirth) return null;
-        const dob = parseISO(teacher.dateOfBirth);
+        const dob = parseISO(teacher.dateOfBirth as string);
         const retirementDate = addYears(dob, 60);
         return {
           name: `${teacher.firstName} ${teacher.lastName}`,
@@ -90,7 +90,7 @@ async function StatsCards() {
 
   const leavesEndingSoonFormatted = leavesEndingSoonDetails?.map(req => {
     if (!req.returnDate) return null;
-    const returnDateObj = parseISO(req.returnDate);
+    const returnDateObj = parseISO(req.returnDate as string);
     const teacher = Array.isArray(req.teachers) ? req.teachers[0] : req.teachers; // Handle one-to-one relationship
     return {
         teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher',
@@ -230,21 +230,27 @@ async function StatsCards() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[120px] overflow-y-auto space-y-2 text-muted-foreground">
-                    {leavesEndingSoonFormatted.length > 0 && leavesEndingSoonFormatted.map((leave, index) => (
-                        <p key={`leave-${index}`} className="text-foreground">
-                            - <strong>{leave.teacherName}</strong> returns from leave 
-                            {leave.isReturningToday ? (
-                                <span className="font-bold text-primary"> today</span>
-                            ) : (
-                                ` in ${leave.daysToReturn + 1} day(s)`
-                            )}.
-                        </p>
-                    ))}
-                    {nearingRetirementDetails.length > 0 && nearingRetirementDetails.map((retiree, index) => (
-                         <p key={`retire-${index}`} className="text-foreground">
-                            - <strong>{retiree.name}</strong> is due for retirement {retiree.timeToRetirement}.
-                        </p>
-                    ))}
+                    {leavesEndingSoonFormatted.length > 0 && leavesEndingSoonFormatted.map((leave, index) => {
+                        if (!leave) return null;
+                        return (
+                            <p key={`leave-${index}`} className="text-foreground">
+                                - <strong>{leave.teacherName}</strong> returns from leave
+                                {leave.isReturningToday ? (
+                                    <span className="font-bold text-primary"> today</span>
+                                ) : (
+                                    ` in ${leave.daysToReturn + 1} day(s)`
+                                )}.
+                            </p>
+                        );
+                    })}
+                    {nearingRetirementDetails.length > 0 && nearingRetirementDetails.map((retiree, index) => {
+                        if (!retiree) return null;
+                        return (
+                            <p key={`retire-${index}`} className="text-foreground">
+                                - <strong>{retiree.name}</strong> is due for retirement {retiree.timeToRetirement}.
+                            </p>
+                        );
+                    })}
                     {leavesEndingSoonFormatted.length === 0 && nearingRetirementDetails.length === 0 && (
                         <p>No new notifications.</p>
                     )}

@@ -118,13 +118,20 @@ const prepareTeacherForDb = (teacher: Partial<Teacher>) => {
 
 export const addTeacher = async (teacher: Partial<Omit<Teacher, 'id'>>): Promise<Teacher> => {
     const teacherData = prepareTeacherForDb(teacher);
-    const { data, error } = await supabase.from('teachers').insert([teacherData]).select().single();
+    // Use the admin client to bypass RLS policies for inserts.
+    const { data, error } = await adminDb.from('teachers').insert([teacherData]).select().single();
     if (error) throw error;
     return parseTeacherDates(data);
 };
 
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
     const dbData = prepareTeacherForDb(teacher);
+
+    // The 'id' should not be in the update payload. It's used to identify the row.
+    if ('id' in dbData) {
+        delete (dbData as { id?: string }).id;
+    }
+
     // Use the admin client to bypass RLS policies for updates.
     const { data, error } = await adminDb.from('teachers').update(dbData).eq('id', teacher.id).select().single();
 

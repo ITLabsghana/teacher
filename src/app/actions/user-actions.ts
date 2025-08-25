@@ -40,7 +40,7 @@ export async function createUserAction(user: Omit<User, 'id'>): Promise<User> {
         throw new Error(`Profile Error: ${profileError.message}`);
     }
 
-    return profile as User;
+    return profile as unknown as User;
 };
 
 export async function updateUserAction(user: User): Promise<User> {
@@ -57,7 +57,7 @@ export async function updateUserAction(user: User): Promise<User> {
     // Update the user profile in the public 'users' table
     const { data, error } = await adminDb.from('users').update(updateData).eq('id', user.id).select().single();
     if (error) throw error;
-    return data as User;
+    return data as unknown as User;
 };
 
 export async function deleteUserAction(id: string): Promise<void> {
@@ -123,5 +123,6 @@ export async function getUserEmailByUsername(username: string): Promise<string |
         return null;
     }
 
-    return data?.email || null;
+    // Explicitly cast data to the expected shape to solve type inference issue.
+    return (data as { email: string } | null)?.email || null;
 }

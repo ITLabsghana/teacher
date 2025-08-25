@@ -8,7 +8,6 @@ export default async function LeavePage() {
     return (
         <LeaveTab
             initialLeaveRequests={initialLeaveRequests}
-            initialTeachers={[]}
             isLoading={false}
         />
     );
