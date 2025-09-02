@@ -18,8 +18,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-import { uploadFile, createSignedUploadUrlAction } from '@/app/actions/upload-actions';
-import { addTeacherAction, updateTeacherAction } from '@/app/actions/teacher-actions';
+import { uploadFile, createSignedUploadUrlAction, BUCKETS, BucketName } from '@/app/actions/upload-actions';
+import { addTeacherAction, updateTeacherAction, deleteDocumentAction } from '@/app/actions/teacher-actions';
 
 
 // Date Picker Component using 3 Selects
@@ -222,9 +222,10 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
       setValue('ghanaCardNo', formattedValue);
   };
 
-  const handleFileUpload = async (file: File): Promise<string> => {
+  const handleFileUpload = async (file: File, bucket: BucketName): Promise<string> => {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('bucket', bucket);
       try {
         const url = await uploadFile(formData);
         return url;
@@ -245,8 +246,8 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
       setIsUploadingPhoto(true);
 
       try {
-          // 1. Get a signed URL from our server action
-          const { signedUrl, publicUrl } = await createSignedUploadUrlAction(file.type, file.size);
+          // 1. Get a signed URL from our server action, specifying the photos bucket
+          const { signedUrl, publicUrl } = await createSignedUploadUrlAction(file.type, file.size, BUCKETS.teacherPhotos);
 
           // 2. Upload the file directly to Supabase Storage using the signed URL
           const uploadResponse = await fetch(signedUrl, {
@@ -285,13 +286,19 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
     if (file) {
         setIsUploadingDoc(true);
         try {
-            const url = await handleFileUpload(file);
+            // Call handleFileUpload with the documents bucket
+            const url = await handleFileUpload(file, BUCKETS.teacherDocuments);
             const newDocument = { name: file.name, url };
             setValue('documents', [...(documents || []), newDocument]);
+            toast({ title: 'Success', description: 'Document uploaded successfully.' });
         } catch (error) {
-            // Error handling is in handleFileUpload
+            // Error is already handled in handleFileUpload, no need to show another toast
         } finally {
             setIsUploadingDoc(false);
+             // Reset the file input
+            if(docFileInputRef.current) {
+                docFileInputRef.current.value = '';
+            }
         }
     }
   };
@@ -302,10 +309,26 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
       setValue('documents', updatedDocuments);
   };
 
-  const removeDocument = (index: number) => {
-      const updatedDocuments = [...(documents || [])];
-      updatedDocuments.splice(index, 1);
-      setValue('documents', updatedDocuments);
+  const handleDeleteDocument = async (docUrl: string) => {
+      if (!editingTeacher) {
+          toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'Cannot delete document for a new teacher.',
+          });
+          return;
+      }
+      try {
+          const updatedTeacher = await deleteDocumentAction(editingTeacher.id, docUrl);
+          setValue('documents', updatedTeacher.documents);
+          toast({ title: 'Success', description: 'Document deleted successfully.' });
+      } catch (error: any) {
+          toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: error.message || 'Failed to delete document.',
+          });
+      }
   };
 
   const onSubmit = async (data: TeacherFormData) => {
@@ -318,7 +341,11 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
     }
     try {
         if (editingTeacher) {
-          const updatedTeacher = await updateTeacherAction({ ...editingTeacher, ...sanitizedData } as Teacher);
+          const teacherToUpdate: Teacher = { ...editingTeacher, ...sanitizedData };
+          const updatedTeacher = await updateTeacherAction({
+              teacher: teacherToUpdate,
+              oldPhotoUrl: editingTeacher.photo // Pass the original photo URL
+          });
           toast({ title: 'Success', description: 'Teacher profile updated.' });
           onSave(updatedTeacher);
         } else {
@@ -462,19 +489,21 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
                       <p className="text-sm text-muted-foreground mb-4">Add teacher documents like certificates.</p>
                       <div className="space-y-4">
                           <div className="space-y-2">
-                              {documents?.map((doc, index) => (
-                                  <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
-                                      <FileIcon className="h-5 w-5 text-muted-foreground" />
-                                      <Input 
-                                          value={doc.name} 
-                                          onChange={(e) => handleDocumentNameChange(index, e.target.value)}
-                                          className="flex-grow"
-                                      />
-                                      <Button type="button" variant="ghost" size="icon" onClick={() => removeDocument(index)}>
-                                          <X className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                  </div>
-                              ))}
+                            {(documents && documents.length > 0) ? (
+                                documents.map((doc, index) => (
+                                    <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
+                                        <FileIcon className="h-5 w-5 text-muted-foreground" />
+                                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="flex-grow text-sm text-primary hover:underline truncate" title={doc.name}>
+                                            {doc.name}
+                                        </a>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteDocument(doc.url)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No documents uploaded.</p>
+                            )}
                           </div>
                           <Button 
                               type="button" 

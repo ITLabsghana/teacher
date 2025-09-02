@@ -78,11 +78,15 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
       }
   }, [page, hasMore, isLoadingMore, toast]);
 
-  const handleFormSave = (newTeacher: Teacher) => {
-    // The real-time subscription will handle updating the state.
-    // We just need to close the form.
+  const handleFormSave = (savedTeacher: Teacher) => {
     setIsFormOpen(false);
-  }
+    setEditingTeacher(null);
+    // After a save, the most reliable way to ensure the UI is up-to-date
+    // is to refresh the data from the server. This avoids client-side state
+    // becoming out of sync and is more robust than relying on real-time subscriptions
+    // or manual state management, which was causing the "disappearing teacher" issue.
+    router.refresh();
+  };
 
   useEffect(() => {
     const channel = supabase
