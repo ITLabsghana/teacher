@@ -105,14 +105,19 @@ export async function addTeacherAction(teacherData: Partial<Omit<Teacher, 'id'>>
 
 export async function updateTeacherAction({ teacher, oldPhotoUrl }: { teacher: Teacher, oldPhotoUrl?: string | null }): Promise<Teacher> {
     console.log("--- [Server Action] updateTeacherAction ---");
+    console.log("Received teacher data for update:", { id: teacher.id, photo: teacher.photo });
+    console.log("Old photo URL for potential deletion:", oldPhotoUrl);
+
     try {
         // 1. Update the teacher's data in the database
         const updatedTeacher = await updateTeacher(teacher);
-        console.log("updateTeacherAction successful for teacher ID:", teacher.id);
+        console.log("Database update successful for teacher ID:", teacher.id);
+        console.log("Returned photo URL from DB:", updatedTeacher.photo);
 
         // 2. If the photo has changed, delete the old photo from storage
         const newPhotoUrl = updatedTeacher.photo;
         if (oldPhotoUrl && oldPhotoUrl !== newPhotoUrl) {
+            console.log(`Photo changed. Deleting old photo: ${oldPhotoUrl}`);
             const oldPhotoInfo = getPathFromUrl(oldPhotoUrl);
             if (oldPhotoInfo) {
                 await deleteStorageObject(oldPhotoInfo.bucket, oldPhotoInfo.path);
@@ -121,7 +126,8 @@ export async function updateTeacherAction({ teacher, oldPhotoUrl }: { teacher: T
 
         return updatedTeacher;
     } catch (error: any) {
-        console.error("Error in updateTeacherAction:", error.message);
+        console.error("Error in updateTeacherAction:", error);
+        // It's better to log the whole error object for more context
         throw new Error(`Failed to update teacher: ${error.message}`);
     }
 }

@@ -127,6 +127,10 @@ export const addTeacher = async (teacher: Partial<Omit<Teacher, 'id'>>): Promise
 export const updateTeacher = async (teacher: Teacher): Promise<Teacher> => {
     const dbData = prepareTeacherForDb(teacher);
 
+    // Explicitly ensure the photo URL is included if it exists.
+    // This is a safeguard against any unexpected behavior in prepareTeacherForDb.
+    dbData.photo = teacher.photo;
+
     // The 'id' should not be in the update payload. It's used to identify the row.
     if ('id' in dbData) {
         delete (dbData as { id?: string }).id;
