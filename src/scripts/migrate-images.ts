@@ -54,6 +54,13 @@ const migrateImages = async () => {
                     if (!response.ok) {
                         throw new Error(`Failed to download image (status: ${response.status}): ${response.statusText}`);
                     }
+
+                    // 3a. Check if the downloaded file is actually an image
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.startsWith('image/')) {
+                        throw new Error(`Invalid content type. Expected an image but received '${contentType}'. The URL may be broken or lead to a webpage.`);
+                    }
+
                     const imageBuffer = Buffer.from(await response.arrayBuffer());
                     const fileExtension = photoUrl.split('.').pop()?.split('?')[0] || 'jpg';
                     const newFileName = `migrated-${teacher.id}-${Date.now()}.${fileExtension}`;
