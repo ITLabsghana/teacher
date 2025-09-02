@@ -42,6 +42,12 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
+  // This effect synchronizes the local `teachers` state with the `initialTeachers` prop.
+  // This is crucial for reflecting updates after `router.refresh()` is called.
+  useEffect(() => {
+    setTeachers(initialTeachers.map(parseTeacherDates));
+  }, [initialTeachers]);
+
   useEffect(() => {
     const handler = setTimeout(async () => {
         if (searchTerm) {
@@ -50,6 +56,7 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
             setTeachers(searchResults);
             setIsSearching(false);
         } else {
+            // When the search term is cleared, revert to the initial list of teachers.
             setTeachers(initialTeachers.map(parseTeacherDates));
         }
     }, 500); // 500ms debounce
