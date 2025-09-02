@@ -23,24 +23,23 @@ interface TeachersTabProps {
 }
 
 export default function TeachersTab({ initialTeachers, initialSchools }: TeachersTabProps) {
-  const [teachers, setTeachers] = useState<Teacher[]>(() => initialTeachers.map(parseTeacherDates));
   const [schools, setSchools] = useState<School[]>(initialSchools);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const { toast } = useToast();
+
+  // State for search results. `null` means no search is active.
+  const [searchResults, setSearchResults] = useState<Teacher[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
-  // This effect is the key to keeping the client state in sync with the server data
-  // after a router.refresh() call.
-  useEffect(() => {
-    // Only update the local state if there's no active search.
-    // This prevents search results from being overwritten by the refreshed initialTeachers.
-    if (!searchTerm) {
-      setTeachers(initialTeachers.map(parseTeacherDates));
-    }
-  }, [initialTeachers, searchTerm]);
+  // The definitive list of teachers to render. It's derived from props or search state.
+  // This avoids the complex state synchronization issues.
+  const teachersToRender = useMemo(() => {
+      const list = searchResults === null ? initialTeachers : searchResults;
+      return list.map(parseTeacherDates);
+  }, [initialTeachers, searchResults]);
 
   // Effect for handling search logic
   useEffect(() => {
@@ -48,37 +47,24 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
         if (searchTerm.trim()) {
             setIsSearching(true);
             const results = await searchTeachers(searchTerm);
-            setTeachers(results.map(parseTeacherDates));
+            setSearchResults(results);
             setIsSearching(false);
         } else {
-            // When search is cleared, revert to the initial list from props
-            setTeachers(initialTeachers.map(parseTeacherDates));
+            // When search is cleared, reset search results to null to show the initial list
+            setSearchResults(null);
         }
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [searchTerm, initialTeachers]);
+  }, [searchTerm]);
 
-  // Effect for real-time updates.
-  // This provides a responsive experience by updating the UI immediately,
-  // then calls router.refresh() to ensure consistency with the server.
+  // Effect for real-time updates. The most robust approach is to simply
+  // refresh the server-provided data. This keeps a single source of truth.
   useEffect(() => {
     const channel = supabase
-      .channel('teachers-realtime-channel')
+      .channel('teachers-realtime-channel-robust')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, (payload) => {
-          console.log('Real-time change detected!', payload);
-          // Optimistically update the UI for a snappy feel
-          if (payload.eventType === 'INSERT') {
-              const newTeacher = parseTeacherDates(payload.new);
-              setTeachers(current => [newTeacher, ...current.filter(t => t.id !== newTeacher.id)]);
-          } else if (payload.eventType === 'UPDATE') {
-              const updatedTeacher = parseTeacherDates(payload.new);
-              setTeachers(current => current.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
-          } else if (payload.eventType === 'DELETE') {
-              const deletedId = (payload.old as Teacher).id;
-              setTeachers(current => current.filter(t => t.id !== deletedId));
-          }
-          // Also refresh server data in the background to ensure consistency
+          console.log('Real-time change detected, refreshing data...', payload);
           router.refresh();
       })
       .subscribe();
@@ -86,38 +72,22 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
     return () => { supabase.removeChannel(channel); };
   }, [router]);
 
-  const handleFormSave = (savedTeacher: Teacher) => {
+  // This function is the single, reliable way to handle data changes.
+  // It closes the form and tells Next.js to refetch the data. The UI will
+  // update automatically and correctly when the `initialTeachers` prop changes.
+  const handleFormSave = () => {
     setIsFormOpen(false);
     setEditingTeacher(null);
-
-    // --- Optimistic Update ---
-    // Immediately update the local state for a responsive UI.
-    const isNew = !teachers.some(t => t.id === savedTeacher.id);
-    if (isNew) {
-      setTeachers(current => [savedTeacher, ...current]);
-    } else {
-      setTeachers(current => current.map(t => (t.id === savedTeacher.id ? savedTeacher : t)));
-    }
-
-    // --- Background Revalidation ---
-    // Silently refetch server data to ensure consistency. If the optimistic
-    // update was correct, the user won't notice a thing.
     router.refresh();
   };
   
   const handleDelete = async (teacherId: string) => {
-    // Optimistically remove the teacher from the UI
-    const originalTeachers = teachers;
-    setTeachers(current => current.filter(t => t.id !== teacherId));
-
     try {
       await deleteTeacherAction(teacherId);
       toast({ title: 'Success', description: 'Teacher deleted successfully.' });
-      // No need to call router.refresh() here if we trust the optimistic update,
-      // but it's a good safety net. The real-time subscription will also trigger a refresh.
+      // After deleting, we must refresh the data from the server.
+      router.refresh();
     } catch (error: any) {
-      // If the delete fails, revert the optimistic update
-      setTeachers(originalTeachers);
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
   };
@@ -186,7 +156,7 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
             <TableBody>
               {isSearching ? (
                   <TableRow><TableCell colSpan={8} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
-              ) : teachers.length > 0 ? teachers.map(teacher => (
+              ) : teachersToRender.length > 0 ? teachersToRender.map(teacher => (
                 <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
                      <Avatar className="h-20 w-20">
@@ -239,7 +209,7 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
             </TableBody>
           </Table>
         </div>
-        {/* Pagination logic would need to be updated to work with this new state model, disabling for now */}
+        {/* Pagination is disabled for now as it adds complexity */}
       </CardContent>
       <TeacherForm
         key={editingTeacher ? editingTeacher.id : 'new'}
