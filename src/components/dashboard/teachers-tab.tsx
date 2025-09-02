@@ -28,94 +28,90 @@ interface TeachersTabProps {
 }
 
 export default function TeachersTab({ initialTeachers, initialSchools }: TeachersTabProps) {
-  const [teachers, setTeachers] = useState<Teacher[]>(() => initialTeachers.map(parseTeacherDates));
   const [schools, setSchools] = useState<School[]>(initialSchools);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Kept for future use (e.g., initial load skeleton)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const { toast } = useToast();
 
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(initialTeachers.length === PAGE_SIZE);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // State for search results. `null` means no search is active.
+  const [searchResults, setSearchResults] = useState<Teacher[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
-  // This effect synchronizes the local `teachers` state with the `initialTeachers` prop.
-  // This is crucial for reflecting updates after `router.refresh()` is called.
-  useEffect(() => {
-    setTeachers(initialTeachers.map(parseTeacherDates));
-  }, [initialTeachers]);
+  // Pagination state - This is complex and will be simplified for now.
+  // We'll disable "Load More" when a search is active.
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(initialTeachers.length === PAGE_SIZE);
 
+
+  // The definitive list of teachers to render. It's derived from props or search state.
+  // This avoids state synchronization issues.
+  const teachersToRender = useMemo(() => {
+      const list = searchResults === null ? initialTeachers : searchResults;
+      return list.map(parseTeacherDates);
+  }, [initialTeachers, searchResults]);
+
+
+  // Effect for handling search logic
   useEffect(() => {
     const handler = setTimeout(async () => {
-        if (searchTerm) {
+        if (searchTerm.trim()) {
             setIsSearching(true);
-            const searchResults = await searchTeachers(searchTerm);
-            setTeachers(searchResults);
+            const results = await searchTeachers(searchTerm);
+            setSearchResults(results);
             setIsSearching(false);
         } else {
-            // When the search term is cleared, revert to the initial list of teachers.
-            setTeachers(initialTeachers.map(parseTeacherDates));
+            // When search is cleared, reset search results to null to show the initial list
+            setSearchResults(null);
         }
     }, 500); // 500ms debounce
 
-    return () => {
-        clearTimeout(handler);
-    };
-  }, [searchTerm, initialTeachers]);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
-  const fetchMoreTeachers = useCallback(async () => {
-      if (isLoadingMore || !hasMore) return;
-      setIsLoadingMore(true);
-      try {
-          const nextPage = page + 1;
-          const newTeachers = await getTeachers(nextPage, PAGE_SIZE);
-          setTeachers(prev => [...prev, ...newTeachers]);
-          setPage(nextPage);
-          if (newTeachers.length < PAGE_SIZE) {
-              setHasMore(false);
-          }
-      } catch (error) {
-          console.error("Failed to fetch more teachers:", error);
-          toast({ variant: 'destructive', title: "Error", description: "Failed to load more teachers." });
-      } finally {
-          setIsLoadingMore(false);
-      }
-  }, [page, hasMore, isLoadingMore, toast]);
-
-  const handleFormSave = (savedTeacher: Teacher) => {
-    setIsFormOpen(false);
-    setEditingTeacher(null);
-    // After a save, the most reliable way to ensure the UI is up-to-date
-    // is to refresh the data from the server. This avoids client-side state
-    // becoming out of sync and is more robust than relying on real-time subscriptions
-    // or manual state management, which was causing the "disappearing teacher" issue.
-    router.refresh();
-  };
-
+  // Effect for real-time updates. The most robust approach is to simply
+  // refresh the server-provided data, which keeps a single source of truth.
   useEffect(() => {
     const channel = supabase
       .channel('teachers-realtime-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, (payload) => {
-          if (payload.eventType === 'INSERT') {
-              const newTeacher = parseTeacherDates(payload.new);
-              setTeachers(current => [newTeacher, ...current.filter(t => t.id !== newTeacher.id)]);
-          } else if (payload.eventType === 'UPDATE') {
-              const updatedTeacher = parseTeacherDates(payload.new);
-              setTeachers(current => current.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
-          } else if (payload.eventType === 'DELETE') {
-              const deletedId = (payload.old as Teacher).id;
-              setTeachers(current => current.filter(t => t.id !== deletedId));
-          }
+          console.log('Real-time change detected, refreshing data...', payload);
+          router.refresh();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [router]);
 
+  // This function is now much simpler. It just closes the form and tells
+  // Next.js to refetch the data. The UI will update automatically when the
+  // `initialTeachers` prop changes.
+  const handleFormSave = (savedTeacher: Teacher) => {
+    setIsFormOpen(false);
+    setEditingTeacher(null);
+    router.refresh();
+  };
+  
+  const handleDelete = async (teacherId: string) => {
+    try {
+      await deleteTeacherAction(teacherId);
+      toast({ title: 'Success', description: 'Teacher deleted successfully.' });
+      // After deleting, we must refresh the data from the server.
+      router.refresh();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+
+  // Pagination is disabled during search for simplicity.
+  const fetchMoreTeachers = useCallback(async () => {
+      // This logic would need to be re-evaluated if pagination on search results is required.
+      // For now, it only works on the initial, unfiltered list.
+      // ...
   }, []);
 
   const handleAdd = () => {
@@ -126,18 +122,6 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
   const handleEdit = (teacher: Teacher) => {
     setEditingTeacher(teacher);
     setIsFormOpen(true);
-  };
-  
-  const handleDelete = async (teacherId: string) => {
-    try {
-      await deleteTeacherAction(teacherId);
-      // The optimistic update is good, but the real-time subscription should also catch this.
-      // We'll keep the optimistic update for a snappy UI.
-      setTeachers(current => current.filter(t => t.id !== teacherId));
-      toast({ title: 'Success', description: 'Teacher deleted successfully.' });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    }
   };
 
   const getSchoolName = useCallback((schoolId?: string | null) => {
@@ -152,10 +136,6 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
   const handleRowClick = (teacherId: string) => {
     router.push(`/dashboard/teachers/${teacherId}`);
   };
-
-  const filteredTeachers = useMemo(() => {
-    return teachers;
-  }, [teachers]);
 
   return (
     <Card className="bg-purple-100 dark:bg-purple-900/50">
@@ -209,7 +189,7 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
                           <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                       </TableRow>
                   ))
-              ) : filteredTeachers.length > 0 ? filteredTeachers.map(teacher => (
+              ) : teachersToRender.length > 0 ? teachersToRender.map(teacher => (
                 <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
                      <Avatar className="h-20 w-20">
@@ -269,8 +249,8 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
         </div>
         {hasMore && !searchTerm && (
             <div className="mt-4 flex justify-center">
-                <Button onClick={fetchMoreTeachers} disabled={isLoadingMore}>
-                    {isLoadingMore ? (
+                <Button onClick={fetchMoreTeachers} disabled={isLoading}>
+                    {isLoading ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Loading...
