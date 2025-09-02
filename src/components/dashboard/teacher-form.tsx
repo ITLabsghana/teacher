@@ -72,20 +72,22 @@ export const DatePickerSelect = ({ value, onChange, fromYear = 1950, toYear = ne
 };
 
 
+// By making every field optional, we allow the user to save partial progress
+// without being blocked by validation errors, as requested.
 const teacherSchema = z.object({
   // Personal Information
-  staffId: z.string().min(1, "Staff ID is required"),
-  firstName: z.string().min(2, "First name is too short"),
-  lastName: z.string().min(2, "Surname is too short"),
-  dateOfBirth: z.date({ required_error: "Date of birth is required." }).nullable(),
-  gender: z.enum(['Male', 'Female']).nullable(),
+  staffId: z.string().optional().nullable(),
+  firstName: z.string().optional().nullable(),
+  lastName: z.string().optional().nullable(),
+  dateOfBirth: z.date().optional().nullable(),
+  gender: z.enum(['Male', 'Female']).optional().nullable(),
   registeredNo: z.string().optional().nullable(),
   ghanaCardNo: z.string().optional().nullable(),
   ssnitNo: z.string().optional().nullable(),
   tinNo: z.string().optional().nullable(),
   phoneNo: z.string().optional().nullable(),
   homeTown: z.string().optional().nullable(),
-  email: z.string().email("Invalid email address").optional().or(z.literal('')).nullable(),
+  email: z.string().email("Invalid email address").or(z.literal('')).optional().nullable(),
   address: z.string().optional().nullable(),
   photo: z.string().optional().nullable(),
 
@@ -99,13 +101,13 @@ const teacherSchema = z.object({
   leadershipPosition: z.string().optional().nullable(),
   otherLeadershipPosition: z.string().optional().nullable(),
   areaOfSpecialization: z.string().optional().nullable(),
-  lastPromotionDate: z.date().nullable().optional(),
+  lastPromotionDate: z.date().optional().nullable(),
   previousSchool: z.string().optional().nullable(),
-  schoolId: z.string().nullable().optional(),
-  datePostedToCurrentSchool: z.date().nullable().optional(),
+  schoolId: z.string().optional().nullable(),
+  datePostedToCurrentSchool: z.date().optional().nullable(),
   licensureNo: z.string().optional().nullable(),
-  firstAppointmentDate: z.date().nullable().optional(),
-  dateConfirmed: z.date().nullable().optional(),
+  firstAppointmentDate: z.date().optional().nullable(),
+  dateConfirmed: z.date().optional().nullable(),
   teacherUnion: z.string().optional().nullable(),
 
   // Bank and Salary Information
