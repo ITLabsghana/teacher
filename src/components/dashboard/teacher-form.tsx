@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-import { uploadFile, createSignedUploadUrlAction, BUCKETS, BucketName } from '@/app/actions/upload-actions';
+import { createSignedPhotoUploadUrlAction, uploadDocumentAction } from '@/app/actions/upload-actions';
 import { addTeacherAction, updateTeacherAction, deleteDocumentAction } from '@/app/actions/teacher-actions';
 
 
@@ -222,23 +222,6 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
       setValue('ghanaCardNo', formattedValue);
   };
 
-  const handleFileUpload = async (file: File, bucket: BucketName): Promise<string> => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', bucket);
-      try {
-        const url = await uploadFile(formData);
-        return url;
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Upload Failed',
-          description: error.message || `Could not upload ${file.name}.`,
-        });
-        throw error;
-      }
-  };
-
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -246,8 +229,8 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
       setIsUploadingPhoto(true);
 
       try {
-          // 1. Get a signed URL from our server action, specifying the photos bucket
-          const { signedUrl, publicUrl } = await createSignedUploadUrlAction(file.type, file.size, BUCKETS.teacherPhotos);
+          // 1. Get a signed URL from our server action
+          const { signedUrl, publicUrl } = await createSignedPhotoUploadUrlAction(file.type, file.size);
 
           // 2. Upload the file directly to Supabase Storage using the signed URL
           const uploadResponse = await fetch(signedUrl, {
@@ -285,18 +268,24 @@ export function TeacherForm({ isOpen, setIsOpen, editingTeacher, onSave, schools
     const file = e.target.files?.[0];
     if (file) {
         setIsUploadingDoc(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
         try {
-            // Call handleFileUpload with the documents bucket
-            const url = await handleFileUpload(file, BUCKETS.teacherDocuments);
+            const url = await uploadDocumentAction(formData);
             const newDocument = { name: file.name, url };
             setValue('documents', [...(documents || []), newDocument]);
             toast({ title: 'Success', description: 'Document uploaded successfully.' });
-        } catch (error) {
-            // Error is already handled in handleFileUpload, no need to show another toast
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Upload Failed',
+                description: error.message || `Could not upload ${file.name}.`,
+            });
         } finally {
             setIsUploadingDoc(false);
-             // Reset the file input
-            if(docFileInputRef.current) {
+            // Reset the file input
+            if (docFileInputRef.current) {
                 docFileInputRef.current.value = '';
             }
         }
