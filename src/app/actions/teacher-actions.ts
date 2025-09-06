@@ -3,6 +3,7 @@
 import { adminDb } from '@/lib/supabase-admin';
 import { addTeacher, deleteTeacher, getTeacherById, parseTeacherDates, updateTeacher } from '@/lib/supabase';
 import type { Teacher } from '@/lib/types';
+import { revalidatePath } from 'next/cache';
 
 // Helper to extract file path from a public Supabase storage URL
 function getPathFromUrl(url: string | null | undefined): { bucket: string, path: string } | null {
@@ -86,6 +87,11 @@ export async function deleteTeacherAction(teacherId: string): Promise<void> {
                 }
             }
         }
+
+        // 5. Revalidate paths to update the UI
+        revalidatePath('/dashboard');
+        revalidatePath('/dashboard/teachers');
+
     } catch (error: any) {
         console.error("Error in deleteTeacherAction:", error.message);
         throw new Error(`Failed to delete teacher: ${error.message}`);
@@ -95,6 +101,11 @@ export async function deleteTeacherAction(teacherId: string): Promise<void> {
 export async function addTeacherAction(teacherData: Partial<Omit<Teacher, 'id'>>): Promise<Teacher> {
     try {
         const newTeacher = await addTeacher(teacherData);
+
+        // Revalidate paths to update the UI
+        revalidatePath('/dashboard');
+        revalidatePath('/dashboard/teachers');
+
         return newTeacher;
     } catch (error: any) {
         console.error("Error in addTeacherAction:", error);
@@ -123,6 +134,10 @@ export async function updateTeacherAction({ teacher, oldPhotoUrl }: { teacher: T
                 await deleteStorageObject(oldPhotoInfo.bucket, oldPhotoInfo.path);
             }
         }
+
+        // 3. Revalidate paths to update the UI
+        revalidatePath('/dashboard');
+        revalidatePath('/dashboard/teachers');
 
         return updatedTeacher;
     } catch (error: any) {
