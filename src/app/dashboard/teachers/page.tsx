@@ -1,21 +1,19 @@
-
 import TeachersTab from '@/components/dashboard/teachers-tab';
-import { getTeachers, getSchools } from '@/lib/supabase';
+import { getSchools } from '@/lib/supabase';
 
-// This forces the page to be dynamically rendered and not cached.
-// This is crucial for ensuring the latest data is fetched from the database
-// when the user navigates to the page or after a router.refresh().
-export const revalidate = 0;
-
+// By removing `revalidate = 0` and the initial data fetch for teachers,
+// this page component becomes mostly static. It can be served to the user
+// very quickly. The dynamic data will be fetched by the client component.
 export default async function TeachersPage() {
-    const [initialTeachers, initialSchools] = await Promise.all([
-        getTeachers(0, 20, true),
-        getSchools(true),
-    ]);
+    // We can still fetch small, essential data on the server if it's fast.
+    // The list of schools is needed for the form dropdowns.
+    const initialSchools = await getSchools(true);
 
     return (
         <TeachersTab
-            initialTeachers={initialTeachers}
+            // Pass an empty array for the initial teachers.
+            // The TeachersTab component will be responsible for fetching its own data.
+            initialTeachers={[]}
             initialSchools={initialSchools}
         />
     );

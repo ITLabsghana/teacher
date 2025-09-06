@@ -20,78 +20,90 @@ import { searchTeachers, deleteTeacherAction } from '@/app/actions/teacher-actio
 const PAGE_SIZE = 20;
 
 interface TeachersTabProps {
-    initialTeachers: Teacher[];
+    initialTeachers: Teacher[]; // Will be empty on initial load
     initialSchools: School[];
 }
 
 export default function TeachersTab({ initialTeachers, initialSchools }: TeachersTabProps) {
-  const [teachers, setTeachers] = useState<Teacher[]>(() => initialTeachers.map(parseTeacherDates));
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schools, setSchools] = useState<School[]>(initialSchools);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const { toast } = useToast();
+
+  const [isLoading, setIsLoading] = useState(true); // Start in loading state
   const [isSearching, setIsSearching] = useState(false);
 
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(initialTeachers.length === PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // This effect synchronizes the local `teachers` state with the `initialTeachers` prop.
-  // This is the key to reflecting server-side updates from `router.refresh()`.
-  useEffect(() => {
-    // Only reset the list if the user is not actively searching.
-    // This prevents search results from being overwritten.
-    if (!searchTerm) {
-      setTeachers(initialTeachers.map(parseTeacherDates));
-      setPage(0); // Reset page count when props change
-      setHasMore(initialTeachers.length === PAGE_SIZE);
+  const fetchInitialTeachers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const newTeachers = await getTeachers(0, PAGE_SIZE, true);
+      setTeachers(newTeachers.map(parseTeacherDates));
+      setPage(0);
+      setHasMore(newTeachers.length === PAGE_SIZE);
+    } catch (error) {
+      console.error("Failed to fetch initial teachers:", error);
+      toast({ variant: 'destructive', title: "Error", description: "Failed to load teachers." });
+    } finally {
+      setIsLoading(false);
     }
-  }, [initialTeachers, searchTerm]);
+  }, [toast]);
+
+  // Fetch initial data on component mount
+  useEffect(() => {
+    fetchInitialTeachers();
+  }, [fetchInitialTeachers]);
 
   // Effect for handling search logic
   useEffect(() => {
     const handler = setTimeout(async () => {
         if (searchTerm.trim()) {
             setIsSearching(true);
+            setHasMore(false); // Disable "load more" during search
             const results = await searchTeachers(searchTerm);
             setTeachers(results.map(parseTeacherDates));
             setIsSearching(false);
-        } else {
-            // When search is cleared, revert to the initial list from props
-            setTeachers(initialTeachers.map(parseTeacherDates));
+        } else if (teachers.length > 0) { // Only refetch if there was a search term before
+            // When search is cleared, revert to the initial list
+            fetchInitialTeachers();
         }
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [searchTerm, initialTeachers]);
+  }, [searchTerm, fetchInitialTeachers]);
 
-  // Real-time updates simply trigger a server data refresh.
-  // The useEffect above will then handle syncing the new props to the local state.
+  // Real-time updates simply trigger a refetch of the initial data.
   useEffect(() => {
     const channel = supabase
-      .channel('teachers-realtime-channel-final')
+      .channel('teachers-realtime-channel-final-perf')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => {
-          router.refresh();
+          // A change happened, refetch the first page to show the latest state.
+          // This is simpler and more robust than trying to merge changes.
+          fetchInitialTeachers();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [router]);
+  }, [fetchInitialTeachers]);
 
   const handleFormSave = () => {
     setIsFormOpen(false);
     setEditingTeacher(null);
-    // The single source of truth for updates is a server refresh.
-    // The useEffect hook will catch the new `initialTeachers` prop and update the state.
-    router.refresh();
+    // After saving, refetch the initial data to ensure the list is up-to-date.
+    fetchInitialTeachers();
   };
 
   const handleDelete = async (teacherId: string) => {
     try {
       await deleteTeacherAction(teacherId);
       toast({ title: 'Success', description: 'Teacher deleted successfully.' });
-      router.refresh();
+      // After deleting, refetch.
+      fetchInitialTeachers();
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
@@ -102,7 +114,7 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
       setIsLoadingMore(true);
       try {
           const nextPage = page + 1;
-          const newTeachers = await getTeachers(nextPage, PAGE_SIZE);
+          const newTeachers = await getTeachers(nextPage, PAGE_SIZE, true);
           setTeachers(prev => [...prev, ...newTeachers.map(parseTeacherDates)]);
           setPage(nextPage);
           if (newTeachers.length < PAGE_SIZE) {
@@ -153,7 +165,7 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
         </div>
         <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+            {(isSearching || (isLoading && teachers.length === 0)) && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
             <Input
                 placeholder="Search by name, school, specialization, or years in school..."
                 value={searchTerm}
@@ -178,8 +190,19 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isSearching ? (
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+              {isLoading && teachers.length === 0 ? (
+                  Array.from({length: 5}).map((_, i) => (
+                      <TableRow key={i} className="animate-pulse">
+                          <TableCell><Skeleton className="h-20 w-20 rounded-full" /></TableCell>
+                          <TableCell><div className="space-y-2"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-48" /></div></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                      </TableRow>
+                  ))
               ) : teachers.length > 0 ? teachers.map(teacher => (
                 <TableRow key={teacher.id} onClick={() => handleRowClick(teacher.id)} className="cursor-pointer">
                   <TableCell>
@@ -226,7 +249,7 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
               )) : (
                 <TableRow>
                   <TableCell colSpan={8} className="h-24 text-center">
-                    {searchTerm ? 'No teachers found matching your search.' : 'No teachers have been added yet.'}
+                    {isSearching ? 'No teachers found matching your search.' : 'No teachers have been added yet.'}
                   </TableCell>
                 </TableRow>
               )}
