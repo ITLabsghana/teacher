@@ -43,7 +43,8 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
   const fetchInitialTeachers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const newTeachers = await getTeachers(0, PAGE_SIZE, true);
+      // When fetching from the client, `isAdmin` must be false to use the public key.
+      const newTeachers = await getTeachers(0, PAGE_SIZE, false);
       setTeachers(newTeachers.map(parseTeacherDates));
       setPage(0);
       setHasMore(newTeachers.length === PAGE_SIZE);
@@ -114,7 +115,8 @@ export default function TeachersTab({ initialTeachers, initialSchools }: Teacher
       setIsLoadingMore(true);
       try {
           const nextPage = page + 1;
-          const newTeachers = await getTeachers(nextPage, PAGE_SIZE, true);
+          // When fetching from the client, `isAdmin` must be false.
+          const newTeachers = await getTeachers(nextPage, PAGE_SIZE, false);
           setTeachers(prev => [...prev, ...newTeachers.map(parseTeacherDates)]);
           setPage(nextPage);
           if (newTeachers.length < PAGE_SIZE) {
